@@ -6,7 +6,7 @@
 > **Chaves:** **Files:** caminhos tocados · **AC:** critérios de `spec.md` atendidos (num spike,
 > *medidos*; `—` = nenhum; "parcial" diz a parte medida) · **Done:** definição objetiva de pronto ·
 > **Deps:** tarefas antes (`—` = nenhuma) · **Implements:** ids da spec/requisitos. Cada tarefa cabe
-> em ≲ 1 h de agente.
+> em ≲ 1 h de agente (esperas de gravação e de longa duração no aparelho não contam).
 >
 > Só a **Fase 0** está escrita por inteiro (projeto novo: `spec-intake`, modo de criação do zero). As
 > fases seguintes têm só o cabeçalho; a `spec-implement` gera as tarefas delas **depois** da
@@ -58,7 +58,7 @@ Resumo:
   runner nem pelo agente;
 - atualizar o Claude Code para ≥ 2.1.283;
 - no repositório do Hagah (ou numa sessão do Hagah): corrigir o roteiro pelos rótulos de `spec.md`
-  S13 item 2 e, **até o SP-16 (T-0.33)**, gerar o build de simulador (`deploy.md` D3.5).
+  S13 item 2 e, **até o SP-16 (T-0.36)**, gerar o build de simulador (`deploy.md` D3.5).
 
 Se a primeira subida do runner mostrar "Untrusted Developer", confiar no desenvolvedor em Settings ›
 General › VPN & Device Management (pela pesquisa, provavelmente não precisa com time pago; o SP-12
@@ -114,13 +114,13 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `TeamIdentifier=984PNJZ8B9` e `Authority=Apple Development: Andre Saboia (6NKUX5CX7G)`; `security
   find-identity -v -p codesigning` igual antes e depois; `swift test` verde. Deps: T-0.2, T-0.3.
   Implements: S1 item 1, S0.10, A2, A5, P-3, ❓ Q-3.
-- [ ] **T-0.5** Núcleo do runner: no Kit, roteador, autenticação por token, controlador único e agenda
-  das duas filas (testáveis com `swift test`); no runner, `testServe` (faz `press(.home)` e só então
-  abre o servidor), `NWListener` WebSocket no loopback na porta da configuração (no build `Spike`,
-  `CONTRARREGRA_BIND=loopback|endpoint`), `session.hello`, `health`, `clock.ping` na conexão `sync`
-  (fora da main thread; `pad` até 64 KB), `runner.capabilities` (sondagem de PX-1…PX-6 só lendo
-  símbolos, mais `CONTRARREGRA_PRIVATE`), capturas do XCTest desligadas pelos meios documentados, prazos
-  por comando. Files: `ios/ContrarregraRunner/RunnerTests.swift`, `ios/ContrarregraRunner/{Server,Log}/**`,
+- [ ] **T-0.5** Núcleo do runner: no Kit, roteador, autenticação por token, controlador único e
+  agenda das duas filas (testáveis com `swift test`); no runner, `testServe` (faz `press(.home)` e
+  só então abre o servidor), `NWListener` WebSocket no loopback na porta da configuração (no build
+  `Spike`, `CONTRARREGRA_BIND=loopback|endpoint`), `session.hello`, `health`, `clock.ping` na
+  conexão `sync` (fora da main thread; `pad` até 64 KB), `runner.capabilities` (sondagem de
+  PX-1…PX-6 só lendo símbolos, mais `CONTRARREGRA_PRIVATE`), prazos por comando. Files:
+  `ios/ContrarregraRunner/RunnerTests.swift`, `ios/ContrarregraRunner/{Server,Log}/**`,
   `ios/ContrarregraRunner/PrivateXCT/Probe.swift`, `ios/ContrarregraKit/**`. AC: — (as do aparelho
   passam na T-0.11). Done: `xcodebuild build-for-testing` exit 0; `swift test` cobre roteador,
   autenticação, controlador único e a agenda das filas com um cliente em processo. Deps: T-0.4.
@@ -160,13 +160,17 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   variáveis de S1, sessões velhas apagadas, `xcodebuild` destacado com saída em arquivo,
   `caffeinate`), testados contra o usbmuxd falso, o servidor WebSocket de teste e um `xcodebuild`
   falso. Files: `mac/src/{device,runner,commands,cli}/**`, `mac/test/runner.test.ts`. AC: —. Done:
-  testes verdes: o `.xctestrun` da sessão tem permissão 0600 e as variáveis de S1, sessões velhas são
-  apagadas, `runner down` o apaga, o `xcodebuild` nunca recebe pipes. Deps: T-0.4, T-0.9.
-  Implements: S2 itens 1, 3, 6–8.
+  testes verdes: o `.xctestrun` da sessão tem permissão 0600, as variáveis de S1 e as capturas do
+  XCTest desligadas (`SystemAttachmentLifetime`/`UserAttachmentLifetime = keepNever`,
+  `PreferredScreenCaptureFormat = screenshots`; `-collect-test-diagnostics never` no `xcodebuild`,
+  S1 item 9), sessões velhas são apagadas, `runner down` o apaga, o `xcodebuild` nunca recebe pipes.
+  Deps: T-0.4, T-0.9. Implements: S2 itens 1, 3, 6–8.
 - [ ] **T-0.11** Transporte no aparelho: **G5 antes da primeira instalação do runner e do
   hospedeiro**; o primeiro passo é uma sonda de alcance (`runner up`, um `Connect` e
-  `session.hello`): se o `Connect` for recusado, a tarefa para e vale o plano B do SP-4 (❓ Q-13 → G1
-  imediato, `requirements.md` §5) antes de qualquer outro spike no aparelho; senão, mede as ACs abaixo.
+  `session.hello`): se o `Connect` for recusado com o runner vivo, repetir com o build `Spike` nas duas
+  formas de `CONTRARREGRA_BIND` (G5 para instalá-lo); recusado nas duas, a tarefa para e vale o plano B
+  do SP-4 (❓ Q-13 → G1 imediato, `requirements.md` §5) antes de qualquer outro spike no aparelho;
+  senão, mede as ACs abaixo.
   Files: `mac/src/{usbmux,device,runner}/**` (só correções que o aparelho mostrar). AC: AC-1.1,
   AC-1.2, AC-1.12, AC-1.13, AC-2.3 (parte: `runner up`/`runner status` sem cabo), AC-2.5, AC-2.7,
   AC-2.9. Done: a sonda passa; `runner up` → `status: up` e as ACs passam; `runner down` apaga o
@@ -223,7 +227,7 @@ Regras comuns:
   e escura); a pessoa abre a Central de Controle e toca o avião, trava e destrava (Face ID + arrasto),
   abre a folha do Sign in with Apple e cancela; repetir com o QuickTime manual. Extrair quadros a 2 fps
   e procurar "Automation Running"/"volume buttons" com o OCR do Mac (T-0.14). Files: `spikes/SP-1.md`,
-  `spikes/sp-1/**`. AC: AC-13.7, AC-13.8 (parte do aviso). Done: **sucesso** = 0 quadros com o aviso
+  `spikes/sp-1/**`. AC: AC-13.8 (parte do aviso). Done: **sucesso** = 0 quadros com o aviso
   em ~360 amostras enquanto ele está visível no aparelho, **e** 100 % dos toques humanos fazem efeito;
   **plano B** = (1) pontos de controle `who: runner` com `steps` em tudo que não é credencial (avião,
   arrasto de destravar); (2) comparar com a Gravação de Tela do iOS; (3) levar ❓ Q-9 ao dono com os
@@ -234,7 +238,8 @@ Regras comuns:
   10 s e religar; medir até `wired` e se continua `wired` por 30 min. Depois: runner subido, `health` a
   10 Hz, modo avião 60 s ligado/desligado ×10; registrar PID (`devicectl device info processes`), vida
   do `xcodebuild`, maior intervalo, linhas "Exiting due to IDE disconnection"; uma vez de propósito em
-  `localNetwork` (controle negativo). Files: `spikes/SP-2.md`, `spikes/sp-2/**`. AC: AC-2.2, AC-2.4.
+  `localNetwork` (controle negativo). Files: `spikes/SP-2.md`, `spikes/sp-2/**`. AC: AC-2.2, AC-2.4
+  (parcial: a leitura do `devicectl` em `localNetwork` no controle negativo, sem pré-voo).
   Done: **sucesso** = `wired` em ≤ 30 s por um procedimento documentado e estável por 30 min; 10/10
   com o mesmo PID e intervalo ≤ 2 s; o controle em Wi-Fi reproduz a morte. **Plano B** = re-assinar o
   `.xctrunner` sem `Frameworks/XC*`, lançá-lo por `devicectl device process launch` e repetir — G5
@@ -265,53 +270,59 @@ Regras comuns:
   **Plano B** = se o loopback não for alcançável por usbmux, parar e levar ao dono ❓ Q-13 num G1
   imediato (emenda de P-3/P-7 e HC-4); nenhuma escuta fora do loopback antes desse G1. Deps: T-0.11,
   T-0.17. Implements: S2, ADR-9.
-- [ ] **T-0.20** **SP-5 (alto) — OBS.** Quatro configurações da fonte (preset High; formato manual
-  60 fps; "Capture Card"; preset 4K); áudio do iPhone com o Salmo 23 tocando (picos, silêncio no
-  alto-falante, sincronia áudio/vídeo); 10 min a 1170×2532@60 com H.264 por hardware ABR 16 Mbps
-  (quadros pulados, `ffprobe`, tamanho); OBS aberto antes do cabo e "chute"; 3 capítulos com títulos
-  UTF-8; 30 paradas (10 × 1 min, 10 × 5 min, 10 × 10 min ≈ 19 GB no total, cada arquivo apagado logo
-  depois de medido, pela regra comum); resolver o `device` pelo `itemName`. Files: `spikes/SP-5.md`,
-  `spikes/sp-5/**`. AC: AC-9.2, AC-9.3, AC-9.6, AC-9.7. Done: **sucesso** = 1170×2532 sem cor lavada
+- [ ] **T-0.20** **SP-5 (alto) — OBS, parte 1: fonte, áudio e gravação longa.** Quatro configurações
+  da fonte (preset High; formato manual 60 fps; "Capture Card"; preset 4K); áudio do iPhone com o
+  Salmo 23 tocando (picos, silêncio no alto-falante, sincronia áudio/vídeo); 10 min a 1170×2532@60 com
+  H.264 por hardware ABR 16 Mbps (quadros pulados, `ffprobe`, tamanho); OBS aberto antes do cabo e
+  "chute"; resolver o `device` pelo `itemName`. Files: `spikes/SP-5.md`, `spikes/sp-5/**`. AC:
+  AC-9.3 (parcial: o chute sem pré-voo), AC-9.7. Done: **sucesso** = 1170×2532 sem cor lavada
   (diferença ≤ 3/255 em áreas lisas), picos entre −20 e −3 dBFS, defasagem A/V ≤ ±45 ms, 0 quadros
-  pulados, capítulos exatos, 0 falsos prontos. **Plano B** = HEVC; 30 fps; QuickTime manual com
-  capítulos do FFMETADATA. Deps: T-0.12, T-0.13. Implements: S9, ADR-4, ADR-14, ❓ Q-8.
-- [ ] **T-0.21** Núcleo de relógio e alinhamento para o SP-6 (sem aparelho): NTP com ajuste
+  pulados, fonte recuperada pelo chute em ≤ 15 s. **Plano B** = HEVC; 30 fps; QuickTime manual. Deps:
+  T-0.12, T-0.13. Implements: S9 itens 1, 3 e 6, ADR-4, ADR-14, ❓ Q-8.
+- [ ] **T-0.21** **SP-5 (alto) — OBS, parte 2: capítulos e finalização.** 3 capítulos com títulos
+  UTF-8; 30 paradas (10 × 1 min, 10 × 5 min, 10 × 10 min ≈ 19 GB no total, cada arquivo apagado logo
+  depois de medido, pela regra comum). Files: `spikes/SP-5.md`, `spikes/sp-5/**`. AC: AC-9.2, AC-9.6.
+  Done: **sucesso** = capítulos exatos e 0 falsos prontos. **Plano B** = QuickTime manual com
+  capítulos do FFMETADATA. Deps: T-0.20. Implements: S9 item 5, ADR-4, ❓ Q-8.
+- [ ] **T-0.22** Núcleo de relógio e alinhamento para o SP-6 (sem aparelho): NTP com ajuste
   Theil-Sen (S7 item 2), T0 pelas marcas (item 3), detecção por região e ajuste V = α + (1+β)·P com o
   erro deixando um de fora (itens 4–6), decodificador do código de S0.10, e o invólucro do
   ffmpeg/ffprobe fixados (`paths.*`) com extração de quadros. Files: `mac/src/{clock,align}/**`,
-  `mac/src/media/{ffmpeg,frames}.ts`, `mac/test/{clock,align}.test.ts`. AC: — (medidas nas T-0.22 e
-  T-0.23). Done: `node --test` verde com dados sintéticos: rajadas com deslocamento e deriva plantados
+  `mac/src/media/{ffmpeg,frames}.ts`, `mac/test/{clock,align}.test.ts`. AC: — (medidas nas T-0.23 e
+  T-0.24). Done: `node --test` verde com dados sintéticos: rajadas com deslocamento e deriva plantados
   e recuperados, vídeos de teste gerados por `ffmpeg -f lavfi` num diretório temporário (marcas,
   mudança de região, código de S0.10 desenhado com `drawbox`). Deps: T-0.3. Implements: S0.10, S7
   itens 2–6, ADR-15. [P]
-- [ ] **T-0.22** **SP-6 (alto) — sincronia ponta a ponta, parte 1: marcas e latência de captura.**
-  Com o núcleo da T-0.21, mede: (a) 8 marcas `SerialFrame` no pré-rolo achadas por `signalstats`;
+- [ ] **T-0.23** **SP-6 (alto) — sincronia ponta a ponta, parte 1: marcas e latência de captura.**
+  Com o núcleo da T-0.22, mede: (a) 8 marcas `SerialFrame` no pré-rolo achadas por `signalstats`;
   (b) 10 min do relógio do hospedeiro (S0.10) na tela, decodificado por quadro, com e sem "Use
   Buffering", alternando movimento e 30 s parados → distribuição da latência de captura. Files:
   `spikes/SP-6.md`, `spikes/sp-6/**`. AC: AC-7.2, AC-7.7. Done: **sucesso** = |T0ᵢ − T0| ≤ 17 ms e
   erro padrão de T0 ≤ 3 ms; latência estável ±10 ms com espalhamento p95−p5 ≤ 33 ms. **Plano B** =
-  desligar buffering; QuickTime. Deps: T-0.11, T-0.12, T-0.19, T-0.20, T-0.21, T-0.31. Implements:
+  desligar buffering; QuickTime. Deps: T-0.11, T-0.12, T-0.19, T-0.20, T-0.22, T-0.34. Implements:
   S7 itens 3, 4 e 7, ADR-15.
-- [ ] **T-0.23** **SP-6 (alto) — sincronia ponta a ponta, parte 2: toques reais.** 30 toques reais
+- [ ] **T-0.24** **SP-6 (alto) — sincronia ponta a ponta, parte 2: toques reais.** 30 toques reais
   nas cenas 2 e 5, com detecção por região e erro deixando um de fora (S7 item 6), usando o T0 e a
-  latência medidos na T-0.22. Files: `spikes/SP-6.md`, `spikes/sp-6/**`. AC: AC-7.3 (método). Done:
+  latência medidos na T-0.23. Files: `spikes/SP-6.md`, `spikes/sp-6/**`. AC: AC-7.3 (método). Done:
   **sucesso** = ≥ 90 % dos toques detectados no quadro certo (±1) e nenhuma detecção mais de 100 ms
-  antes da ação. **Plano B** = só alinhamento visual por tomada. Deps: T-0.22. Implements: S7, SM-2.
-- [ ] **T-0.24** **SP-7 (médio) — travar, acender e destravar (cena 3).** Só com Q-5a = sim; senão,
+  antes da ação. **Plano B** = só alinhamento visual por tomada. Deps: T-0.23. Implements: S7, SM-2.
+- [ ] **T-0.25** **SP-7 (médio) — travar, acender e destravar (cena 3).** Só com Q-5a = sim; senão,
   medir só o ponto de controle humano (botão lateral). `pressLockButton` ×10 com leitura de
-  `com.apple.springboard.lockstate` e captura; áudio segue tocando; `device.wake` (um `press(.home)`
-  com a tela travada, ninguém olhando) mostra os controles da tela travada sem destravar; a pessoa
-  destrava com Face ID; medir quando o `lockstate` vira 0 e quando a tela travada sai de fato (vídeo
-  alinhado pelo núcleo da T-0.21 com o T0 e a latência da T-0.22); se preciso, o arrasto para cima é
-  do `spike.unlockDrag` (só na configuração `Spike`, recusado com `locked: true`) ou do dono; runner e
-  captura atravessam travas de 10 s, 60 s e 5 min. Files: `spikes/SP-7.md`, `spikes/sp-7/**`,
+  `com.apple.springboard.lockstate` e captura do OBS (nunca `screen.shot` com a tela travada); áudio
+  segue tocando; `device.wake` (um `press(.home)` com a tela travada, ninguém olhando) mostra os
+  controles da tela travada sem destravar; a pessoa destrava com Face ID; medir quando o `lockstate`
+  vira 0 e quando a tela travada sai de fato (vídeo alinhado pelo núcleo da T-0.22 com o T0 e a
+  latência da T-0.23); se preciso, o arrasto para cima é do `spike.unlockDrag` (só na configuração
+  `Spike`, recusado com `locked: true`) ou do dono; runner e captura atravessam travas de 10 s, 60 s
+  e 5 min. Files: `spikes/SP-7.md`, `spikes/sp-7/**`,
   `ios/ContrarregraRunner/PrivateXCT/Lock.swift`, `ios/ContrarregraRunner/Spikes/**`. AC: AC-1.9,
   AC-1.21, AC-1.23 (parcial: `ui.drag` na tela travada com `locked: true` → `E_FORBIDDEN_APP`),
-  AC-5.6. Done: **sucesso** = 10/10 travas em ≤ 2 s; `wake` não destrava; destrave detectado em ≤ 1 s
-  depois de a tela travada sair; runner e captura sem queda. **Plano B** = evento HID 0x0C/0x30; ou
-  ponto de controle humano (botão lateral). Deps: T-0.11, T-0.13, T-0.22. Implements: S1 itens 8 e
-  11, S5, PX-1, ❓ Q-5a.
-- [ ] **T-0.25** **SP-8 (médio) — Sign in with Apple no aparelho.** Pré-condições: o dono já fez o
+  AC-5.6 (parcial: `lockstate` → 0 × primeiro quadro sem a tela travada, sem ponto de controle).
+  Done: **sucesso** = 10/10 travas em ≤ 2 s; `wake` não destrava; destrave detectado em ≤ 1 s depois
+  de a tela travada sair; runner e captura sem queda. **Plano B** = evento HID 0x0C/0x30; ou ponto
+  de controle humano (botão lateral). Deps: T-0.11, T-0.13, T-0.23. Implements: S1 itens 8 e 11, S5,
+  PX-1, ❓ Q-5a.
+- [ ] **T-0.26** **SP-8 (médio) — Sign in with Apple no aparelho.** Pré-condições: o dono já fez o
   backup do diário (D0.13) e confere a lista do Sign in with Apple **à mão** (D0.14); nenhum passo em
   Settings da conta Apple é feito pelo runner ou pelo agente. Sem gravar, com a conta do aparelho
   (❓ Q-2): tocar o botão do Hagah e registrar qual processo expõe a folha
@@ -324,14 +335,15 @@ Regras comuns:
   de limpeza que devolve a variante de primeiro cadastro. **Plano B** = o dono toca o "Continue" num
   ponto de controle; ou a folha inteira como ponto de controle. Deps: T-0.11. Implements: S5, S13 item
   6, AC-13.6.
-- [ ] **T-0.26** **SP-9 (médio) — Central de Controle, modo avião, rede, barra de estado.** 10
+- [ ] **T-0.27** **SP-9 (médio) — Central de Controle, modo avião, rede, barra de estado.** 10
   ciclos: arrastar (0,9·0,01 → 0,9·0,2), achar `airplane-mode-button` em ≤ 2 s, ler `value`, tocar,
   conferir a troca, fechar; ler `{network}` com o cabo ligado (deve ir a `offline` com o avião, mesmo
   com o túnel no cabo); com o OBS gravando, ver se a barra de estado mostra 9:41 e se o ícone de avião
-  aparece. Files: `spikes/SP-9.md`, `spikes/sp-9/**`. AC: AC-1.15, AC-5.7. Done: **sucesso** = 10/10;
+  aparece. Files: `spikes/SP-9.md`, `spikes/sp-9/**`. AC: AC-1.15, AC-5.7 (parcial: abrir, tocar e
+  fechar pelo runner, sem ponto de controle). Done: **sucesso** = 10/10;
   `network` correto; a prova visual do avião definida. **Plano B** = rótulo "Airplane Mode"; OCR; a
   pessoa toca. Deps: T-0.11, T-0.13, T-0.17. Implements: S1 item 7, S0.3, S13 item 7.
-- [ ] **T-0.27** **SP-10 (médio) — mapa de alvos e linha do tempo do Hagah no build do TestFlight.**
+- [ ] **T-0.28** **SP-10 (médio) — mapa de alvos e linha do tempo do Hagah no build do TestFlight.**
   Pré-condições: D0.13 e D0.14 feitos. Snapshot de cada tela do roteiro (leitor, seletores,
   Now Playing nas duas alturas, barra de seleção, nota, Diário deslogado e logado, Ajustes, Downloads,
   About, Plano, playlist): rótulo, tipo, frame, `isHittable` dos ~30 alvos (com nome e e-mail
@@ -348,79 +360,87 @@ Regras comuns:
   alvos batem com S13 por `label`/`labelPrefix`; regra de desempate para cada ambíguo; 10/10 por gesto
   e 0 trocas de capítulo; o player nunca mostra o Salmo 24 na sequência das cenas 2–9; se "Syncing…"
   durar menos de 200 ms, a prova da sincronia muda (G1 na coreografia). **Plano B** = âncoras +
-  deslocamento; OCR. Deps: T-0.11, T-0.17, T-0.25. Implements: S13.
-- [ ] **T-0.28** **SP-11 (médio) — OCR da palavra.** Lente "Word", Salmo 23 NIV pausado, paralelo NVI:
+  deslocamento; OCR. Deps: T-0.11, T-0.17, T-0.26. Implements: S13.
+- [ ] **T-0.29** **SP-11 (médio) — OCR da palavra.** Lente "Word", Salmo 23 NIV pausado, paralelo NVI:
   20 ciclos de OCR na região do versículo 1 + toque em "shepherd", com `RecognizeTextRequest` acurado e
   `RecognizeDocumentsRequest.words`, fechando o painel entre ciclos. Files: `spikes/SP-11.md`,
   `spikes/sp-11/**`, `ios/ContrarregraRunner/Spikes/**`,
   `choreographies/hagah/v8.5-review.choreo.yaml`. AC: AC-1.6. Done: **sucesso** = ≥ 19/20 abrem o
   painel certo, ≤ 700 ms por ciclo, erro de centro ≤ 6 pt; condição do painel registrada no catálogo.
   **Plano B** = posição estimada pelo frame do versículo; OCR no Mac sobre a captura (T-0.14). Deps:
-  T-0.11, T-0.27. Implements: S1 item 6.
-- [ ] **T-0.29** **SP-12 (médio) — runner de longa duração, alertas e nada visível.** 4 h no cabo com
-  comandos periódicos (SM-5); 10 falhas induzidas; um alerta de um botão sobre o Hagah com um toque
-  num elemento coberto, com e sem PX-5 (só com Q-5e = sim), registrando se o XCTest o fecha sozinho —
-  a fonte é o alerta "Account deleted" do próprio Hagah, provocado com o dono presente repetindo o
-  login e a exclusão do SP-8 (dois Face ID; pré-condições D0.13 e D0.14); se ele não servir, o
-  primeiro alerta de um botão que aparecer nas 4 h; sem nenhum, a T-0.36 registra a variante como não
-  medida —; registrar todo pedido de código de automação e o "Untrusted Developer", se aparecer;
-  ícones do hospedeiro e do runner tirados da tela de início e o runner ainda sobe, com os nomes
-  exibidos de verdade (para `bundle.displayNames`); uma subida com a captura automática do XCTest
-  ligada × as configurações de S1 item 9 (latência p50 de 50 `ui.tap`, indicador na captura do OBS,
-  atividade de gravação no registro); tempo até o runner sair da frente. Files: `spikes/SP-12.md`,
-  `spikes/sp-12/**`, `ios/ContrarregraRunner/PrivateXCT/Interruptions.swift`,
-  `ios/ContrarregraRunner/Spikes/**`. AC: AC-1.11, AC-1.13, AC-1.20, AC-2.8, AC-12.3 (medição). Done:
-  **sucesso** = 0 religamentos em 4 h; RSS cresce < 100 MB; 1 pedido de código só na subida; runner
-  fora da frente em ≤ 5 s; nenhum ícone na página do Hagah; sem diferença com a captura desligada;
-  comportamento de alertas documentado. **Plano B** = subir um runner novo antes de cada tomada; PX-4
-  só com o sim do dono (❓ Q-5d, decidido na T-0.36); chaves não documentadas de captura (A10). Deps:
-  T-0.11, T-0.13, T-0.25. Implements: S1 itens 2 e 9, E-1.4, SM-5, SM-6.
-- [ ] **T-0.30** **SP-13 (médio) — limites do Claude Code no MCP.** Protótipo de `take_start` +
+  T-0.11, T-0.28. Implements: S1 item 6.
+- [ ] **T-0.30** **SP-12 (médio) — runner de longa duração, parte 1: 4 h e falhas.** 4 h no cabo com
+  comandos periódicos (SM-5); 10 falhas induzidas; registrar todo pedido de código de automação e o
+  "Untrusted Developer", se aparecer. Files: `spikes/SP-12.md`, `spikes/sp-12/**`. AC: AC-1.11, AC-2.8.
+  Done: **sucesso** = 0 religamentos em 4 h; RSS cresce < 100 MB; 1 pedido de código só na subida.
+  **Plano B** = subir um runner novo antes de cada tomada; PX-4 só com o sim do dono (❓ Q-5d, decidido
+  na T-0.39). Deps: T-0.11. Implements: S1 item 2, SM-5.
+- [ ] **T-0.31** **SP-12 (médio) — parte 2: alertas.** Um alerta de um botão sobre o Hagah com um
+  toque num elemento coberto, com e sem PX-5 (só com Q-5e = sim), registrando se o XCTest o fecha
+  sozinho. Fonte: o alerta "Account deleted" do próprio Hagah, provocado com o dono presente
+  repetindo o login e a exclusão do SP-8 (dois Face ID; pré-condições D0.13 e D0.14); se ele não
+  servir, o primeiro alerta de um botão que aparecer durante a T-0.30; sem nenhum, a T-0.39 registra
+  a variante como não medida. Files: `spikes/SP-12.md`, `spikes/sp-12/**`,
+  `ios/ContrarregraRunner/PrivateXCT/Interruptions.swift`, `ios/ContrarregraRunner/Spikes/**`. AC:
+  —. Done: **sucesso** = comportamento de alertas documentado com e sem PX-5. **Plano B** = todo
+  alerta esperado com `expect` explícito (E-1.4). Deps: T-0.26, T-0.30. Implements: E-1.4, A10 PX-5,
+  ❓ Q-5e.
+- [ ] **T-0.32** **SP-12 (médio) — parte 3: nada visível.** Ícones do hospedeiro e do runner tirados
+  da tela de início e o runner ainda sobe, com os nomes exibidos de verdade (para
+  `bundle.displayNames`); uma subida com a captura automática do XCTest ligada × as configurações de S1
+  item 9 (latência p50 de 50 `ui.tap`, indicador na captura do OBS, atividade de gravação no registro);
+  tempo até o runner sair da frente. Files: `spikes/SP-12.md`, `spikes/sp-12/**`,
+  `ios/ContrarregraRunner/Spikes/**`. AC: AC-1.13, AC-1.20, AC-12.3 (medição). Done: **sucesso** =
+  runner fora da frente em ≤ 5 s; nenhum ícone na página do Hagah; sem diferença com a captura
+  desligada. **Plano B** = chaves não documentadas de captura (A10). Deps: T-0.11, T-0.13. Implements:
+  S1 item 9, SM-6.
+- [ ] **T-0.33** **SP-13 (médio) — limites do Claude Code no MCP.** Protótipo de `take_start` +
   `take_wait` com supervisor destacado e vigia (tomada simulada de 15 min, sem simulador nem
   aparelho, 3 pontos de controle, MCP morto no meio, supervisor morto no meio); capturas JPEG 390×844 ×
   40 (tamanho, avisos, acerto em 5 alvos); servidor iniciado pelo app de desktop e pelo terminal (qual
   Node); leitura do Chaveiro depois de dormir; três avisos sonoros com o OBS gravando e o iPhone em
   silêncio. Files: `spikes/SP-13.md`, `spikes/sp-13/**`. AC: AC-8.2, AC-8.3, AC-8.4 (parcial: protótipo
   sem simulador), AC-8.9, AC-5.3 (medição). Done: **sucesso** = todos os números das ACs. **Plano B** =
-  tomada pela CLI em segundo plano e MCP só lendo arquivos. Deps: T-0.13, T-0.15. Implements: S8,
+  tomada pela CLI em segundo plano e MCP só lendo arquivos. Deps: T-0.11, T-0.13, T-0.15, T-0.22.
+  Implements: S8,
   ADR-11.
-- [ ] **T-0.31** **SP-14 (baixo) — deriva do relógio.** Rajadas de 32 trocas a cada 10 s por 20 min
+- [ ] **T-0.34** **SP-14 (baixo) — deriva do relógio.** Rajadas de 32 trocas a cada 10 s por 20 min
   (como S7); ajuste linear; comparar só-pré, pré+pós e completo. Files: `spikes/SP-14.md`,
   `spikes/sp-14/**`. AC: AC-7.1. Done: resíduo RMS ≤ 1 ms; erro de pré+pós no meio ≤ 2 ms. **Plano B**
-  = rajadas durante a tomada obrigatórias. Deps: T-0.19. Implements: S7.
-- [ ] **T-0.32** **SP-15 (baixo) — ritmo da guia.** O dono lê as falas das cenas 1, 4 e 8 (calibração)
+  = rajadas durante a tomada obrigatórias. Deps: T-0.19, T-0.22. Implements: S7.
+- [ ] **T-0.35** **SP-15 (baixo) — ritmo da guia.** O dono lê as falas das cenas 1, 4 e 8 (calibração)
   e 2, 6 e 10 (verificação), gravando num gravador qualquer, com os WAVs em
   `~/Movies/contrarregra/spikes/SP-15/`, ou com `paths.ffmpeg -f avfoundation` (Microfone liberado,
   `deploy.md` D0.3); sintetizar as mesmas com Samantha, Daniel e Reed; aplicar `atempo =
   targetWpm/wpmMedido` e comparar. Files: `spikes/SP-15.md`, `spikes/sp-15/**`. AC: AC-6.1, AC-6.2.
   Done: erro previsto × lido ≤ 10 % nas três cenas de verificação. **Plano B** = permanência =
   palavras ÷ wpm do dono. Deps: T-0.1. Implements: S6. [P]
-- [ ] **T-0.33** **SP-16 (baixo) — simulador.** Build do runner para simulador (`build-for-testing
+- [ ] **T-0.36** **SP-16 (baixo) — simulador.** Build do runner para simulador (`build-for-testing
   -destination 'generic/platform=iOS Simulator'`) e transporte pelo loopback do Mac; build Release de
   simulador do Hagah (D3.5, entregue pelo dono ou por uma sessão do Hagah); `simctl io recordVideo`
   (quadros variáveis? áudio?); mesmos rótulos que no aparelho. Files: `spikes/SP-16.md`,
   `spikes/sp-16/**`. AC: AC-11.3 (método). Done: erro de mapeamento ≤ 17 ms em `pts_time`; diferenças
   de rótulo listadas. **Plano B** = ensaiar no aparelho sem gravar (`--mode dry`, quando existir).
-  Deps: T-0.8, T-0.10. Implements: S11. [P]
-- [ ] **T-0.34** **SP-17 (baixo) — puxar o registro e abrir link.** `devicectl device copy from
+  Deps: T-0.22, T-0.28. Implements: S11.
+- [ ] **T-0.37** **SP-17 (baixo) — puxar o registro e abrir link.** `devicectl device copy from
   --domain-type appDataContainer --domain-identifier <runner>.xctrunner` com o runner vivo e parado;
   `XCUIDevice.shared.system.open(hagah://bible/ENGNIV/PSA/1)` pelo runner (mesmo PID do Hagah? pede
   confirmação?). Files: `spikes/SP-17.md`, `spikes/sp-17/**`. AC: —. Done: arquivo idêntico em ≤ 5 s nos
   dois estados; comportamento do link documentado. **Plano B** = `events.fetch` pelo canal; preparo só
   pela UI. Deps: T-0.11. Implements: S4 item 4, S12 item 2.
-- [ ] **T-0.35** **SP-18 (baixo, só se ❓ Q-6 = sim) — cabine.** Laço de 10 cliques no Chrome
+- [ ] **T-0.38** **SP-18 (baixo, só se ❓ Q-6 = sim) — cabine.** Laço de 10 cliques no Chrome
   (AudioWorklet) e com `ffmpeg -f avfoundation` (caminho fixado), fone com fio e alto-falante
   embutido; Microfone liberado ao Chrome e ao processo que roda o ffmpeg (`deploy.md` D0.3). Files:
   `spikes/SP-18.md`, `spikes/sp-18/**`. AC: AC-10.8. Done: p95 ≤ 20 ms depois de uma calibração.
   **Plano B** = só ffmpeg + palma. Deps: T-0.1. Implements: S10 item 3. [P]
-- [ ] **T-0.36** Consolidar a Fase 0: atualizar `architecture.md` A10/A11 com o caminho escolhido por
+- [ ] **T-0.39** Consolidar a Fase 0: atualizar `architecture.md` A10/A11 com o caminho escolhido por
   spike; levar ao dono, num G1, Q-5 (d, f), Q-8, Q-9 e, se ainda não decididas num G1 imediato
   (`requirements.md` §5), Q-12 e Q-13, com os números; emitir G1 para cada mudança de comportamento
   que os spikes exigirem (ex.: pontos de controle `who: runner`, pausas de áudio na coreografia do
   Hagah, variante da folha em AC-13.6, prova da sincronia); atualizar as estimativas desta página e
   `bundle.displayNames`. Files: `spec/architecture.md`, `spec/tasks.md`, `spec/spec.md` e
   `spec/requirements.md` (só via G1). AC: —. Done: todo spike aplicável com decisão; G1 respondidos.
-  Deps: T-0.16…T-0.34, e T-0.35 se Q-6 = sim. Implements: P-6.
+  Deps: T-0.16…T-0.37, e T-0.38 se Q-6 = sim. Implements: P-6.
 
 ## Fase 1 — Esqueleto ambulante
 **Objetivo:** a fatia mais fina por todas as camadas: coreografia de uma cena (cena 1 do Hagah: tela
@@ -432,17 +452,18 @@ e `sync.json` calculado · **Data-alvo:** D+11 · **Sinal de atraso:** integraç
 
 ## Fase 2 — Runner, transporte e exploração
 **Objetivo:** todas as operações de S1 e o transporte de S2 completos; ferramentas MCP de exploração.
-· **Seções:** S1, S2, S8 (exploração) · **Portão:** AC-1.1…AC-1.23, exceto AC-1.5 se Q-5b/c = não,
-AC-1.9 se Q-5a = não e AC-1.23 (Fase 3, que traz os pontos de controle); AC-1.10 e AC-1.18 sempre;
+· **Seções:** S1, S2, S8 (exploração) · **Portão:** AC-1.1…AC-1.24, exceto AC-1.5 se Q-5b/c = não,
+AC-1.9 se Q-5a = não, e AC-1.8 e AC-1.23 (Fase 3, que traz as seções da coreografia e os pontos de
+controle); AC-1.10 e AC-1.18 sempre;
 AC-2.1…AC-2.3, AC-2.5…AC-2.9 (AC-2.4 e AC-2.10 dependem do pré-voo: Fase 5); AC-8.1…AC-8.3 ·
 **Data-alvo:** D+14 · **Sinal de atraso:** APIs privadas exigindo mais que PX-1…PX-6.
 
 ## Fase 3 — Coreografia, execução, pontos de controle e guia
 **Objetivo:** formato completo, executor com prazos absolutos, espera de alvo, blocos e repetição,
 pausas/retomadas, pontos de controle com aviso, faixa-guia. · **Seções:** S0.4, S3, S4, S5, S6 ·
-**Portão:** AC-0.2, AC-0.3, AC-0.7, AC-1.23, AC-3.1…AC-3.4, AC-3.8, AC-4.1…AC-4.10, AC-5.1…AC-5.7,
-AC-6.1…AC-6.4 (AC-6.2 como procedimento com o dono) · **Data-alvo:** D+18 · **Sinal de atraso:**
-atraso de prazo p95 > 20 ms.
+**Portão:** AC-0.2, AC-0.3, AC-0.7, AC-1.8, AC-1.23, AC-3.1…AC-3.4, AC-3.8, AC-4.1…AC-4.10,
+AC-5.1…AC-5.7, AC-6.1…AC-6.4 (AC-6.2 como procedimento com o dono) · **Data-alvo:** D+18 · **Sinal de
+atraso:** atraso de prazo p95 > 20 ms.
 
 ## Fase 4 — Gravação, sincronia e saídas
 **Objetivo:** OBS completo (guarda de perfil, guarda de disco, finalização), alinhamento em três elos

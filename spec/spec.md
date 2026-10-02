@@ -72,7 +72,7 @@ quando não há primário (ex.: `{type: tabBar}`). **Modificadores**: `app`, `wi
 
 | Campo | Tipo | Sentido |
 |---|---|---|
-| `ref` | string | nome de um alvo do catálogo `targets:` da coreografia |
+| `ref` | string | nome de um alvo do catálogo `targets:` da coreografia; fora de coreografia (exploração), também um `@e<n>` da árvore atual (S0.6; de outro `treeVersion` → `E_TARGET_NOT_FOUND`), que `choreo validate` recusa |
 | `app` | string | `target` (padrão: o app alvo), `springboard`, `controlcenter` (= SpringBoard), `authkit` (= `com.apple.AuthKitUIService`), ou um bundle id de `apps.allowed` |
 | `label` / `labelPrefix` / `labelContains` | string | rótulo de acessibilidade exato / começo / trecho |
 | `identifier` | string | identificador de acessibilidade |
@@ -221,7 +221,7 @@ Evento (uma linha de `events.ndjson`, no aparelho e no Mac; reunidos em `events.
 {"seq": 41, "kind": "step.end", "sceneId": "s02", "stepId": "s02.play", "action": "tap",
  "target": {"label": "Play"}, "caption": "Toca play no mini-player",
  "tDevStartNs": "…", "tDispatchNs": "…", "tDevEndNs": "…", "tDevUptimeNs": "…",
- "tMacNs": "…", "tPredRawS": 31.391, "tRecS": 31.452, "tFinalS": 27.118, "tVideoObservedS": 27.133,
+ "tMacNs": "…", "tPredRawS": 31.391, "tRecS": 31.452, "tFinalS": 24.452, "tVideoObservedS": 24.467,
  "detectScore": 21.8, "status": "ok", "lateMs": 3, "path": "private", "detail": {}}
 ```
 
@@ -231,7 +231,9 @@ Evento (uma linha de `events.ndjson`, no aparelho e no Mac; reunidos em `events.
 primeiro plano**), `runner.reconnect`, `sync.burst`, `obs.state`, `obs.chapter`, `intervention`,
 `take.pause`, `take.resume`, `take.end`, `take.abort`. Tempos D/M como string decimal (inteiros de
 64 bits); R/F em segundos com 3 casas. `tPredRawS` e `tRecS` estão em R; `tFinalS` e
-`tVideoObservedS`, em F (F = R − `trim.startR`; S7 itens 4–6).
+`tVideoObservedS`, em F (F = R − `trim.startR`; S7 itens 4–6). Eventos de `prepare`/`cleanup` levam
+`sceneId: "prepare"` ou `"cleanup"` e ficam fora de `events.json.scenes`; `take.start` e `take.end`
+delimitam a seção `scenes` (S4).
 
 `events.json` = `{schema: "contrarregra.events/1", take: TakeManifest, clock: SyncReport,
 trim: {startR, endR, leadInS}, scenes: [{id, title, startF, endF, guideS, holdS, checkpointsS,
@@ -247,6 +249,7 @@ overrunMs}], checkpoints: [...], events: [Event]}`.
 | `choreo.json` | a coreografia compilada usada |
 | `preflight.json` | relatório do pré-voo (S12) |
 | `status.json`, `events.ndjson` | estado vivo (`{schema: "contrarregra.status/1", …}`, com batimento do supervisor) e eventos durante a tomada |
+| `sever.json`, `command.json` | pedidos ao supervisor (S2 item 8; S8 item 5), apagados depois de lidos |
 | `recording.mp4` | o arquivo do OBS, intocado |
 | `rehearsal.mov` | o vídeo do ensaio no simulador (S11), no lugar de `recording.mp4` |
 | `events.json`, `sync.json` | eventos finais e relatório de sincronia (S7) |
@@ -309,8 +312,8 @@ por amostragem do centro de cada célula.
    para sair da frente, **só então** abre o servidor (S2) e gira o run loop principal até
    `runner.shutdown`. Tempo limite de teste desligado (`-test-timeouts-enabled NO`). Falhas do XCTest
    não derrubam o teste: `continueAfterFailure = true`, `record(_:)` só registra, e todo alvo é
-   resolvido antes de agir (S0.2); PX-4 só com ❓ Q-5d. Se mesmo assim o método terminar, o Mac o
-   religa fora de tomada (S2).
+   resolvido antes de agir (S0.2); PX-4 só com ❓ Q-5d. Se mesmo assim o método terminar, o runner
+   cai e nada o religa sozinho (S2 item 7).
 3. **Duas filas.** *Fila de controle* (fora da main thread): `session.hello`, `health`,
    `clock.ping`, `choreo.status`, `choreo.abort`, `events.fetch` — nunca espera o XCTest. *Fila do
    XCTest* (main thread, serial): tudo que toca a UI. Prazo padrão ⚠️ 10 s por comando (`ui.tree`
@@ -363,14 +366,15 @@ por amostragem do centro de cada célula.
    botão lateral). `device.wake` acende a tela travada sem destravar (um `press(.home)` com a tela
    travada; o SP-7 confirma; plano B: ponto de controle "aperte o botão lateral sem olhar para o
    iPhone"). Estado de bloqueio pela notificação `com.apple.springboard.lockstate`.
-9. **Nada da ferramenta na tela.** Durante a tomada o runner nunca ativa o hospedeiro nem a si mesmo;
-   desliga as capturas automáticas do XCTest pelos meios documentados (`-collect-test-diagnostics
-   never` e, no `.xctestrun`, `SystemAttachmentLifetime`/`UserAttachmentLifetime = keepNever` e
-   `PreferredScreenCaptureFormat = screenshots`); não anuncia Bonjour; durante a seção `scenes` (de
-   `choreo.run {section: scenes}` até `take.end`; S4) recusa `press volumeUp/volumeDown` (mostram o
-   HUD), `app.launch` e `app.openURL` (`E_FORBIDDEN_IN_TAKE`); emite `device.state` a cada troca do app em primeiro plano. O aviso do
-   iOS "Automation Running — Hold both volume buttons to stop" aparece enquanto há sessão de
-   automação; se ele entra na captura USB é o **SP-1**, e o tratamento é ❓ Q-9.
+9. **Nada da ferramenta na tela.** Durante a tomada o runner nunca ativa o hospedeiro nem a si
+   mesmo; desliga as capturas automáticas do XCTest pelos meios documentados
+   (`-collect-test-diagnostics never` e, no `.xctestrun`,
+   `SystemAttachmentLifetime`/`UserAttachmentLifetime = keepNever` e `PreferredScreenCaptureFormat =
+   screenshots`); não anuncia Bonjour; durante a seção `scenes` (de `choreo.run {section: scenes}`
+   até `take.end`; S4) recusa `press volumeUp/volumeDown` (mostram o HUD), `app.launch` e
+   `app.openURL` (`E_FORBIDDEN_IN_TAKE`); emite `device.state` a cada troca do app em primeiro
+   plano. O aviso do iOS "Automation Running — Hold both volume buttons to stop" aparece enquanto há
+   sessão de automação; se ele entra na captura USB é o **SP-1**, e o tratamento é ❓ Q-9.
 10. **Idioma, geometria, texto e aparência** são lidos pelo próprio runner (`Locale`, tela em
     pontos, categoria de tamanho de texto e estilo da interface do seu processo) e expostos em
     `device.state`.
@@ -379,7 +383,8 @@ por amostragem do centro de cada célula.
     `app.urlPrefixes` da coreografia carregada e `urls.allowedPrefixes`. No SpringBoard, só o ícone
     do app alvo (`app.iconLabel`), a Central de Controle e o interruptor do modo avião; na tela
     travada, só o arrasto de destravar, dentro de um ponto de controle `who: runner` e depois de
-    `{locked: false}` (no build `Spike`, também o `spike.unlockDrag` do SP-7, com a mesma condição).
+    `{locked: false}` (no build `Spike`, também o `spike.unlockDrag` do SP-7, com a condição
+    `{locked: false}`, fora de ponto de controle).
     Essas regras restringem **ações** (toque, arrasto, digitação, abrir app ou link). **Leituras**
     (`ui.find` e condições) no SpringBoard só alcançam os ícones da página onde está o ícone do app
     alvo (PF-12), os controles da Central de Controle e os controles de mídia da tela travada; nunca
@@ -387,7 +392,11 @@ por amostragem do centro de cada célula.
     do Sign in with Apple (`authkit`), só `ui.find`/`ui.tap` de botões (ex.: "Continue") — nunca
     `ui.type`, `ui.tree`, `ui.ocr` nem `screen.shot`, para nome e e-mail da conta Apple não saírem do
     aparelho. Fora disso, `E_FORBIDDEN_APP`; e `ui.*` com o app em primeiro plano fora da lista também
-    é recusado.
+    é recusado. No iPhone físico, Ajustes, Telefone, Mensagens, Mail, Wallet e as lojas
+    (`com.apple.Preferences`, `com.apple.mobilephone`, `com.apple.MobileSMS`, `com.apple.mobilemail`,
+    `com.apple.Passbook`, `com.apple.AppStore`, `com.apple.MobileStore`) nunca entram na lista: como
+    app alvo de `choreo.load`, como `app.explore` ou em `apps.allowed`, o runner os recusa com
+    `E_FORBIDDEN_APP` (P-3); só o build de simulador os aceita (AC-3.7).
 
 **API / Interface**
 - WebSocket no loopback do aparelho, porta `runner.port`; primeira mensagem obrigatória
@@ -475,13 +484,17 @@ por amostragem do centro de cada célula.
 - **AC-1.20** Given o runner observando, when o app em primeiro plano muda (Hagah → SpringBoard), then
   um evento `device.state` com o novo `foregroundApp` é emitido em ≤ 1 s.
 - **AC-1.21** Given o áudio do app alvo tocando e a tela travada e apagada, when `device.wake` é chamado com ninguém olhando para o
-  iPhone, then a tela acende na tela travada (`locked` continua `true`) e os controles de mídia
-  aparecem na árvore do SpringBoard.
+  iPhone, then a tela acende na tela travada (`locked` continua `true`) e `ui.find` acha os controles
+  de mídia da tela travada no SpringBoard.
 - **AC-1.22** Given nenhuma coreografia carregada e `app.explore = app.kifactory.hagah`, when
   `ui.tree` é pedido com o Hagah à frente, then responde a árvore (sem `E_FORBIDDEN_APP`).
 - **AC-1.23** Given a tela travada com `locked: false` depois do Face ID, when um ponto de controle
   `who: runner` faz o arrasto de destravar, then não há `E_FORBIDDEN_APP`; Given `locked: true`, then
   o mesmo arrasto responde `E_FORBIDDEN_APP`.
+- **AC-1.24** Given o runner no iPhone físico, when `choreo.load` recebe uma coreografia com
+  `app.bundleId: com.apple.Preferences`, ou chega `ui.tree` com Ajustes à frente e `app.explore =
+  com.apple.Preferences`, then a resposta é `E_FORBIDDEN_APP` e nada é operado; Given o runner no
+  simulador, when a mesma coreografia é carregada, then é aceita (AC-3.7).
 
 ---
 
@@ -513,22 +526,25 @@ por amostragem do centro de cada célula.
 3. **Duas conexões e um dono**: `control` (comandos e eventos) e `sync` (só `clock.ping`, sem
    capturas para não sofrer bloqueio de fila). O runner aceita **um** `control` por vez; uma segunda
    recebe `E_BUSY`. A CLI e o MCP abrem `control` **por comando** (hello → chamada → fecha); o
-   supervisor da tomada segura `control` a tomada inteira, sob um arquivo de trava por aparelho;
+   supervisor da tomada segura `control` a tomada inteira, sob um arquivo de trava por aparelho
+   (`paths.cache/locks/<udid>.lock`);
    comandos de exploração durante a tomada recebem `E_BUSY` com o `takeId`.
 4. **Duas linhas de vida independentes**: a sessão do XCTest (túnel CoreDevice do `xcodebuild`)
    mantém o runner vivo; o usbmux carrega os comandos. Se a sessão do XCTest cair, o runner morre;
    se só o usbmux cair, o runner segue e a tomada continua no aparelho.
-5. **Exigência de cabo** ✅ (HC-4): para tomada, `devicectl list devices --json-output <arquivo>`
-   tem de mostrar `transportType = "wired"` e `tunnelState = "connected"`; com `localNetwork`, o
-   pré-voo falha e ensina o procedimento de forçar o cabo (Wi-Fi do iPhone desligado em Settings por
-   10 s e religado — SP-2).
+5. **Exigência de cabo** ✅ (HC-4): para tomada, `devicectl list devices --json-output <arquivo>` tem
+   de mostrar `transportType = "wired"` e `tunnelState = "connected"`; com `localNetwork`, o pré-voo
+   falha (PF-03, `E_NOT_WIRED`) e ensina o procedimento de forçar o cabo (Wi-Fi do iPhone desligado
+   em Settings por 10 s e religado — SP-2).
 6. **Reconexão**: batimento a 1 Hz; 3 faltas = caiu. Reconecta com recuo exponencial até 2 s;
    depois de reconectar: `session.hello`, `events.fetch {sinceSeq}` com o último evento recebido, e
    uma rajada de sincronia (S7). Sem cabo, comandos que falam com o aparelho falham rápido com "ligue
    o cabo" (`E_NO_USB`).
-7. **Supervisor do runner**: se o `xcodebuild` sai, o Mac registra e marca o runner como caído; fora
-   de tomada religa sozinho; **durante tomada nunca religa** (religar põe o runner na frente da tela,
-   P-4): a tomada aborta (E-2.6). O caso "a sessão não sobrevive ao modo avião" é o SP-2 (❓ Q-12).
+7. **Runner caído**: se o `xcodebuild` sai, o Mac registra e marca o runner como caído; `runner
+   status` e todo comando seguinte veem o pid morto e respondem `E_RUNNER_DOWN` com a dica `runner
+   up`. Nada religa sozinho: fora de tomada, quem religa é o dono ou o agente (`runner up`);
+   **durante tomada nunca religa** (religar põe o runner na frente da tela, P-4): a tomada aborta
+   (E-2.6). O caso "a sessão não sobrevive ao modo avião" é o SP-2 (❓ Q-12).
 8. **Gancho de teste**: `contrarregra runner sever --for <s>` acha o dono da conexão `control` (o
    supervisor, pelo arquivo de trava do aparelho, ou o próprio processo fora de tomada) e lhe pede,
    por um arquivo `sever.json {forS}` na pasta da tomada mais `SIGUSR1`, que feche os próprios
@@ -732,8 +748,9 @@ scenes:
 - **E-3.4** `record_step` sem ação anterior bem-sucedida → erro claro, nada gerado.
 
 **Acceptance Criteria (Given/When/Then)**
-- **AC-3.1** Given `choreographies/fixtures/s02-s07.choreo.yaml` (o cabeçalho de S0.4 + as cenas 2 e
-  7 acima sem alteração), when `choreo validate` roda, then sai com 0 erros.
+- **AC-3.1** Given `choreographies/fixtures/s02-s07.choreo.yaml` (o cabeçalho de S0.4 com `prepare` e
+  `cleanup` vazios, os dois catálogos `targets` acima fundidos e as cenas 2 e 7 acima, sem alteração,
+  numa única lista `scenes`), when `choreo validate` roda, then sai com 0 erros.
 - **AC-3.2** Given uma cena com `press {button: volumeUp}` ou `app {action: launch}` do app alvo,
   when validada, then falha citando a regra de tomada.
 - **AC-3.3** Given `openURL` dentro de `scenes`, when validada, then falha; Given o mesmo em
@@ -782,10 +799,10 @@ scenes:
    evento `intervention`; `choreo.resume {skipStep: false}` (padrão) tenta o passo de novo,
    `{skipStep: true}` segue do seguinte.
 6. **Abortar**: o executor para no ponto atual; o Mac encerra a gravação com o pós-rolo e marca a
-   tomada `aborted`; as saídas de diagnóstico são geradas mesmo assim, e a `cleanup` fica pendente
-   (`cleanupPending: true`) para a próxima `take run` (S12 item 4). Se a tomada abortou com o modo
-   avião ligado (um `checkpoint` de avião ligado sem o de desligar), `take.json` registra
-   `airplaneLeftOn: true` e o Mac avisa o dono para desligá-lo.
+   tomada `aborted`; as saídas de diagnóstico são geradas mesmo assim e, se `scenes` chegou a
+   começar, a `cleanup` fica pendente (`cleanupPending: true`) para a próxima `take run` (S12 item
+   4). Se a tomada abortou com o modo avião ligado (um `checkpoint` de avião ligado sem o de
+   desligar), `take.json` registra `airplaneLeftOn: true` e o Mac avisa o dono para desligá-lo.
 7. **Modo `dry`**: executa a coreografia no aparelho sem gravar (para ensaiar no iPhone).
 
 **API / Interface**
@@ -817,8 +834,9 @@ scenes:
   toque, no aparelho, when roda, then p95(`lateMs`) ≤ 20 ms e o máximo ≤ 50 ms.
 - **AC-4.3** Given um passo com `cue: 2`, when a cena roda, then `step.start` desse passo é ≥ o início
   da frase 2 na guia.
-- **AC-4.4** Given `runner sever --for 60` no início da cena 9, when a coreografia segue, then todos os
-  passos executam e o Mac recupera depois a sequência completa de eventos.
+- **AC-4.4** Given uma coreografia de fixture com ≥ 90 s e `runner sever --for 60` no início da sua
+  2.ª cena, when a coreografia segue, then todos os passos executam e o Mac recupera depois a sequência
+  completa de eventos.
 - **AC-4.5** Given um passo com `expect` que nunca fica verdadeiro e `onFail: pause`, when o prazo
   estoura, then o executor pausa e emite `step.fail` e `take.pause`; Given `choreo.resume {skipStep:
   true}`, then gera `intervention` e continua do passo seguinte; Given `{skipStep: false}`, then o
@@ -869,7 +887,7 @@ scenes:
 - **E-5.1** A condição já é verdadeira ao chegar (ex.: o dono foi rápido) → resolve na primeira
   sondagem, `waitedMs` pequeno, sem aviso sonoro.
 - **E-5.2** O Mac está sem conexão com o runner quando o ponto de controle começa → o runner espera
-  igual; o Mac avisa assim que reconecta e lê `choreo.status = checkpoint`.
+  igual; o Mac avisa assim que reconecta e lê `choreo.status.state = checkpoint`.
 - **E-5.3** O Face ID falha e o iOS pede o código → se toques humanos funcionam, a pessoa digita; se o
   SP-1 mostrar que não, o prazo estoura e a tomada pausa (repetir a cena exige nova tomada).
 - **E-5.4** Uma folha de sistema inesperada surge no lugar da esperada → `until` não fica
@@ -972,11 +990,12 @@ scenes:
 5. **Tempo de cada evento no vídeo**: `tRecS` = α + (1+β)·`tPredRawS` (em R; ajuste com todos os
    passos detectados); `tFinalS` = `tRecS` − `trim.startR` (em F). `events.json` guarda `tPredRawS`,
    `tRecS`, `tFinalS`, o observado (`tVideoObservedS`, em F) e `detectScore`.
-6. **Medida da meta ±100 ms (SM-2)**: erro do passo *i* = |`tVideoObservedS`ᵢ − (V̂₋ᵢ − `trim.startR`)|,
-   onde V̂₋ᵢ (em R) vem do ajuste (α, β) feito **sem** o passo *i* (deixa um de fora), sobre os passos
-   `visual: true` detectados (mínimo 10); meta: mediana ≤ 50 ms e máximo ≤ 100 ms. `sync.json` também traz o erro sem a correção
-   visual (só θ, T0 e a latência medida no SP-6), para expor viés. Tomada fora da meta: `syncOk:
-   false` e não é entregue sem o sim do dono (P-5).
+6. **Medida da meta ±100 ms (SM-2)**: erro do passo *i* = |`tVideoObservedS`ᵢ − (V̂₋ᵢ −
+   `trim.startR`)|, onde V̂₋ᵢ (em R) vem do ajuste (α, β) feito **sem** o passo *i* (deixa um de
+   fora), sobre os passos `visual: true` detectados (mínimo 10); meta: mediana ≤ 50 ms e máximo ≤
+   100 ms. `sync.json` também traz o erro sem a correção visual (só θ, T0 e a latência medida no
+   SP-6), para expor viés. Tomada fora da meta: `syncOk: false` e não é entregue sem o sim do dono
+   (P-5).
 7. **Calibração dedicada** (só manutenção/spike, nunca numa tomada): `contrarregra sync calibrate`
    lança o hospedeiro por `devicectl device process launch`, grava 10 min do relógio (S0.10) no OBS,
    decodifica os quadros e mede a distribuição da latência de captura com e sem "Use Buffering"; ao
@@ -1042,6 +1061,10 @@ scenes:
 | `wait_for {condition, timeoutMs}` | `wait-for` | `runner_up`, `runner_down`, `runner_status` | `runner up\|down\|status` |
 | `batch {steps, stopOnError}` | `batch --file` | `rehearse_start` | `rehearse --detach` |
 
+   `zoom {region}` devolve a captura nativa (PNG em px) só da região dada em pontos, para ler detalhes
+   pequenos; `batch {steps, stopOnError}` executa passos no formato de S0.4 (sem `checkpoint`, `cue` e
+   `hold`), em ordem, pela conexão de exploração, e devolve um resultado por passo, parando no
+   primeiro erro se `stopOnError`.
    Só na CLI: `runner build|logs|sever`, `obs setup`, `guide calibrate|play`, `sync
    measure|calibrate`, `booth`, `takes prune` (G4, com o dono; ❓ Q-14).
 3. **Captura para o Claude Code**: JPEG em pontos (390×844, qualidade ⚠️ 0,8, ≤ 150 KB) mais uma
@@ -1052,11 +1075,15 @@ scenes:
 4. **Árvore**: formato compacto, só visíveis, com `_meta['anthropic/maxResultSizeChars'] = 200000`.
 5. **Tomadas longas**: `take_start` cria um **supervisor destacado** (processo próprio) que roda a
    tomada, segura a conexão `control` e escreve `status.json` (com batimento de 1 Hz: pid e tempo
-   monotônico) e `events.ndjson`; o MCP só lê esses arquivos. Reiniciar o MCP não interrompe a tomada;
-   `take_status` reencontra o supervisor pelo `takeId` e confere o batimento. Um **vigia** (processo
-   filho do supervisor) e também `take_status`, `take_wait` e `doctor` checam o batimento: velho há
-   mais de 10 s com `GetRecordStatus.outputActive = true` → `StopRecord`, espera a finalização,
-   `choreo.abort` e `take.json` `status: failed`, `cause: supervisor-lost`.
+   monotônico) e `events.ndjson`; o MCP só lê esses arquivos e fala com o supervisor por arquivo:
+   `take_resume`/`take_abort` (e `take resume|abort` na CLI) gravam `command.json {op: resume|abort,
+   skipStep?, reason?}` na pasta da tomada e mandam `SIGUSR2` ao pid de `status.json`; o supervisor
+   repassa ao runner (`choreo.resume`/`choreo.abort`) e apaga o arquivo. Reiniciar o MCP não
+   interrompe a tomada; `take_status` reencontra o supervisor pelo `takeId` e confere o batimento. Um
+   **vigia** (processo filho do supervisor) e também `take_status`, `take_wait` e `doctor` checam o
+   batimento: velho há mais de 10 s → se `GetRecordStatus.outputActive = true`, `StopRecord` e espera a
+   finalização; sempre `choreo.abort` (se o runner responder) e `take.json` `status: failed`, `cause:
+   supervisor-lost` e, se `scenes` chegou a começar, `cleanupPending: true`.
 6. **Instruções do servidor** (≤ 2.048 caracteres, regra principal primeiro): opere o iPhone físico
    para gravar demos; prefira `@eN` e rótulos a coordenadas; nunca digite credenciais nem peça
    senha; não capture fora do app alvo; tomada = `take_start` + `take_wait`.
@@ -1130,14 +1157,16 @@ scenes:
    fechar a conexão rejeita os pendentes; pedidos dependentes esperam a resposta do anterior (o
    servidor processa fora de ordem). **Antes de qualquer pedido que escreve** (`SetRecordDirectory`,
    `SetInputSettings`, `SetProfileParameter`, `SetVideoSettings`, `CreateInput`, `StartRecord`,
-   `CreateRecordChapter`), confere `GetProfileList.currentProfileName = obs.profile` e
+   `CreateRecordChapter` e cada lote `SerialFrame` das marcas, que liga e desliga a fonte "Sync Flash"
+   com `SetSceneItemEnabled`), confere `GetProfileList.currentProfileName = obs.profile` e
    `GetSceneCollectionList.currentSceneCollectionName = obs.collection`; se não, `E_OBS_CONFIG` e
    nada é escrito. Se o OBS estiver aberto noutro perfil, o pedido ao dono é fechar o OBS; a
    ferramenta o reabre com `open -a OBS --args --profile Contrarregra --collection Contrarregra
    --disable-shutdown-check --disable-missing-files-check` só quando não há processo do OBS.
 3. **Fonte viva**: antes de gravar, `GetSceneItemTransform` tem de dar 1170×2532 e
-   `GetSourceScreenshot` não pode ser preta; senão, "chuta" a fonte (`SetInputSettings {device}` com o
-   valor resolvido no item 1) e espera até 15 s (contorna o bug #12062 do OBS 31).
+   `GetSourceScreenshot` não pode ser preta; senão, "chuta" a fonte (`SetInputSettings {device}` com
+   o valor resolvido no item 1) e espera até 15 s (contorna o bug #12062 do OBS 31); sem fonte viva
+   depois disso, `E_OBS_SOURCE`.
 4. **Disco**: antes de gravar, `fs.statfs` na pasta e `GetStats.availableDiskSpace`; exige livre ≥
    `max(disk.minFreeGiB, 3 × estimativa + 2 GiB)` (HC-11; estimativa = bitrate × duração prevista da
    coreografia × 1,25; o 3 cobre a gravação, `review.mp4` e `final.mp4`; ❓ Q-14). Durante, consulta a
@@ -1148,10 +1177,10 @@ scenes:
    cada `scene.start`, `CreateRecordChapter {chapterName: "NN — título"}` (navegação; os capítulos
    finais são regenerados, S10). Durante: `GetOutputStatus {outputName: "adv_file_output"}` a 4 Hz
    (quadros totais e pulados). Fim: pós-rolo → `StopRecord` → espera `STOPPED` → espera a
-   **finalização**: tamanho estável por 500 ms e `ffprobe -show_chapters` com a contagem esperada (nº
-   de `CreateRecordChapter` aceitos + 1 capítulo automático em 0, "Start" ou "Iniciar" conforme o
-   idioma do OBS), ou a linha "MP4 file output complete" do registro do OBS; prazo 60 s → renomeia
-   para `recording.mp4`.
+   **finalização**: tamanho estável por 500 ms e `ffprobe -show_chapters` com a contagem esperada
+   (nº de `CreateRecordChapter` aceitos + o capítulo automático em 0, se o OBS o criar, "Start" ou
+   "Iniciar" conforme o idioma do OBS), ou a linha "MP4 file output complete" do registro do OBS;
+   prazo 60 s → renomeia para `recording.mp4`.
 6. **Validade**: quadros pulados (render ou saída) > 0 durante a tomada → `take.json` `obsStats`
    registra e a tomada fica marcada para revisão.
 7. **Plano B** ✅ (ADR-4): QuickTime manual gravando o iPhone (o dono inicia e para); os capítulos vêm
@@ -1222,7 +1251,8 @@ scenes:
      início da cena 1, **sem edit list** (o trecho extra, `trim.leadInS` ≤ 1 s, só mostra a tela de
      início parada do pré-rolo), termina no fim da última cena, com os capítulos de `chapters.ffmeta`, só
      a faixa de áudio 1.
-2. **Mixagem** (`contrarregra mix <takeDir> [--voice voice.wav] [--offset-ms N] [--debug-stems]`): a
+2. **Mixagem** (`contrarregra mix <takeDir> [--voice voice.wav] [--offset-ms N] [--debug-stems]
+   [--force]`; `--force` só para tomada `aborted`/`failed`, E-10.2): a
    voz do dono (padrão `voice.wav` da pasta, com `voice.json`) entra com `adelay` (nunca `-itsoffset`
    com filtros); o áudio do app é abaixado sob a voz por `sidechaincompress` alimentado por uma cópia
    limitada da voz (profundidade estável, ⚠️ 8–12 dB, razão 3); `amix` sem normalizar; `loudnorm` em
@@ -1348,8 +1378,10 @@ scenes:
 | PF-16 | aparelho com rede: `device.state.network = online` (modo avião desligado) | auto |
 | PF-17 | a tomada anterior terminou com `cleanupPending: false` e todas as `assert` da `cleanup` dela passaram; o dono confirma cada item de `confirm` da coreografia (S0.4; no Hagah, S13 item 6) | auto + humano |
 
-   O relatório sai em `preflight.json`; qualquer `fail` impede a gravação; `human` exige a
-   confirmação do dono (CLI/MCP `take preflight --confirm PF-11`).
+   O relatório sai em `preflight.json`; qualquer `fail` impede a gravação (`E_PREFLIGHT`, com os ids
+   que falharam); `human` exige a confirmação do dono (`take preflight <choreo> --confirm PF-11`; MCP
+   `take_preflight {choreography, confirm: ["PF-11"]}`), guardada com a hora em
+   `paths.cache/confirmations.json` (E-12.1).
 2. **Preparo** (`prepare` da coreografia, executado pelo runner com `choreo.run {section: prepare}`,
    sem gravar): leva o app alvo ao estado inicial do vídeo e
    **verifica** com `assert`. Pode usar `openURL` e `terminate`. Antes de apagar dado do app alvo,
@@ -1362,12 +1394,13 @@ scenes:
    tomada repetir o vídeo. Se `{network: offline}`, o primeiro passo é um ponto de controle "desligue
    o modo avião" até `{network: online}`.
 4. **Repetir** (US-16, SM-3): `take run` encadeia limpeza da anterior (se pendente) → pré-voo →
-   preparo → PF-15 → tomada → saídas, sem passos manuais além dos pontos de controle.
+   preparo → PF-15 → tomada → saídas, sem passos manuais além dos pontos de controle. Terminada a
+   limpeza pendente com todas as `assert` passando, o supervisor grava `cleanupPending: false` no
+   `take.json` da tomada anterior (PF-17).
 
 **API / Interface**
-- CLI `contrarregra take preflight [--confirm PF-nn]`, `take run <choreo> [--mode take|dry]
-  [--detach]`; MCP
-  `take_preflight`, `take_start`.
+- CLI `contrarregra take preflight <choreo> [--confirm PF-nn]`, `take run <choreo> [--mode take|dry]
+  [--detach]`; MCP `take_preflight {choreography, confirm?}`, `take_start`.
 
 **Error & Edge Cases**
 - **E-12.1** Confirmação humana com mais de ⚠️ 12 h → expira e é pedida de novo.
@@ -1493,8 +1526,8 @@ scenes:
   `status: "finished"` e `syncOk: true`, `choreo.status` chega a `done` na seção `scenes`,
   `events.json` tem 0 eventos `intervention`, e os únicos `checkpoint.wait` são os do item 6 (SM-1).
 - **AC-13.4** Given uma tomada completa, when `events.json` é lido, then não há `device.state` com
-  `foregroundApp` ∈ {hospedeiro, runner} nem comando `device.press volume*` entre `take.start` e
-  `take.end` (SM-6).
+  `foregroundApp` ∈ {hospedeiro, runner} nem comando `device.press volume*` entre o `obs.state` de
+  início e o de fim da gravação (SM-6).
 - **AC-13.5** Given `final.mp4` de uma tomada completa, when inspecionado, then o primeiro quadro mostra
   a tela de início (OCR acha "Hagah Bible"), e entre o `tVideoObservedS` do toque de s01 e o primeiro
   quadro do leitor os `pts` são contínuos (nenhum quadro ausente na abertura).
@@ -1522,4 +1555,4 @@ decidida. Os riscos técnicos sem resposta estão como spikes ordenados por risc
 (SP-1…SP-18). Eles podem mudar o caminho técnico (principal ou plano B) e, em seis casos, levar o
 dono a uma decisão já listada: SP-1 → Q-9; SP-2 → Q-12; SP-4 → Q-13; SP-5 → Q-8; SP-12 → Q-5 (d); e
 AC-1.4 → Q-5 (f). Toda mudança de comportamento que um spike exigir vai ao G1 pela tarefa de consolidação
-(T-0.36).
+(T-0.39).

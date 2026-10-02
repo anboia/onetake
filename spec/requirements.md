@@ -152,7 +152,7 @@ Cada item tem uma proposta padrão, a lista "Onde pesa" e um `❓ Q-n` nos ponto
 arquivos que mudam conforme a resposta.
 **Quando se decide:** Q-1…Q-4, Q-5 (a, b, c, e), Q-6, Q-7, Q-10, Q-11, Q-14, Q-15 e Q-16 na
 ratificação (G1). Q-5 (d, f), Q-8, Q-9, Q-12 e Q-13 dependem de um spike: decidem-se no G1 que a
-tarefa de consolidação da Fase 0 (T-0.36) emite; até lá vale a proposta padrão — exceto quando o
+tarefa de consolidação da Fase 0 (T-0.39) emite; até lá vale a proposta padrão — exceto quando o
 resultado bloqueia os spikes seguintes (Q-13 depois da sonda da T-0.11 ou do SP-4, T-0.19; Q-12 se o
 plano B do SP-2, T-0.17, falhar): aí o G1 é emitido na hora. Para Q-12 e Q-13 a proposta padrão não
 vale antes do G1. Nada aqui bloqueia a estrutura da spec.
@@ -194,11 +194,12 @@ vale antes do G1. Nada aqui bloqueia a estrutura da spec.
   sozinho** (PX-5) — sem ele, o XCTest pode fechar sozinho um alerta de um botão que bloqueie um
   toque; plano B: tratar todo alerta esperado com `expect`; (f) **captura de tela privada em JPEG**
   (PX-6) — só se a captura pública não cumprir AC-1.4. *Proposta:* aceitar **(a), (b), (c) e (e)**
-  na ratificação; (d) e (f) só se o spike pedir (T-0.36). Onde pesa: `spec.md` S0.1, S1 itens 4, 5,
-  8 e E-1.4, AC-1.5/AC-1.9/AC-1.18; `architecture.md` A10; `tasks.md` T-0.18, T-0.24, T-0.29.
+  na ratificação; (d) e (f) só se o spike pedir (T-0.39). Onde pesa: `spec.md` S0.1, S1 itens 4, 5,
+  8 e E-1.4, AC-1.5/AC-1.9/AC-1.18; `architecture.md` A10; `tasks.md` T-0.18, T-0.25, T-0.30,
+  T-0.31.
 - **Q-6 — Cabine de narração na v1.** O pedido a trata como opcional. *Proposta:* **sim, como Fase 8**,
   cortável sem afetar as outras; sem ela, o dono narra em qualquer gravador ouvindo a faixa-guia
-  alinhada e lendo o `.vtt`. Onde pesa: `spec.md` S10 item 3 (AC-10.8, AC-10.9), `tasks.md` T-0.35 e
+  alinhada e lendo o `.vtt`. Onde pesa: `spec.md` S10 item 3 (AC-10.8, AC-10.9), `tasks.md` T-0.38 e
   Fase 8.
 - **Q-7 — TTS pago para a faixa-guia.** O padrão é o `say` do macOS (grátis, local). O Gemini TTS
   que o Hagah usa tem custo e manda o texto das falas a um serviço externo. *Proposta:* **só `say`**

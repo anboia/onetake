@@ -69,12 +69,13 @@
 - O runner e o MCP só operam os apps e links permitidos (o app alvo, `apps.allowed`, os prefixos de
   link permitidos; no SpringBoard, só o ícone do app alvo, a Central de Controle e o botão do modo
   avião; na tela travada, só o arrasto de destravar dentro de um ponto de controle, depois do Face
-  ID — no build `Spike`, também o `spike.unlockDrag` do SP-7, com a mesma condição; na folha do Sign
-  in with Apple, só tocar botões, sem ler a árvore nem capturar a tela). Essa lista vale para
+  ID — no build `Spike`, também o `spike.unlockDrag` do SP-7, só com `{locked: false}`; na folha do
+  Sign in with Apple, só tocar botões, sem ler a árvore nem capturar a tela). Essa lista vale para
   ações; leituras no SpringBoard só acham esses elementos, os ícones da página do app alvo e os
   controles de mídia da tela travada — nunca a árvore inteira do SpringBoard, e nada é capturado com
   a tela travada. O iPhone é pessoal: Ajustes, Telefone, Mensagens, Mail, carteira e lojas estão
-  fora de alcance.
+  fora de alcance — no aparelho físico o runner os recusa mesmo que a coreografia ou a configuração
+  os peça (S1 item 11).
 - O que é gravado fica fora do repositório e nunca entra no git (HC-7): tomadas em
   `~/Movies/contrarregra/`; capturas de exploração, caches e registros da ferramenta em
   `~/Library/Caches/contrarregra/`; saídas de spike em `~/Movies/contrarregra/spikes/`.

@@ -51,7 +51,7 @@ assinatura), Q-11 (versão do iOS: se for atualizar, atualizar **agora**, antes 
 12. Instalar pelo TestFlight o build que vai à revisão (❓ Q-1); ele substitui o build Release de
     desenvolvimento que está no aparelho com o mesmo bundle id. Conferir em Hagah › Settings › About.
 13. Dados do Hagah (❓ Q-15): sincronizar ou exportar o diário antes do SP-8 e do SP-10 da Fase 0
-    (T-0.25, T-0.27), que entram e excluem conta e apagam o diário local; o preparo das tomadas deixa o
+    (T-0.26, T-0.28), que entram e excluem conta e apagam o diário local; o preparo das tomadas deixa o
     app deslogado e com o diário vazio.
 14. Para a cena 7 (❓ Q-2): em Settings › [nome] › Sign-In & Security › Sign in with Apple, confirmar
     que o Hagah **não** está na lista (assim a folha de primeiro cadastro aparece).
@@ -152,7 +152,8 @@ Entregar o `.app` com `--app-path`. É a única exceção de build especial (P-4
 1. OBS aberto no perfil "Contrarregra" com o servidor WebSocket ligado; iPhone no cabo, destravado, em
    inglês, Do Not Disturb ligado.
 2. `bin/contrarregra runner up` (código da automação, se pedido).
-3. `bin/contrarregra take preflight` → resolver o que falhar → confirmar PF-11 e PF-17.
+3. `bin/contrarregra take preflight choreographies/hagah/v8.5-review.choreo.yaml` → resolver o que
+   falhar → confirmar PF-11 e PF-17.
 4. `bin/contrarregra take run choreographies/hagah/v8.5-review.choreo.yaml` (ou `take_start` pelo
    Claude Code). Ficar perto do iPhone, **sem olhar para ele na cena 3 até ser chamado**: o Mac fala
    quando é a vez da pessoa (Face ID, modo avião).

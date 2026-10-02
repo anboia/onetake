@@ -123,7 +123,7 @@ recordVideo` e passos `sim: skip|simulate`.
 |---|---|---|
 | repositório | código, `config/defaults.json`, coreografias YAML, spec, notas de spike (`SP-n.md`) | git |
 | `~/.config/contrarregra/config.json` | configuração da máquina (S0.1), sem segredos | dono |
-| `~/Library/Caches/contrarregra/` | DerivedData do runner, `sessions/*.xctestrun` (0600, apagados no `down`), cache da guia, capturas de exploração (podadas), registros | ferramenta |
+| `~/Library/Caches/contrarregra/` | DerivedData do runner, `sessions/*.xctestrun` (0600, apagados no `down`), `locks/<udid>.lock`, `confirmations.json` (confirmações humanas do pré-voo), cache da guia, capturas de exploração (podadas), registros | ferramenta |
 | `~/Movies/contrarregra/<app>/<takeId>/` | pasta da tomada (S0.8) | ferramenta; fora do git |
 | `~/Movies/contrarregra/spikes/SP-n/` | capturas, quadros e gravações de spike | ferramenta; cada gravação apagada logo depois de medida (um G4 por spike, com o dono) |
 | contêiner do `.xctrunner` no iPhone | `Documents/contrarregra/<takeId>/events.ndjson` | runner |
@@ -327,12 +327,13 @@ nos binários locais).
 | PX-1 | Travar a tela | `-[XCUIDevice pressLockButton]`; `+[XCDeviceEvent deviceEventWithPage:0x0C usage:0x30 duration:0.5]` + `-[XCUIDevice performDeviceEvent:error:]` | `XCUIDevice.Button` só tem home, volume, action, camera | no iOS 27 o `pressLockButton` parou de travar (WDA #1171) | ponto de controle: a pessoa aperta o botão lateral | (a) |
 | PX-2 | Pular a espera de ociosidade | `-[XCUIApplication _performWithInteractionOptions:block:]` (SkipPre/SkipPostEventQuiescence); reserva: troca de `-[XCUIApplicationProcess waitForQuiescenceIncludingAnimationsIdle:isPreEvent:]` | não há chave pública; "Reduce Motion" muda o visual e não para o laço de animação do Hagah | some num Xcode novo; sem a espera, transições não são aguardadas (compensado por `expect`) | toque público aceitando a latência medida, e pausar o áudio antes de toques que não precisam dele | (b) |
 | PX-3 | Evento sintetizado | `XCSynthesizedEventRecord`, `XCPointerEventPath` (`initForTouchAtPoint:offset:`, `moveToPoint:atOffset:`, `liftUpAtOffset:`), `-[XCUIDevice eventSynthesizer]` `synthesizeEvent:completion:` | toques públicos esperam a ociosidade, não têm tempo explícito e só arrastam em linha reta (sem `via`) | cabeçalhos mudaram no Xcode 26 (WDA #1202) | `XCUICoordinate press(forDuration:thenDragTo:withVelocity:thenHoldForDuration:)`; `via` → `E_CAPABILITY_MISSING` | (c) |
-| PX-4 | Não parar o teste em falha | `shouldSetShouldHaltWhenReceivesControl`/`shouldHaltWhenReceivesControl`; troca de `-[XCTIssue shouldInterruptTest]` | só se o SP-12 mostrar que `continueAfterFailure` + `record(_:)` não bastam | baixo | o Mac religa o runner (fora de tomada) | (d) |
+| PX-4 | Não parar o teste em falha | `shouldSetShouldHaltWhenReceivesControl`/`shouldHaltWhenReceivesControl`; troca de `-[XCTIssue shouldInterruptTest]` | só se o SP-12 mostrar que `continueAfterFailure` + `record(_:)` não bastam | baixo | `runner up` de novo (fora de tomada) | (d) |
 | PX-5 | XCTest não tocar alertas sozinho | troca de `-[XCUIApplication doesNotHandleUIInterruptions]` → `YES` | monitores públicos só agem quando um alerta bloqueia, e o tratamento padrão pode fechar alertas de um botão | baixo | `expect` explícito para alertas esperados; o fechamento automático fica registrado | (e) |
 | PX-6 | Captura de tela privada em JPEG | `_XCT_requestScreenshot:withReply:` com `XCTImageEncoding` | só se `XCUIScreen.main.screenshot()` não cumprir AC-1.4 | médio (interface do testmanagerd) | captura pública + recodificar | (f) |
 
 Não é API privada, mas é não documentado: o nome de notificação `com.apple.springboard.lockstate`
-(API pública `notify_register_dispatch`). Plano B: detectar a tela travada pela árvore do SpringBoard.
+(API pública `notify_register_dispatch`). Plano B: inferir pelas leituras permitidas no SpringBoard (S1
+item 11): ícone do app alvo tocável = destravada; controles de mídia da tela travada = travada.
 As chaves de `UserDefaults` `DisableScreenshots`/`DisableDiagnosticScreenRecordings` que o WDA usa
 **não** são usadas enquanto os meios documentados bastarem (S1 item 9). O SP-12 compara uma subida com
 a captura automática ligada × desligada (latência, indicador na captura, atividade de gravação no
