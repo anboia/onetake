@@ -25,7 +25,8 @@ assinatura), Q-11 (versão do iOS: se for atualizar, atualizar **agora**, antes 
    ```
 
 3. Ajustes do Sistema › Privacidade e Segurança: dar **Câmera** e **Microfone** ao OBS (captura do
-   iPhone e do áudio dele).
+   iPhone e do áudio dele). **Microfone** ao Terminal ou ao app do Claude Code (o que rodar
+   `paths.ffmpeg -f avfoundation`) e ao Chrome só para o SP-15/SP-18 ou se Q-6 = sim.
 
 **No iPhone (iOS 26.x; ❓ Q-11)**
 4. Ligar o cabo USB com o iPhone destravado; aceitar "Trust This Computer" e, no Mac, "Permitir
@@ -50,7 +51,7 @@ assinatura), Q-11 (versão do iOS: se for atualizar, atualizar **agora**, antes 
 12. Instalar pelo TestFlight o build que vai à revisão (❓ Q-1); ele substitui o build Release de
     desenvolvimento que está no aparelho com o mesmo bundle id. Conferir em Hagah › Settings › About.
 13. Dados do Hagah (❓ Q-15): sincronizar ou exportar o diário antes do SP-8 e do SP-10 da Fase 0
-    (T-0.19, T-0.21), que entram e excluem conta e apagam o diário local; o preparo das tomadas deixa o
+    (T-0.25, T-0.27), que entram e excluem conta e apagam o diário local; o preparo das tomadas deixa o
     app deslogado e com o diário vazio.
 14. Para a cena 7 (❓ Q-2): em Settings › [nome] › Sign-In & Security › Sign in with Apple, confirmar
     que o Hagah **não** está na lista (assim a folha de primeiro cadastro aparece).

@@ -62,15 +62,19 @@
   de autenticação do sistema. Esses passos são sempre ponto de controle humano.
 - O servidor de comandos do runner escuta **só em loopback no aparelho**, exige o **token de
   sessão** gerado a cada subida, aceita um controlador por vez e não anuncia Bonjour; o Mac só o
-  alcança pelo usbmuxd no aparelho (entrada `USB`; se o SP-4 provar o loopback inalcançável, ❓ Q-13) e,
-  no simulador (S11), pelo loopback do próprio Mac. Exceção registrada fora do nosso controle: o obs-websocket
-  5.6.2 escuta em todas as interfaces do Mac sem opção de loopback — senha forte obrigatória e
-  servidor desligado no OBS fora das sessões de gravação (passo do dono).
+  alcança pelo usbmuxd no aparelho (entrada `USB`; se o SP-4 provar o loopback inalcançável,
+  ❓ Q-13) e, no simulador (S11), pelo loopback do próprio Mac. Exceção registrada fora do nosso
+  controle: o obs-websocket 5.6.2 escuta em todas as interfaces do Mac sem opção de loopback — senha
+  forte obrigatória e servidor desligado no OBS fora das sessões de gravação (passo do dono).
 - O runner e o MCP só operam os apps e links permitidos (o app alvo, `apps.allowed`, os prefixos de
   link permitidos; no SpringBoard, só o ícone do app alvo, a Central de Controle e o botão do modo
   avião; na tela travada, só o arrasto de destravar dentro de um ponto de controle, depois do Face
-  ID; na folha do Sign in with Apple, só tocar botões, sem ler a árvore nem capturar a tela). O
-  iPhone é pessoal: Ajustes, Telefone, Mensagens, Mail, carteira e lojas estão fora de alcance.
+  ID — no build `Spike`, também o `spike.unlockDrag` do SP-7, com a mesma condição; na folha do Sign
+  in with Apple, só tocar botões, sem ler a árvore nem capturar a tela). Essa lista vale para
+  ações; leituras no SpringBoard só acham esses elementos, os ícones da página do app alvo e os
+  controles de mídia da tela travada — nunca a árvore inteira do SpringBoard, e nada é capturado com
+  a tela travada. O iPhone é pessoal: Ajustes, Telefone, Mensagens, Mail, carteira e lojas estão
+  fora de alcance.
 - O que é gravado fica fora do repositório e nunca entra no git (HC-7): tomadas em
   `~/Movies/contrarregra/`; capturas de exploração, caches e registros da ferramenta em
   `~/Library/Caches/contrarregra/`; saídas de spike em `~/Movies/contrarregra/spikes/`.

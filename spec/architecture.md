@@ -100,14 +100,16 @@ permitida e resolve o alvo (árvore, OCR) → `PrivateXCT.synthesize` ou toque p
 tempos D. `record_step` lê o último pedido bem-sucedido e a árvore seguinte e devolve o YAML.
 
 **Tomada (US-6…US-10).** `take_start` → `take/supervisor` (processo destacado, `caffeinate`, vigia
-filho, batimento em `status.json`) → limpeza pendente → pré-voo (S12) → `prepare` pelo runner →
-PF-15 → `choreo compile` (com guia) → `choreo.load` → rajada de sincronia pré pela conexão `sync` →
-OBS (com guarda de perfil): `SetRecordDirectory`, `StartRecord`, espera `STARTED`, pré-rolo com 8
-marcas `SerialFrame` → `choreo.run` → o aparelho executa sozinho; eventos chegam por notificação e vão
-para `events.ndjson`; `scene.start` → `CreateRecordChapter`; `checkpoint.wait` → aviso no Mac → (a
-pessoa age) → o runner segue → … → `take.end` → pós-rolo → `StopRecord` → espera finalização →
-`cleanup` → `events.fetch` (completa buracos) → rajada pós → `align` (marcas + regiões + ajuste) →
-`export` (S10) → `status: finished`. O MCP só lê `status.json`/`events.ndjson`.
+filho, batimento em `status.json`) → limpeza pendente (`choreo.load` do `choreo.json` da tomada
+anterior + `choreo.run {section: cleanup}`) → pré-voo (S12) → `choreo compile` (com guia) →
+`choreo.load` → `choreo.run {section: prepare}` → PF-15 → rajada de sincronia pré pela conexão
+`sync` → OBS (com guarda de perfil): `SetRecordDirectory`, `StartRecord`, espera `STARTED`, pré-rolo
+com 8 marcas `SerialFrame` → `choreo.run {section: scenes}` → o aparelho executa sozinho; eventos
+chegam por notificação e vão para `events.ndjson`; `scene.start` → `CreateRecordChapter`;
+`checkpoint.wait` → aviso no Mac → (a pessoa age) → o runner segue → … → `take.end` → pós-rolo →
+`StopRecord` → espera finalização → `choreo.run {section: cleanup}` → `events.fetch` (completa
+buracos) → rajada pós → `align` (marcas + regiões + ajuste) → `export` (S10) → `status: finished`.
+O MCP só lê `status.json`/`events.ndjson`.
 
 **Pós (US-11…US-13).** `review.mp4` + `subtitles.vtt` + `guide.aligned.wav` → o dono narra (cabine
 ou outro gravador) → `voice.wav` → `mix` → `final.mp4`.
@@ -123,7 +125,7 @@ recordVideo` e passos `sim: skip|simulate`.
 | `~/.config/contrarregra/config.json` | configuração da máquina (S0.1), sem segredos | dono |
 | `~/Library/Caches/contrarregra/` | DerivedData do runner, `sessions/*.xctestrun` (0600, apagados no `down`), cache da guia, capturas de exploração (podadas), registros | ferramenta |
 | `~/Movies/contrarregra/<app>/<takeId>/` | pasta da tomada (S0.8) | ferramenta; fora do git |
-| `~/Movies/contrarregra/spikes/SP-n/` | capturas, quadros e gravações de spike | ferramenta; apagadas por série (G4) |
+| `~/Movies/contrarregra/spikes/SP-n/` | capturas, quadros e gravações de spike | ferramenta; cada gravação apagada logo depois de medida (um G4 por spike, com o dono) |
 | contêiner do `.xctrunner` no iPhone | `Documents/contrarregra/<takeId>/events.ndjson` | runner |
 | Chaveiro do macOS, serviço `contrarregra` | `OBS_WEBSOCKET_PASSWORD` (e, opcionais, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `GEMINI_API_KEY`) | dono cria; ferramenta só lê |
 | `~/Library/Application Support/obs-studio/basic/{profiles,scenes}/Contrarregra*` | perfil e cenas da ferramenta | OBS (criados por `obs setup`) |
@@ -140,7 +142,9 @@ contrarregra/                      # repositório separado em ~/project/contrarr
 ├── package.json                   # "type": "module", engines node ">=22.18 <23", scripts test/typecheck
 ├── tsconfig.json                  # noEmit, allowImportingTsExtensions, erasableSyntaxOnly, verbatimModuleSyntax, module nodenext, target esnext
 ├── .mcp.json                      # servidor "contrarregra" → bin/contrarregra-mcp
-├── .gitignore                     # ios/*.xcodeproj, .build/, node_modules/, mídia (*.mp4 *.mov *.wav *.png *.jpg *.heic), *.xcresult, *.p8, *.p12, *.mobileprovision, *.cer
+├── .gitignore                     # ios/*.xcodeproj, .build/, node_modules/, *.mp4, *.mov, *.wav, *.aiff, *.aif,
+│                                  #   *.m4a, *.caf, *.png, *.jpg, *.jpeg, *.heic, *.xcresult, *.xctestrun, *.log,
+│                                  #   *.ndjson, *.p8, *.p12, *.mobileprovision, *.cer, spikes/sp-*/out/
 ├── bin/contrarregra, bin/contrarregra-mcp   # shims POSIX que acham Node 22.x ≥ 22.18
 ├── config/defaults.json
 ├── mac/src/{core,usbmux,device,runner,choreo,guide,clock,align,obs,media,outputs,mix,booth,take,sim,commands,cli,mcp}/

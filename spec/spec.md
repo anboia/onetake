@@ -116,6 +116,7 @@ app: {bundleId: app.kifactory.hagah, iconLabel: "Hagah Bible", expectVersion: "1
      urlPrefixes: ["hagah://"]}                    # links que o preparo/limpeza podem abrir
 device: {language: en, screenPt: {w: 390, h: 844}, textSize: large, appearance: light}
 guide: {voice: Samantha, targetWpm: 150}          # opcional; senão vem de Config
+confirm: ["…"]                                    # opcional: o que o dono confirma no pré-voo (PF-17)
 targets: {<nome>: Target}                         # catálogo reutilizável
 prepare: [Step]      # roda antes de gravar (não aparece no vídeo)
 scenes:
@@ -133,7 +134,8 @@ expectTimeoutMs?, repeat?, onFail?, optional?, caption?, visual?, sim?}`.
 - `do` ∈ `tap`, `doubleTap`, `longPress {durationMs}`,
   `drag {from, to, via?, pressMs?, velocity?|durationMs?, holdMs?}` (`from`/`to`/`via` são `Point`
   ou `Target`; `velocity` e `durationMs` são excludentes; `via` = pontos intermediários, só com PX-3),
-  `scrollTo {target, within?, direction: down|up, maxSwipes}`, `type {text}`, `press {button: home}`,
+  `scrollTo {target, within?, direction: down|up, maxSwipes}`, `type {text}`,
+  `press {button: home|volumeUp|volumeDown}` (volume só fora de `scenes`, S3 item 1),
   `lock`, `wake`, `home`, `controlCenter {open|close}`, `app {action: activate|terminate|launch}`,
   `openURL {url}`, `wait {ms}`, `waitFor {condition}`, `assert {condition}`, `checkpoint {…}` (S5),
   `block {when?, steps}`, `mark {label}` (só registra), `hold` (segura até a permanência mínima).
@@ -228,7 +230,8 @@ Evento (uma linha de `events.ndjson`, no aparelho e no Mac; reunidos em `events.
 `scene.end` (com `overrunMs`), `device.state` (bloqueio, sono, rede e **toda troca do app em
 primeiro plano**), `runner.reconnect`, `sync.burst`, `obs.state`, `obs.chapter`, `intervention`,
 `take.pause`, `take.resume`, `take.end`, `take.abort`. Tempos D/M como string decimal (inteiros de
-64 bits); R/F em segundos com 3 casas.
+64 bits); R/F em segundos com 3 casas. `tPredRawS` e `tRecS` estão em R; `tFinalS` e
+`tVideoObservedS`, em F (F = R − `trim.startR`; S7 itens 4–6).
 
 `events.json` = `{schema: "contrarregra.events/1", take: TakeManifest, clock: SyncReport,
 trim: {startR, endR, leadInS}, scenes: [{id, title, startF, endF, guideS, holdS, checkpointsS,
@@ -335,7 +338,7 @@ por amostragem do centro de cada célula.
      language, screenPt, textSize, appearance}`.
    - `app.activate|launch|terminate|state {bundleId}`, `app.openURL {url}`.
    - `wait.for {condition, timeoutMs}`.
-   - `choreo.load {choreography, takeId, mode}`, `choreo.run {startAtD?}`, `choreo.pause`,
+   - `choreo.load {choreography, takeId, mode}`, `choreo.run {section, startAtD?}`, `choreo.pause`,
      `choreo.resume`, `choreo.abort`, `choreo.status`, `events.fetch {takeId, sinceSeq}` (S4).
    - `runner.capabilities` (S0.5); `runner.shutdown`.
 5. **Tocar.** Todo toque e arrasto vai a uma coordenada absoluta da tela (o alvo resolvido dá o
@@ -363,9 +366,9 @@ por amostragem do centro de cada célula.
 9. **Nada da ferramenta na tela.** Durante a tomada o runner nunca ativa o hospedeiro nem a si mesmo;
    desliga as capturas automáticas do XCTest pelos meios documentados (`-collect-test-diagnostics
    never` e, no `.xctestrun`, `SystemAttachmentLifetime`/`UserAttachmentLifetime = keepNever` e
-   `PreferredScreenCaptureFormat = screenshots`); não anuncia Bonjour; de `choreo.run` até `take.end` (só
-   durante `scenes`) recusa `press volumeUp/volumeDown` (mostram o HUD), `app.launch` e `app.openURL`
-   (`E_FORBIDDEN_IN_TAKE`); emite `device.state` a cada troca do app em primeiro plano. O aviso do
+   `PreferredScreenCaptureFormat = screenshots`); não anuncia Bonjour; durante a seção `scenes` (de
+   `choreo.run {section: scenes}` até `take.end`; S4) recusa `press volumeUp/volumeDown` (mostram o
+   HUD), `app.launch` e `app.openURL` (`E_FORBIDDEN_IN_TAKE`); emite `device.state` a cada troca do app em primeiro plano. O aviso do
    iOS "Automation Running — Hold both volume buttons to stop" aparece enquanto há sessão de
    automação; se ele entra na captura USB é o **SP-1**, e o tratamento é ❓ Q-9.
 10. **Idioma, geometria, texto e aparência** são lidos pelo próprio runner (`Locale`, tela em
@@ -376,10 +379,15 @@ por amostragem do centro de cada célula.
     `app.urlPrefixes` da coreografia carregada e `urls.allowedPrefixes`. No SpringBoard, só o ícone
     do app alvo (`app.iconLabel`), a Central de Controle e o interruptor do modo avião; na tela
     travada, só o arrasto de destravar, dentro de um ponto de controle `who: runner` e depois de
-    `{locked: false}`. Na folha do Sign in with Apple (`authkit`), só `ui.find`/`ui.tap` de botões
-    (ex.: "Continue") — nunca `ui.type`, `ui.tree`, `ui.ocr` nem `screen.shot`, para nome e e-mail da
-    conta Apple não saírem do aparelho. Fora disso, `E_FORBIDDEN_APP`; e `ui.*` com o app em
-    primeiro plano fora da lista também é recusado.
+    `{locked: false}` (no build `Spike`, também o `spike.unlockDrag` do SP-7, com a mesma condição).
+    Essas regras restringem **ações** (toque, arrasto, digitação, abrir app ou link). **Leituras**
+    (`ui.find` e condições) no SpringBoard só alcançam os ícones da página onde está o ícone do app
+    alvo (PF-12), os controles da Central de Controle e os controles de mídia da tela travada; nunca
+    `ui.tree` completo do SpringBoard, e nunca `screen.shot` nem `ui.ocr` com a tela travada. Na folha
+    do Sign in with Apple (`authkit`), só `ui.find`/`ui.tap` de botões (ex.: "Continue") — nunca
+    `ui.type`, `ui.tree`, `ui.ocr` nem `screen.shot`, para nome e e-mail da conta Apple não saírem do
+    aparelho. Fora disso, `E_FORBIDDEN_APP`; e `ui.*` com o app em primeiro plano fora da lista também
+    é recusado.
 
 **API / Interface**
 - WebSocket no loopback do aparelho, porta `runner.port`; primeira mensagem obrigatória
@@ -430,9 +438,10 @@ por amostragem do centro de cada célula.
   e `tDevEndNs − tDevStartNs` é ≤ 700 ms em 20/20.
 - **AC-1.7** Given um campo seguro em foco, when `ui.type` é pedido, then a resposta é
   `E_SECURE_FIELD` e nenhuma tecla é enviada.
-- **AC-1.8** Given uma tomada em curso, when chega `device.press {button: volumeUp}`, `app.launch`
-  do app alvo ou `app.openURL {url: "hagah://…"}`, then a resposta é `E_FORBIDDEN_IN_TAKE`; Given
-  `choreo.status = done` (limpeza), when `app.openURL {url: "hagah://…"}`, then executa.
+- **AC-1.8** Given uma tomada com `choreo.status.section = scenes`, when chega `device.press {button:
+  volumeUp}`, `app.launch` do app alvo ou `app.openURL {url: "hagah://…"}`, then a resposta é
+  `E_FORBIDDEN_IN_TAKE`; Given `choreo.status.section = cleanup`, when `app.openURL {url:
+  "hagah://…"}`, then executa.
 - **AC-1.9** Given PX-1 liberado (❓ Q-5a) e presente, when `device.lock` é chamado 10 vezes (com desbloqueio
   humano entre elas), then 10/10 travam em ≤ 2 s confirmados por `device.state.locked = true`.
 - **AC-1.10** Given PX-1 ausente ou não liberado, when `device.lock` é chamado, then a resposta é
@@ -483,7 +492,9 @@ por amostragem do centro de cada célula.
 1. **Subir o runner** ✅: `contrarregra runner build` gera o projeto (XcodeGen) e roda
    `xcodebuild build-for-testing` com o time `984PNJZ8B9` e assinatura automática;
    `contrarregra runner up` apaga `.xctestrun` de sessões velhas, escreve um da sessão (cópia do
-   gerado, com as variáveis de S1, `chmod 600`) em `paths.cache/sessions/` e roda, destacado, com
+   gerado, com as variáveis de S1 — `CONTRARREGRA_PORT`, `CONTRARREGRA_TOKEN`, `CONTRARREGRA_SESSION`,
+   `CONTRARREGRA_PRIVATE`, `CONTRARREGRA_ALLOWED`, `CONTRARREGRA_EXPLORE` e, com `--spike`,
+   `CONTRARREGRA_BIND` —, `chmod 600`) em `paths.cache/sessions/` e roda, destacado, com
    stdout/stderr para arquivo (nunca pipes) e sob `caffeinate -dimsu -w <pid>`:
    `xcodebuild test-without-building -xctestrun <sessão> -destination id=<udid>
    -only-testing ContrarregraRunner/RunnerTests/testServe -test-timeouts-enabled NO
@@ -574,9 +585,10 @@ por amostragem do centro de cada célula.
 
 1. O dono e o Claude Code escrevem a fonte YAML (S0.4); `contrarregra choreo validate` confere
    esquema, ids únicos, `ref` existentes, `cue` dentro do número de frases, ações permitidas por
-   seção, `caption` ≤ 34 caracteres, e as regras de tomada: sem `press volume*`, sem
-   `launch`/`openURL` do app alvo dentro de `scenes` (`openURL` só em `prepare`/`cleanup`); sem passo
-   `type` cujo alvo seja `secureTextField` (direto ou via `ref`) ou cujo texto pareça credencial.
+   seção, `caption` ≤ 34 caracteres, e as regras de tomada, que valem dentro de `scenes`: sem `press
+   volume*`, sem `launch` do app alvo, sem `openURL` (`openURL` só em `prepare`/`cleanup`); e, em
+   qualquer seção, sem passo `type` cujo alvo seja `secureTextField` (direto ou via `ref`) ou cujo
+   texto pareça credencial.
 2. `contrarregra choreo compile` produz o JSON canônico: expande `ref`, aplica padrões, sintetiza a
    faixa-guia por frase (S6), grava os tempos de cada frase e a permanência mínima de cada cena, e
    calcula `compiled.sha256` (S0.4).
@@ -746,12 +758,15 @@ scenes:
 
 **Behavior**
 
-1. **Fluxo da tomada** (orquestrado pelo supervisor no Mac, S8): pré-voo PF-01…PF-14, PF-16, PF-17
-   (S12) → `prepare` (sem gravar) → PF-15 → `choreo.load` → rajada de sincronia pré (S7) → início da
-   gravação e pré-rolo (S9) → `choreo.run` → cenas → pós-rolo → fim da gravação → `cleanup` → coleta
-   de eventos → rajada pós → alinhamento (S7) → saídas (S10).
-2. **No aparelho**: `choreo.run` fixa `T0` (D). O executor agenda por **prazos absolutos** a partir
-   de `T0` no `ContinuousClock`, com tolerância de 1 ms; nunca encadeia esperas relativas.
+1. **Fluxo da tomada** (orquestrado pelo supervisor no Mac, S8): limpeza pendente da tomada
+   anterior, se houver (S12 item 4) → pré-voo PF-01…PF-14, PF-16, PF-17 (S12) → `choreo compile`
+   (com a guia, S3) → `choreo.load` → `choreo.run {section: prepare}` (sem gravar) → PF-15 → rajada de
+   sincronia pré (S7) → início da gravação e pré-rolo (S9) → `choreo.run {section: scenes}` → cenas →
+   pós-rolo → `StopRecord` (S9) → `choreo.run {section: cleanup}` → coleta de eventos → rajada pós →
+   alinhamento (S7) → saídas (S10).
+2. **No aparelho**: cada `choreo.run` fixa o `T0` (D) da sua seção. O executor agenda por **prazos
+   absolutos** a partir de `T0` no `ContinuousClock`, com tolerância de 1 ms; nunca encadeia esperas
+   relativas.
 3. **Ordem e tempo dos passos**: cada passo tem início agendado `max(fim do anterior + afterMs,
    início da frase cue)`; `lateMs` = início real − início agendado. A cena *i* começa quando a
    anterior termina e termina em `max(fim do último passo, início da cena + holdMs)`, com
@@ -767,16 +782,23 @@ scenes:
    evento `intervention`; `choreo.resume {skipStep: false}` (padrão) tenta o passo de novo,
    `{skipStep: true}` segue do seguinte.
 6. **Abortar**: o executor para no ponto atual; o Mac encerra a gravação com o pós-rolo e marca a
-   tomada `aborted`; as saídas de diagnóstico são geradas mesmo assim. Se a tomada abortou com o modo
+   tomada `aborted`; as saídas de diagnóstico são geradas mesmo assim, e a `cleanup` fica pendente
+   (`cleanupPending: true`) para a próxima `take run` (S12 item 4). Se a tomada abortou com o modo
    avião ligado (um `checkpoint` de avião ligado sem o de desligar), `take.json` registra
    `airplaneLeftOn: true` e o Mac avisa o dono para desligá-lo.
 7. **Modo `dry`**: executa a coreografia no aparelho sem gravar (para ensaiar no iPhone).
 
 **API / Interface**
 - `choreo.load {choreography, takeId, mode: take|rehearsal|dry}` → `{sha256, scenes, steps}`.
-- `choreo.run {startAtD?}` → `{t0Ns}` imediatamente; o progresso chega por eventos.
-- `choreo.status` → `{state: idle|loaded|running|paused|checkpoint|done|aborted, sceneId, stepId,
-  seq, lateMsP95}`.
+- `choreo.run {section: prepare|scenes|cleanup, startAtD?}` → `{t0Ns}` imediatamente; o progresso
+  chega por eventos. As seções rodam em ordem, cada uma uma vez por `load`: `prepare` → `scenes` →
+  `cleanup`; `cleanup` também roda logo depois do `load` (limpeza pendente, S12 item 4); fora disso,
+  `E_CHOREO_STATE`. `startAtD` só vale em `scenes`. As regras de tomada (S1 item 9) valem só durante
+  `scenes`; `take.start` e `take.end` marcam o começo e o fim de `scenes`, e os eventos de
+  `prepare`/`cleanup` levam `sceneId: "prepare"` ou `"cleanup"`.
+- `choreo.status` → `{state: idle|loaded|running|paused|checkpoint|done|aborted, section:
+  prepare|scenes|cleanup|null, sceneId, stepId, seq, lateMsP95}` (`done` = a seção em `section`
+  terminou).
 - `choreo.pause`, `choreo.resume {skipStep?: bool}`, `choreo.abort {reason}`.
 
 **Error & Edge Cases**
@@ -945,13 +967,14 @@ scenes:
    `visual: true`: para cada um, recorta uma região em volta do alvo (frame em pontos × 3 px/pt) e acha
    o primeiro quadro que muda depois do previsto (`signalstats` YDIF; classificação com `tblend` YMAX
    ≥ 64). `tPredRawS` = `tDispatchNs` levado a M (θ) e a R (T0), sem latência. Ajuste V = α + (1+β)·P,
-   com P = `tPredRawS`. Eventos sem mudança detectada ficam marcados e fora do ajuste.
-5. **Tempo de cada evento no vídeo**: `tRecS` = α + (1+β)·`tPredRawS` (ajuste com todos os passos
-   detectados); `tFinalS` = `tRecS` − início do corte. `events.json` guarda `tPredRawS`, `tRecS`,
-   `tFinalS`, o observado (`tVideoObservedS`) e `detectScore`.
-6. **Medida da meta ±100 ms (SM-2)**: erro do passo *i* = |`tVideoObservedS`ᵢ − V̂₋ᵢ|, onde V̂₋ᵢ vem do
-   ajuste (α, β) feito **sem** o passo *i* (deixa um de fora), sobre os passos `visual: true` detectados
-   (mínimo 10); meta: mediana ≤ 50 ms e máximo ≤ 100 ms. `sync.json` também traz o erro sem a correção
+   com P = `tPredRawS` e V = o quadro observado em R (`tVideoObservedS` + `trim.startR`). Eventos sem
+   mudança detectada ficam marcados e fora do ajuste.
+5. **Tempo de cada evento no vídeo**: `tRecS` = α + (1+β)·`tPredRawS` (em R; ajuste com todos os
+   passos detectados); `tFinalS` = `tRecS` − `trim.startR` (em F). `events.json` guarda `tPredRawS`,
+   `tRecS`, `tFinalS`, o observado (`tVideoObservedS`, em F) e `detectScore`.
+6. **Medida da meta ±100 ms (SM-2)**: erro do passo *i* = |`tVideoObservedS`ᵢ − (V̂₋ᵢ − `trim.startR`)|,
+   onde V̂₋ᵢ (em R) vem do ajuste (α, β) feito **sem** o passo *i* (deixa um de fora), sobre os passos
+   `visual: true` detectados (mínimo 10); meta: mediana ≤ 50 ms e máximo ≤ 100 ms. `sync.json` também traz o erro sem a correção
    visual (só θ, T0 e a latência medida no SP-6), para expor viés. Tomada fora da meta: `syncOk:
    false` e não é entregue sem o sim do dono (P-5).
 7. **Calibração dedicada** (só manutenção/spike, nunca numa tomada): `contrarregra sync calibrate`
@@ -1276,9 +1299,9 @@ scenes:
 6. O ensaio gera as mesmas saídas (S10), servindo de bancada do alinhamento.
 
 **API / Interface**
-- CLI `contrarregra rehearse <choreo> [--app-path <.app>] [--scenes s02,s05]` (`--app-path` só quando o
-  app alvo não vem instalado no simulador); MCP `rehearse_start`
-  (mesmo modelo de `take_start`/`take_wait`).
+- CLI `contrarregra rehearse <choreo> [--app-path <.app>] [--scenes s02,s05] [--detach]`
+  (`--app-path` só quando o app alvo não vem instalado no simulador); MCP `rehearse_start` (mesmo
+  modelo de `take_start`/`take_wait`).
 
 **Error & Edge Cases**
 - **E-11.1** Build do app alvo com ferramentas de desenvolvimento ligadas (rótulos a mais) → aviso no
@@ -1323,16 +1346,18 @@ scenes:
 | PF-14 | rajada de sincronia com resíduo ≤ 2 ms | auto |
 | PF-15 | portão pós-preparo: `prepare` terminou e suas asserções passaram (avaliado logo antes de `StartRecord`) | auto |
 | PF-16 | aparelho com rede: `device.state.network = online` (modo avião desligado) | auto |
-| PF-17 | a tomada anterior terminou com `cleanupPending: false` e a revogação viu "Account deleted" sem o alerta "Delete without confirming with Apple?"; o dono confirma que o app alvo não está em Settings › [nome] › Sign-In & Security › Sign in with Apple (❓ Q-2) | auto + humano |
+| PF-17 | a tomada anterior terminou com `cleanupPending: false` e todas as `assert` da `cleanup` dela passaram; o dono confirma cada item de `confirm` da coreografia (S0.4; no Hagah, S13 item 6) | auto + humano |
 
    O relatório sai em `preflight.json`; qualquer `fail` impede a gravação; `human` exige a
    confirmação do dono (CLI/MCP `take preflight --confirm PF-11`).
-2. **Preparo** (`prepare` da coreografia, sem gravar): leva o app alvo ao estado inicial do vídeo e
+2. **Preparo** (`prepare` da coreografia, executado pelo runner com `choreo.run {section: prepare}`,
+   sem gravar): leva o app alvo ao estado inicial do vídeo e
    **verifica** com `assert`. Pode usar `openURL` e `terminate`. Antes de apagar dado do app alvo,
    confere se há dado que nenhuma tomada criou e, se houver, para num ponto de controle humano sem
    apagar nada (❓ Q-15). Termina com o app alvo encerrado e a tela de início visível, para a cena 1
    mostrar a abertura a frio; então PF-15.
-3. **Limpeza** (`cleanup`, depois de parar a gravação): desfaz o que a tomada deixou (no Hagah: excluir
+3. **Limpeza** (`cleanup`, executada pelo runner com `choreo.run {section: cleanup}` depois de parar a
+   gravação): desfaz o que a tomada deixou (no Hagah: excluir
    a conta de novo com revogação e sair — conta Apple do aparelho, ❓ Q-2 —, S13), para a próxima
    tomada repetir o vídeo. Se `{network: offline}`, o primeiro passo é um ponto de controle "desligue
    o modo avião" até `{network: online}`.
@@ -1340,7 +1365,8 @@ scenes:
    preparo → PF-15 → tomada → saídas, sem passos manuais além dos pontos de controle.
 
 **API / Interface**
-- CLI `contrarregra take preflight [--confirm PF-nn]`, `take run <choreo> [--mode take|dry]`; MCP
+- CLI `contrarregra take preflight [--confirm PF-nn]`, `take run <choreo> [--mode take|dry]
+  [--detach]`; MCP
   `take_preflight`, `take_start`.
 
 **Error & Edge Cases**
@@ -1435,7 +1461,11 @@ scenes:
    "Previous verse", type: button}, state: hittable}]}`); cena 7 — três Face ID; cena 9 — "Abra a
    Central de Controle, ligue o modo avião, conte 2 s e feche" com `until: {all: [{network: offline},
    {element: {app: controlcenter, identifier: "airplane-mode-button"}, state: gone}]}`; cena 10 — o
-   mesmo para desligar, com `{network: online}`; limpeza — Face ID da revogação.
+   mesmo para desligar, com `{network: online}`; limpeza — Face ID da revogação. A `cleanup` do Hagah
+   tem `assert`s de que a revogação chegou ao alerta "Account deleted" e não ao "Delete without
+   confirming with Apple?" (exclusão sem revogar o vínculo na Apple), e o cabeçalho `confirm` pede ao
+   dono que confira que o Hagah não está em Settings › [nome] › Sign-In & Security › Sign in with
+   Apple (PF-17; ❓ Q-2).
 7. **Prova do modo avião na cena 9**: durante a captura USB o iOS provavelmente troca a barra de
    estado por uma limpa (9:41, sinal cheio; confirmado até o iOS 17.1, SP-9 confirma no 26.x), então
    não se conta com o ícone de avião. A prova é a Central de Controle aberta ~2 s com o botão de avião
@@ -1460,8 +1490,8 @@ scenes:
 - **AC-13.2** Given o app no estado deixado por uma tomada completa, when `prepare` roda, then termina
   em ≤ 3 min, todas as `assert` passam e o app alvo está `notRunning`.
 - **AC-13.3** Given a coreografia completa, when uma tomada roda no iPhone, then `take.json` termina com
-  `status: "finished"` e `syncOk: true`, `choreo.status` chega a `done`, `events.json` tem 0 eventos
-  `intervention`, e os únicos `checkpoint.wait` são os do item 6 (SM-1).
+  `status: "finished"` e `syncOk: true`, `choreo.status` chega a `done` na seção `scenes`,
+  `events.json` tem 0 eventos `intervention`, e os únicos `checkpoint.wait` são os do item 6 (SM-1).
 - **AC-13.4** Given uma tomada completa, when `events.json` é lido, then não há `device.state` com
   `foregroundApp` ∈ {hospedeiro, runner} nem comando `device.press volume*` entre `take.start` e
   `take.end` (SM-6).
@@ -1492,4 +1522,4 @@ decidida. Os riscos técnicos sem resposta estão como spikes ordenados por risc
 (SP-1…SP-18). Eles podem mudar o caminho técnico (principal ou plano B) e, em seis casos, levar o
 dono a uma decisão já listada: SP-1 → Q-9; SP-2 → Q-12; SP-4 → Q-13; SP-5 → Q-8; SP-12 → Q-5 (d); e
 AC-1.4 → Q-5 (f). Toda mudança de comportamento que um spike exigir vai ao G1 pela tarefa de consolidação
-(T-0.30).
+(T-0.36).

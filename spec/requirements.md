@@ -152,8 +152,10 @@ Cada item tem uma proposta padrão, a lista "Onde pesa" e um `❓ Q-n` nos ponto
 arquivos que mudam conforme a resposta.
 **Quando se decide:** Q-1…Q-4, Q-5 (a, b, c, e), Q-6, Q-7, Q-10, Q-11, Q-14, Q-15 e Q-16 na
 ratificação (G1). Q-5 (d, f), Q-8, Q-9, Q-12 e Q-13 dependem de um spike: decidem-se no G1 que a
-tarefa de consolidação da Fase 0 (T-0.30) emite; até lá vale a proposta padrão. Nada aqui bloqueia a
-estrutura da spec.
+tarefa de consolidação da Fase 0 (T-0.36) emite; até lá vale a proposta padrão — exceto quando o
+resultado bloqueia os spikes seguintes (Q-13 depois da sonda da T-0.11 ou do SP-4, T-0.19; Q-12 se o
+plano B do SP-2, T-0.17, falhar): aí o G1 é emitido na hora. Para Q-12 e Q-13 a proposta padrão não
+vale antes do G1. Nada aqui bloqueia a estrutura da spec.
 
 - **Q-1 — Qual build aparece no vídeo.** O roteiro diz 1.0.0 (4); o `hagah/plans/mobile/STATE.md`
   registra o **1.0.0 (5)** no TestFlight desde 2026-09-23 e a troca do 4 pelo 5 antes de reenviar.
@@ -192,11 +194,11 @@ estrutura da spec.
   sozinho** (PX-5) — sem ele, o XCTest pode fechar sozinho um alerta de um botão que bloqueie um
   toque; plano B: tratar todo alerta esperado com `expect`; (f) **captura de tela privada em JPEG**
   (PX-6) — só se a captura pública não cumprir AC-1.4. *Proposta:* aceitar **(a), (b), (c) e (e)**
-  na ratificação; (d) e (f) só se o spike pedir (T-0.30). Onde pesa: `spec.md` S0.1, S1 itens 4, 5,
-  8 e E-1.4, AC-1.5/AC-1.9/AC-1.18; `architecture.md` A10; `tasks.md` T-0.14, T-0.18, T-0.23.
+  na ratificação; (d) e (f) só se o spike pedir (T-0.36). Onde pesa: `spec.md` S0.1, S1 itens 4, 5,
+  8 e E-1.4, AC-1.5/AC-1.9/AC-1.18; `architecture.md` A10; `tasks.md` T-0.18, T-0.24, T-0.29.
 - **Q-6 — Cabine de narração na v1.** O pedido a trata como opcional. *Proposta:* **sim, como Fase 8**,
   cortável sem afetar as outras; sem ela, o dono narra em qualquer gravador ouvindo a faixa-guia
-  alinhada e lendo o `.vtt`. Onde pesa: `spec.md` S10 item 3 (AC-10.8, AC-10.9), `tasks.md` T-0.29 e
+  alinhada e lendo o `.vtt`. Onde pesa: `spec.md` S10 item 3 (AC-10.8, AC-10.9), `tasks.md` T-0.35 e
   Fase 8.
 - **Q-7 — TTS pago para a faixa-guia.** O padrão é o `say` do macOS (grátis, local). O Gemini TTS
   que o Hagah usa tem custo e manda o texto das falas a um serviço externo. *Proposta:* **só `say`**
@@ -237,13 +239,13 @@ estrutura da spec.
   runner — exige mudar S2 item 7/E-2.6 (hoje a tomada aborta quando o `xcodebuild` morre) e marcar à
   mão o início das cenas 9 e 10. *Proposta:* decidir depois do SP-2, com os números; entre as três,
   (c) é a que mantém uma tomada contínua sem a ferramenta à vista. Onde pesa: `spec.md` S2 item 7, A11,
-  `tasks.md` T-0.13.
+  `tasks.md` T-0.17.
 - **Q-13 — Se o loopback do iPhone não for alcançável pelo usbmux (SP-4).** A constituição (P-3,
   P-7) proíbe o runner de escutar fora do loopback. *Opções:* (a) escutar em todas as interfaces
   recusando origem que não seja loopback, com token; (b) escutar só na interface do túnel
   CoreDevice com `wired`; (c) não aceitar e ficar sem transporte de tomada. *Proposta:* decidir
   depois do SP-4; se chegar a isso, (b), com emenda de P-3/P-7 e HC-4 por G1. Onde pesa: `constitution.md`
-  P-3/P-7, HC-4, A11, `tasks.md` T-0.15.
+  P-3/P-7, HC-4, A11, `tasks.md` T-0.19.
 - **Q-14 — Espaço em disco e retenção de tomadas.** Com ~8,7–10 GiB livres e ~3,6 GB por tomada
   guardada, a segunda tomada pode ser recusada pelo HC-11, e os spikes de gravação precisam de
   folga. *Opções:* (a) liberar ~20 GB antes da Fase 0 (o `STATE.md` do Hagah aponta 14 GB em
