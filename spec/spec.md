@@ -245,7 +245,7 @@ overrunMs}], checkpoints: [...], events: [Event]}`.
 
 | Arquivo | Conteúdo |
 |---|---|
-| `take.json` | `{schema, takeId, mode: take\|rehearsal\|dry, status: preparing\|recording\|finished\|aborted\|failed, cause?, choreography: {path, sha256}, app: {bundleId, version}, device: {udid, os, transport}, toolchain: {...}, startedAt, endedAt, interventions, syncOk, cleanupPending, obsStats: {renderSkipped, outputSkipped}, airplaneLeftOn}` |
+| `take.json` | `{schema, takeId, mode: take\|rehearsal\|dry, status: preparing\|recording\|finished\|aborted\|failed, scenesResult?: finished\|aborted, cause?, choreography: {path, sha256}, app: {bundleId, version}, device: {udid, os, transport}, toolchain: {...}, startedAt, endedAt, interventions, syncOk, cleanupPending, obsStats: {renderSkipped, outputSkipped}, airplaneLeftOn}` |
 | `choreo.json` | a coreografia compilada usada |
 | `preflight.json` | relatório do pré-voo (S12) |
 | `status.json`, `events.ndjson` | estado vivo (`{schema: "contrarregra.status/1", …}`, com batimento do supervisor) e eventos durante a tomada |
@@ -800,10 +800,10 @@ scenes:
    `{skipStep: true}` segue do seguinte.
 6. **Abortar** (durante `prepare` ou `scenes`; abortar a `cleanup` segue S12 item 3): o executor
    para no ponto atual; o Mac encerra a gravação com o pós-rolo e marca a tomada `aborted`; as
-   saídas de diagnóstico são geradas mesmo assim e, se `scenes` chegou a começar, a `cleanup` fica
-   pendente (`cleanupPending: true`) para a próxima `take run` (S12 item 4). Se a tomada abortou com
-   o modo avião ligado (um `checkpoint` de avião ligado sem o de desligar), `take.json` registra
-   `airplaneLeftOn: true` e o Mac avisa o dono para desligá-lo.
+   saídas de diagnóstico são geradas mesmo assim e, se `scenes` chegou a começar, a `cleanup` segue
+   pendente (`cleanupPending: true` desde `take.start`, S12 item 3) para a próxima `take run`. Se a
+   tomada abortou com o modo avião ligado (um `checkpoint` de avião ligado sem o de desligar),
+   `take.json` registra `airplaneLeftOn: true` e o Mac avisa o dono para desligá-lo.
 7. **Modo `dry`**: executa a coreografia no aparelho sem gravar (para ensaiar no iPhone).
 
 **API / Interface**
@@ -1085,9 +1085,10 @@ scenes:
    o batimento. Só para uma tomada ainda viva — `take.json.status` = `preparing` ou `recording` e o
    arquivo de trava do aparelho com o `takeId` dela —, batimento velho há mais de 10 s → se
    `GetRecordStatus.outputActive = true`, `StopRecord` e espera a finalização; sempre `choreo.abort`
-   (se o runner responder), `take.json` `status: failed`, `cause: supervisor-lost`, e, se `scenes`
-   chegou a começar, `cleanupPending: true`; por fim solta a trava. Ao terminar normalmente, o
-   supervisor grava o estado final em `status.json` e `take.json`, solta a trava e encerra o vigia.
+   (se o runner responder) e `take.json` `cause: supervisor-lost`, com `status: failed` se `scenes`
+   não terminou, ou `status` = `scenesResult` se já terminou; `cleanupPending` fica como está (S12
+   item 3); por fim solta a trava. Ao terminar normalmente, o supervisor grava o estado final em
+   `status.json` e `take.json`, solta a trava e encerra o vigia.
 6. **Instruções do servidor** (≤ 2.048 caracteres, regra principal primeiro): opere o iPhone físico
    para gravar demos; prefira `@eN` e rótulos a coordenadas; nunca digite credenciais nem peça
    senha; não capture fora do app alvo; tomada = `take_start` + `take_wait`.
@@ -1396,9 +1397,10 @@ scenes:
    a gravação): desfaz o que a tomada deixou (no Hagah: excluir a conta de novo com revogação e sair
    — conta Apple do aparelho, ❓ Q-2 —, S13), para a próxima tomada repetir o vídeo. Se `{network:
    offline}`, o primeiro passo é um ponto de controle "desligue o modo avião" até `{network:
-   online}`. Uma `cleanup` que não termina com todas as `assert` passando (falha, prazo estourado ou
-   abortada) deixa `cleanupPending: true` e não muda o `status` da tomada, que vem de como `scenes`
-   terminou; só uma `cleanup` completa grava `cleanupPending: false`.
+   online}`. O `take.json` nasce com `cleanupPending: false`; o supervisor grava `true` em
+   `take.start` e, em `take.end`/`take.abort`, `scenesResult: finished|aborted`; só uma `cleanup`
+   completa (todas as `assert` passando) volta a `cleanupPending: false`. Uma `cleanup` que falha,
+   estoura o prazo ou é abortada não muda o `status` da tomada, que vem de `scenesResult`.
 4. **Repetir** (US-16, SM-3): `take run` encadeia limpeza da anterior (se pendente) → pré-voo →
    preparo → PF-15 → tomada → saídas, sem passos manuais além dos pontos de controle. Terminada a
    limpeza pendente com todas as `assert` passando, o supervisor grava `cleanupPending: false` no
