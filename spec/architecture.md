@@ -109,7 +109,8 @@ chegam por notificação e vão para `events.ndjson`; `scene.start` → `CreateR
 `checkpoint.wait` → aviso no Mac → (a pessoa age) → o runner segue → … → `take.end` → pós-rolo →
 `StopRecord` → espera finalização → `choreo.run {section: cleanup}` → `events.fetch` (completa
 buracos) → rajada pós → `align` (marcas + regiões + ajuste) → `export` (S10) → `status: finished`.
-O MCP só lê `status.json`/`events.ndjson`.
+O MCP lê `status.json`/`events.ndjson` e fala com o supervisor só por `command.json` + `SIGUSR2`
+(S8 item 5).
 
 **Pós (US-11…US-13).** `review.mp4` + `subtitles.vtt` + `guide.aligned.wav` → o dono narra (cabine
 ou outro gravador) → `voice.wav` → `mix` → `final.mp4`.
@@ -230,8 +231,9 @@ Reabrir exige motivo forte e G1 (P-6).
   Contexto: o Claude Code põe em segundo plano chamadas MCP com mais de 2 min e aborta chamadas paradas
   por 30 min; "tasks" do MCP foram descontinuadas no SDK v2; um supervisor morto deixaria o OBS
   gravando até encher o disco. Decisão: `take_start` devolve na hora; um processo supervisor roda a
-  tomada, escreve arquivos com batimento, e um vigia para a gravação se o batimento sumir; `take_wait`
-  faz long-poll ≤ 55 s.
+  tomada, escreve arquivos com batimento, recebe pedidos do MCP por `command.json` + `SIGUSR2`, e um
+  vigia para a gravação de uma tomada ainda viva se o batimento sumir; `take_wait` faz long-poll
+  ≤ 55 s.
 - **ADR-12 Coreografia em YAML, compilada para JSON canônico (JCS).** O dono revisa o roteiro
   executável (comentários, frases longas); o runner só lê JSON (`JSONDecoder`, sem dependência no
   aparelho); o hash JCS é o mesmo nos dois lados.

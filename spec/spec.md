@@ -528,7 +528,7 @@ por amostragem do centro de cada célula.
    recebe `E_BUSY`. A CLI e o MCP abrem `control` **por comando** (hello → chamada → fecha); o
    supervisor da tomada segura `control` a tomada inteira, sob um arquivo de trava por aparelho
    (`paths.cache/locks/<udid>.lock`);
-   comandos de exploração durante a tomada recebem `E_BUSY` com o `takeId`.
+   comandos de exploração e `runner up|down` durante a tomada recebem `E_BUSY` com o `takeId`.
 4. **Duas linhas de vida independentes**: a sessão do XCTest (túnel CoreDevice do `xcodebuild`)
    mantém o runner vivo; o usbmux carrega os comandos. Se a sessão do XCTest cair, o runner morre;
    se só o usbmux cair, o runner segue e a tomada continua no aparelho.
@@ -541,10 +541,10 @@ por amostragem do centro de cada célula.
    uma rajada de sincronia (S7). Sem cabo, comandos que falam com o aparelho falham rápido com "ligue
    o cabo" (`E_NO_USB`).
 7. **Runner caído**: se o `xcodebuild` sai, o Mac registra e marca o runner como caído; `runner
-   status` e todo comando seguinte veem o pid morto e respondem `E_RUNNER_DOWN` com a dica `runner
-   up`. Nada religa sozinho: fora de tomada, quem religa é o dono ou o agente (`runner up`);
-   **durante tomada nunca religa** (religar põe o runner na frente da tela, P-4): a tomada aborta
-   (E-2.6). O caso "a sessão não sobrevive ao modo avião" é o SP-2 (❓ Q-12).
+   status` mostra `state: down` e todo comando que fala com o runner responde `E_RUNNER_DOWN` com a
+   dica `runner up`. Nada religa sozinho: fora de tomada, quem religa é o dono ou o agente (`runner
+   up`); **durante tomada nunca religa** (religar põe o runner na frente da tela, P-4): a tomada
+   aborta (E-2.6). O caso "a sessão não sobrevive ao modo avião" é o SP-2 (❓ Q-12).
 8. **Gancho de teste**: `contrarregra runner sever --for <s>` acha o dono da conexão `control` (o
    supervisor, pelo arquivo de trava do aparelho, ou o próprio processo fora de tomada) e lhe pede,
    por um arquivo `sever.json {forS}` na pasta da tomada mais `SIGUSR1`, que feche os próprios
@@ -798,11 +798,12 @@ scenes:
    `choreo.abort` por até ⚠️ 120 s, depois aborta. Retomar depois de uma pausa por falha gera um
    evento `intervention`; `choreo.resume {skipStep: false}` (padrão) tenta o passo de novo,
    `{skipStep: true}` segue do seguinte.
-6. **Abortar**: o executor para no ponto atual; o Mac encerra a gravação com o pós-rolo e marca a
-   tomada `aborted`; as saídas de diagnóstico são geradas mesmo assim e, se `scenes` chegou a
-   começar, a `cleanup` fica pendente (`cleanupPending: true`) para a próxima `take run` (S12 item
-   4). Se a tomada abortou com o modo avião ligado (um `checkpoint` de avião ligado sem o de
-   desligar), `take.json` registra `airplaneLeftOn: true` e o Mac avisa o dono para desligá-lo.
+6. **Abortar** (durante `prepare` ou `scenes`; abortar a `cleanup` segue S12 item 3): o executor
+   para no ponto atual; o Mac encerra a gravação com o pós-rolo e marca a tomada `aborted`; as
+   saídas de diagnóstico são geradas mesmo assim e, se `scenes` chegou a começar, a `cleanup` fica
+   pendente (`cleanupPending: true`) para a próxima `take run` (S12 item 4). Se a tomada abortou com
+   o modo avião ligado (um `checkpoint` de avião ligado sem o de desligar), `take.json` registra
+   `airplaneLeftOn: true` e o Mac avisa o dono para desligá-lo.
 7. **Modo `dry`**: executa a coreografia no aparelho sem gravar (para ensaiar no iPhone).
 
 **API / Interface**
@@ -1079,11 +1080,14 @@ scenes:
    `take_resume`/`take_abort` (e `take resume|abort` na CLI) gravam `command.json {op: resume|abort,
    skipStep?, reason?}` na pasta da tomada e mandam `SIGUSR2` ao pid de `status.json`; o supervisor
    repassa ao runner (`choreo.resume`/`choreo.abort`) e apaga o arquivo. Reiniciar o MCP não
-   interrompe a tomada; `take_status` reencontra o supervisor pelo `takeId` e confere o batimento. Um
-   **vigia** (processo filho do supervisor) e também `take_status`, `take_wait` e `doctor` checam o
-   batimento: velho há mais de 10 s → se `GetRecordStatus.outputActive = true`, `StopRecord` e espera a
-   finalização; sempre `choreo.abort` (se o runner responder) e `take.json` `status: failed`, `cause:
-   supervisor-lost` e, se `scenes` chegou a começar, `cleanupPending: true`.
+   interrompe a tomada; `take_status` reencontra o supervisor pelo `takeId` e confere o batimento.
+   Um **vigia** (processo filho do supervisor) e também `take_status`, `take_wait` e `doctor` checam
+   o batimento. Só para uma tomada ainda viva — `take.json.status` = `preparing` ou `recording` e o
+   arquivo de trava do aparelho com o `takeId` dela —, batimento velho há mais de 10 s → se
+   `GetRecordStatus.outputActive = true`, `StopRecord` e espera a finalização; sempre `choreo.abort`
+   (se o runner responder), `take.json` `status: failed`, `cause: supervisor-lost`, e, se `scenes`
+   chegou a começar, `cleanupPending: true`; por fim solta a trava. Ao terminar normalmente, o
+   supervisor grava o estado final em `status.json` e `take.json`, solta a trava e encerra o vigia.
 6. **Instruções do servidor** (≤ 2.048 caracteres, regra principal primeiro): opere o iPhone físico
    para gravar demos; prefira `@eN` e rótulos a coordenadas; nunca digite credenciais nem peça
    senha; não capture fora do app alvo; tomada = `take_start` + `take_wait`.
@@ -1376,7 +1380,7 @@ scenes:
 | PF-14 | rajada de sincronia com resíduo ≤ 2 ms | auto |
 | PF-15 | portão pós-preparo: `prepare` terminou e suas asserções passaram (avaliado logo antes de `StartRecord`) | auto |
 | PF-16 | aparelho com rede: `device.state.network = online` (modo avião desligado) | auto |
-| PF-17 | a tomada anterior terminou com `cleanupPending: false` e todas as `assert` da `cleanup` dela passaram; o dono confirma cada item de `confirm` da coreografia (S0.4; no Hagah, S13 item 6) | auto + humano |
+| PF-17 | a tomada anterior terminou com `cleanupPending: false` (S12 item 3); o dono confirma cada item de `confirm` da coreografia (S0.4; no Hagah, S13 item 6) | auto + humano |
 
    O relatório sai em `preflight.json`; qualquer `fail` impede a gravação (`E_PREFLIGHT`, com os ids
    que falharam); `human` exige a confirmação do dono (`take preflight <choreo> --confirm PF-11`; MCP
@@ -1388,11 +1392,13 @@ scenes:
    confere se há dado que nenhuma tomada criou e, se houver, para num ponto de controle humano sem
    apagar nada (❓ Q-15). Termina com o app alvo encerrado e a tela de início visível, para a cena 1
    mostrar a abertura a frio; então PF-15.
-3. **Limpeza** (`cleanup`, executada pelo runner com `choreo.run {section: cleanup}` depois de parar a
-   gravação): desfaz o que a tomada deixou (no Hagah: excluir
-   a conta de novo com revogação e sair — conta Apple do aparelho, ❓ Q-2 —, S13), para a próxima
-   tomada repetir o vídeo. Se `{network: offline}`, o primeiro passo é um ponto de controle "desligue
-   o modo avião" até `{network: online}`.
+3. **Limpeza** (`cleanup`, executada pelo runner com `choreo.run {section: cleanup}` depois de parar
+   a gravação): desfaz o que a tomada deixou (no Hagah: excluir a conta de novo com revogação e sair
+   — conta Apple do aparelho, ❓ Q-2 —, S13), para a próxima tomada repetir o vídeo. Se `{network:
+   offline}`, o primeiro passo é um ponto de controle "desligue o modo avião" até `{network:
+   online}`. Uma `cleanup` que não termina com todas as `assert` passando (falha, prazo estourado ou
+   abortada) deixa `cleanupPending: true` e não muda o `status` da tomada, que vem de como `scenes`
+   terminou; só uma `cleanup` completa grava `cleanupPending: false`.
 4. **Repetir** (US-16, SM-3): `take run` encadeia limpeza da anterior (se pendente) → pré-voo →
    preparo → PF-15 → tomada → saídas, sem passos manuais além dos pontos de controle. Terminada a
    limpeza pendente com todas as `assert` passando, o supervisor grava `cleanupPending: false` no

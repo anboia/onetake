@@ -153,7 +153,8 @@ Entregar o `.app` com `--app-path`. É a única exceção de build especial (P-4
    inglês, Do Not Disturb ligado.
 2. `bin/contrarregra runner up` (código da automação, se pedido).
 3. `bin/contrarregra take preflight choreographies/hagah/v8.5-review.choreo.yaml` → resolver o que
-   falhar → confirmar PF-11 e PF-17.
+   falhar → confirmar PF-11 e PF-17. Com limpeza pendente, PF-17 falha aqui de propósito: o `take run`
+   do passo 4 começa pela limpeza (S12 item 4) e só então repete o pré-voo.
 4. `bin/contrarregra take run choreographies/hagah/v8.5-review.choreo.yaml` (ou `take_start` pelo
    Claude Code). Ficar perto do iPhone, **sem olhar para ele na cena 3 até ser chamado**: o Mac fala
    quando é a vez da pessoa (Face ID, modo avião).

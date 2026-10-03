@@ -195,8 +195,8 @@ vale antes do G1. Nada aqui bloqueia a estrutura da spec.
   toque; plano B: tratar todo alerta esperado com `expect`; (f) **captura de tela privada em JPEG**
   (PX-6) — só se a captura pública não cumprir AC-1.4. *Proposta:* aceitar **(a), (b), (c) e (e)**
   na ratificação; (d) e (f) só se o spike pedir (T-0.39). Onde pesa: `spec.md` S0.1, S1 itens 4, 5,
-  8 e E-1.4, AC-1.5/AC-1.9/AC-1.18; `architecture.md` A10; `tasks.md` T-0.18, T-0.25, T-0.30,
-  T-0.31.
+  8 e E-1.4, AC-1.5/AC-1.9/AC-1.18; `architecture.md` A10; `tasks.md` T-0.18, T-0.25, T-0.28 (AC-1.4),
+  T-0.30, T-0.31.
 - **Q-6 — Cabine de narração na v1.** O pedido a trata como opcional. *Proposta:* **sim, como Fase 8**,
   cortável sem afetar as outras; sem ela, o dono narra em qualquer gravador ouvindo a faixa-guia
   alinhada e lendo o `.vtt`. Onde pesa: `spec.md` S10 item 3 (AC-10.8, AC-10.9), `tasks.md` T-0.38 e

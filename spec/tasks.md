@@ -396,14 +396,13 @@ Regras comuns:
   S1 item 9, SM-6.
 - [ ] **T-0.33** **SP-13 (médio) — limites do Claude Code no MCP.** Protótipo de `take_start` +
   `take_wait` com supervisor destacado e vigia (tomada simulada de 15 min, sem simulador nem
-  aparelho, 3 pontos de controle, MCP morto no meio, supervisor morto no meio); capturas JPEG 390×844 ×
-  40 (tamanho, avisos, acerto em 5 alvos); servidor iniciado pelo app de desktop e pelo terminal (qual
-  Node); leitura do Chaveiro depois de dormir; três avisos sonoros com o OBS gravando e o iPhone em
-  silêncio. Files: `spikes/SP-13.md`, `spikes/sp-13/**`. AC: AC-8.2, AC-8.3, AC-8.4 (parcial: protótipo
-  sem simulador), AC-8.9, AC-5.3 (medição). Done: **sucesso** = todos os números das ACs. **Plano B** =
-  tomada pela CLI em segundo plano e MCP só lendo arquivos. Deps: T-0.11, T-0.13, T-0.15, T-0.22.
-  Implements: S8,
-  ADR-11.
+  aparelho, 3 pontos de controle, MCP morto no meio, supervisor morto no meio); capturas JPEG
+  390×844 × 40 (tamanho, avisos, acerto em 5 alvos); servidor iniciado pelo app de desktop e pelo
+  terminal (qual Node); leitura do Chaveiro depois de dormir; três avisos sonoros com o OBS gravando
+  e o iPhone em silêncio. Files: `spikes/SP-13.md`, `spikes/sp-13/**`. AC: AC-8.2, AC-8.3, AC-8.4
+  (parcial: protótipo sem simulador), AC-8.9 (parcial: OBS real e runner falso), AC-5.3 (medição).
+  Done: **sucesso** = todos os números das ACs. **Plano B** = tomada pela CLI em segundo plano e MCP
+  só lendo arquivos. Deps: T-0.11, T-0.13, T-0.15, T-0.22. Implements: S8, ADR-11.
 - [ ] **T-0.34** **SP-14 (baixo) — deriva do relógio.** Rajadas de 32 trocas a cada 10 s por 20 min
   (como S7); ajuste linear; comparar só-pré, pré+pós e completo. Files: `spikes/SP-14.md`,
   `spikes/sp-14/**`. AC: AC-7.1. Done: resíduo RMS ≤ 1 ms; erro de pré+pós no meio ≤ 2 ms. **Plano B**
@@ -452,11 +451,12 @@ e `sync.json` calculado · **Data-alvo:** D+11 · **Sinal de atraso:** integraç
 
 ## Fase 2 — Runner, transporte e exploração
 **Objetivo:** todas as operações de S1 e o transporte de S2 completos; ferramentas MCP de exploração.
-· **Seções:** S1, S2, S8 (exploração) · **Portão:** AC-1.1…AC-1.24, exceto AC-1.5 se Q-5b/c = não,
-AC-1.9 se Q-5a = não, e AC-1.8 e AC-1.23 (Fase 3, que traz as seções da coreografia e os pontos de
-controle); AC-1.10 e AC-1.18 sempre;
-AC-2.1…AC-2.3, AC-2.5…AC-2.9 (AC-2.4 e AC-2.10 dependem do pré-voo: Fase 5); AC-8.1…AC-8.3 ·
-**Data-alvo:** D+14 · **Sinal de atraso:** APIs privadas exigindo mais que PX-1…PX-6.
+· **Seções:** S1, S2, S8 (exploração) · **Portão:** AC-1.1…AC-1.24 (AC-1.24 só a parte do aparelho;
+a do simulador vai à Fase 7), exceto AC-1.5 se Q-5b/c = não, AC-1.9 se Q-5a = não, e AC-1.8 e
+AC-1.23 (Fase 3, que traz as seções da coreografia e os pontos de controle); AC-1.10 e AC-1.18
+sempre; AC-2.1…AC-2.3, AC-2.5…AC-2.9 (AC-2.4 e AC-2.10 dependem do pré-voo: Fase 5);
+AC-8.1…AC-8.3 · **Data-alvo:** D+14 · **Sinal de atraso:** APIs privadas exigindo mais que
+PX-1…PX-6.
 
 ## Fase 3 — Coreografia, execução, pontos de controle e guia
 **Objetivo:** formato completo, executor com prazos absolutos, espera de alvo, blocos e repetição,
@@ -485,7 +485,8 @@ SM-6, SM-7 medidos numa tomada real · **Data-alvo:** D+25 (2026-11-10 se o G1 f
 
 ## Fase 7 — Ensaio no simulador
 **Objetivo:** a mesma coreografia no simulador, com gravação e saídas. · **Seções:** S11 ·
-**Portão:** AC-11.1…AC-11.4, AC-3.7, AC-7.5, AC-8.4 · **Data-alvo:** D+29.
+**Portão:** AC-11.1…AC-11.4, AC-1.24 (parte do simulador), AC-3.7, AC-7.5, AC-8.4 ·
+**Data-alvo:** D+29.
 
 ## Fase 8 — Cabine de narração (❓ Q-6)
 **Objetivo:** página local que toca o vídeo com as falas e grava o microfone sincronizado. ·
