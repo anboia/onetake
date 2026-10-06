@@ -128,8 +128,9 @@
 - Toda ação no iPhone real durante a implementação é anunciada antes e nunca toca em Ajustes de
   segurança, conta Apple ou credenciais. São G5: a primeira instalação do runner/hospedeiro no
   iPhone e a instalação de um build novo deles (um `runner up` de build já aprovado não é);
-  desinstalar; qualquer escrita na configuração do OBS do dono; e criar ou reconciliar o perfil
-  "Contrarregra" com `obs setup` (pedidos de gravação e ajustes de spike nesse perfil não são G5).
+  desinstalar; qualquer escrita na configuração do OBS do dono; e criar ou reconciliar o perfil e a
+  coleção "Contrarregra" com `obs setup` (pedidos de gravação, o "chute" da fonte, o `sync
+  calibrate` e ajustes de spike neles não são G5).
 - A ferramenta cria e usa **perfil e coleção de cenas próprios no OBS** ("Contrarregra"; ✅ Q-3); nunca
   escreve no perfil/cenas que o dono já tem e confere o perfil ativo antes de cada escrita.
 - Decisões já tomadas na análise anterior (ADR-1…ADR-8) só se reabrem com motivo forte registrado e

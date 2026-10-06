@@ -266,10 +266,11 @@ Regras comuns:
 - [ ] **T-0.19** **SP-4 (alto) — canal usbmux → WebSocket no loopback.** Duas formas de prender o
   listener (`requiredInterfaceType = .loopback`; `requiredLocalEndpoint 127.0.0.1:P`), no build
   `Spike`. 1.000 ecos de 64 bytes e 100 de 64 KB numa conexão persistente e 1.000 com conexão nova;
-  100 capturas; rajadas NTP; tudo de novo com o modo avião ligado e com capturas simultâneas na outra
-  conexão; registrar o `SerialNumber` cru do usbmuxd. Files: `spikes/SP-4.md`, `spikes/sp-4/**`. AC:
-  AC-2.1, AC-2.6 (só a reconexão, sem `events.fetch`). Done: **sucesso** = o loopback é alcançável;
-  p50 ≤ 5 ms, p95 ≤ 20 ms; conexão nova p95 ≤ 50 ms; desvio do θ ≤ 1 ms; sem mudança com avião.
+  100 capturas (com o Hagah em primeiro plano, S1 item 11); rajadas NTP; tudo de novo com o modo
+  avião ligado e com capturas simultâneas na outra conexão; registrar o `SerialNumber` cru do
+  usbmuxd. Files: `spikes/SP-4.md`, `spikes/sp-4/**`. AC: AC-2.1, AC-2.6 (só a reconexão, sem
+  `events.fetch`). Done: **sucesso** = o loopback é alcançável; p50 ≤ 5 ms, p95 ≤ 20 ms; conexão
+  nova p95 ≤ 50 ms; desvio do θ ≤ 1 ms; sem mudança com avião.
   **Plano B** = se o loopback não for alcançável por usbmux, parar e levar ao dono ⏳ Q-13 num G1
   imediato (emenda de P-3/P-7 e HC-4); nenhuma escuta fora do loopback antes desse G1. Deps: T-0.11,
   T-0.17. Implements: S2, ADR-9.
@@ -302,9 +303,10 @@ Regras comuns:
   (b) 10 min do relógio do hospedeiro (S0.10) na tela, decodificado por quadro, com e sem "Use
   Buffering", alternando movimento e 30 s parados → distribuição da latência de captura. Files:
   `spikes/SP-6.md`, `spikes/sp-6/**`. AC: AC-7.2, AC-7.7. Done: **sucesso** = |T0ᵢ − T0| ≤ 17 ms e
-  erro padrão de T0 ≤ 3 ms; latência estável ±10 ms com espalhamento p95−p5 ≤ 33 ms. **Plano B** =
-  desligar buffering; QuickTime. Deps: T-0.11, T-0.12, T-0.19, T-0.20, T-0.22, T-0.34. Implements:
-  S7 itens 3, 4 e 7, ADR-15.
+  erro padrão de T0 ≤ 3 ms; latência estável ±10 ms com espalhamento p95−p5 ≤ 33 ms; o dono copia a
+  mediana para `sync.captureLatencyMs` no `config.json` (S0.1, D3.1). **Plano B** = desligar
+  buffering; QuickTime. Deps: T-0.11, T-0.12, T-0.19, T-0.20, T-0.22, T-0.34. Implements: S7 itens
+  3, 4 e 7, ADR-15.
 - [ ] **T-0.24** **SP-6 (alto) — sincronia ponta a ponta, parte 2: toques reais.** 30 toques reais
   nas cenas 2 e 5, com detecção por região e erro deixando um de fora (S7 item 6), usando o T0 e a
   latência medidos na T-0.23. Files: `spikes/SP-6.md`, `spikes/sp-6/**`. AC: AC-7.3 (método). Done:
@@ -342,11 +344,12 @@ Regras comuns:
   6, AC-13.6.
 - [ ] **T-0.27** **SP-9 (médio) — Central de Controle, modo avião, rede, barra de estado.** 10
   ciclos: arrastar (0,9·0,01 → 0,9·0,2), achar `airplane-mode-button` em ≤ 2 s, ler `value`, tocar,
-  conferir a troca, fechar; ler `{network}` com o cabo ligado (deve ir a `offline` com o avião, mesmo
-  com o túnel no cabo); com o OBS gravando, ver se a barra de estado mostra 9:41 e se o ícone de avião
-  aparece. Files: `spikes/SP-9.md`, `spikes/sp-9/**`. AC: AC-1.15, AC-5.7 (parcial: abrir, tocar e
-  fechar pelo runner, sem ponto de controle). Done: **sucesso** = 10/10;
-  `network` correto; a prova visual do avião definida. **Plano B** = rótulo "Airplane Mode"; OCR; a
+  conferir a troca, fechar; ler `{network}` com o cabo ligado (deve ir a `offline` com o avião,
+  mesmo com o túnel no cabo); com o OBS gravando, ver se a barra de estado mostra 9:41 e se o ícone
+  de avião aparece. Files: `spikes/SP-9.md`, `spikes/sp-9/**`. AC: AC-1.15, AC-5.7 (parcial: abrir,
+  tocar e fechar pelo runner, sem ponto de controle). Done: **sucesso** = 10/10; `network` correto;
+  a prova visual do avião definida. **Plano B** = rótulo "Airplane Mode"; localizar pelo OCR do Mac
+  sobre um quadro do OBS (T-0.14; o runner não captura a Central de Controle) e tocar por `point`; a
   pessoa toca. Deps: T-0.11, T-0.13, T-0.17. Implements: S1 item 7, S0.3, S13 item 7.
 - [ ] **T-0.28** **SP-10 (médio) — mapa de alvos e linha do tempo do Hagah no build do TestFlight.**
   Pré-condições: D0.13 e D0.14 feitos. Snapshot de cada tela do roteiro (leitor, seletores,

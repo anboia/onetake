@@ -108,7 +108,7 @@ anterior + `choreo.run {section: cleanup}`) → `choreo compile` (com guia) → 
 pré pela conexão `sync` → OBS (com guarda de perfil): `SetRecordDirectory`, `StartRecord`, espera
 `STARTED`, pré-rolo com 8 marcas `SerialFrame` → `choreo.run {section: scenes}` → o aparelho executa
 sozinho; eventos chegam por notificação e vão para `events.ndjson`; `scene.start` →
-`CreateRecordChapter`; `checkpoint.wait` → aviso no Mac → (a pessoa age) → o runner segue → … →
+`CreateRecordChapter`; `checkpoint.wait` (`who: human`) → aviso no Mac → (a pessoa age) → o runner segue → … →
 `take.end` → pós-rolo → `StopRecord` → espera finalização → `choreo.run {section: cleanup}` →
 `events.fetch` (completa buracos) → rajada pós → `align` (marcas + regiões + ajuste) → `export`
 (S10) → `status: finished`. O MCP lê `status.json`/`events.ndjson` e fala com o supervisor só por

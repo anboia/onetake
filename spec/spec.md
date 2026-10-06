@@ -247,7 +247,7 @@ overrunMs}], checkpoints: [...], events: [Event]}`.
 
 | Arquivo | Conteúdo |
 |---|---|
-| `take.json` | `{schema, takeId, mode: take\|rehearsal\|dry, status: preparing\|recording\|finished\|aborted\|failed, scenesResult?: finished\|aborted, cause?, choreography: {path, sha256}, app: {bundleId, version}, device: {udid, os, transport}, toolchain: {...}, startedAt, endedAt, interventions, syncOk, cleanupPending, obsStats: {renderSkipped, outputSkipped}, airplaneLeftOn}` |
+| `take.json` | `{schema, takeId, mode: take\|rehearsal\|dry, status: preparing\|recording\|finished\|aborted\|failed, scenesStartedAt?, scenesResult?: finished\|aborted, cause?, choreography: {path, sha256}, app: {bundleId, version}, device: {udid, os, transport}, toolchain: {...}, startedAt, endedAt, interventions, syncOk, cleanupPending, obsStats: {renderSkipped, outputSkipped}, airplaneLeftOn}` |
 | `choreo.json` | a coreografia compilada usada |
 | `preflight.json` | relatório do pré-voo (S12) |
 | `status.json`, `events.ndjson` | estado vivo (`{schema: "contrarregra.status/1", …}`, com batimento do supervisor) e eventos durante a tomada |
@@ -398,11 +398,13 @@ por amostragem do centro de cada célula.
     `screen.shot` e toda captura interna (seletor `ocr`, condição `text`) só acontecem com o app
     alvo, o hospedeiro (fora de tomada) ou um app de `apps.allowed` em primeiro plano; com o
     SpringBoard à frente (tela de início, Central de Controle, tela travada) ou a folha `authkit`,
-    `E_FORBIDDEN_APP` e nada é capturado. No iPhone físico, Ajustes, Telefone, Mensagens, Mail,
-    Wallet e as lojas (`com.apple.Preferences`, `com.apple.mobilephone`, `com.apple.MobileSMS`,
-    `com.apple.mobilemail`, `com.apple.Passbook`, `com.apple.AppStore`, `com.apple.MobileStore`)
-    nunca entram na lista: como app alvo de `choreo.load`, como `app.explore` ou em `apps.allowed`,
-    o runner os recusa com `E_FORBIDDEN_APP` (P-3); só o build de simulador os aceita (AC-3.7).
+    `E_FORBIDDEN_APP` e nada é capturado; dentro da sondagem de uma condição ou da espera de um
+    alvo, a captura recusada conta como "ainda não" e a sondagem segue até o prazo. No iPhone
+    físico, Ajustes, Telefone, Mensagens, Mail, Wallet e as lojas (`com.apple.Preferences`,
+    `com.apple.mobilephone`, `com.apple.MobileSMS`, `com.apple.mobilemail`, `com.apple.Passbook`,
+    `com.apple.AppStore`, `com.apple.MobileStore`) nunca entram na lista: como app alvo de
+    `choreo.load`, como `app.explore` ou em `apps.allowed`, o runner os recusa com `E_FORBIDDEN_APP`
+    (P-3); só o build de simulador os aceita (AC-3.7).
 
 **API / Interface**
 - WebSocket no loopback do aparelho, porta `runner.port`; primeira mensagem obrigatória
@@ -441,8 +443,9 @@ por amostragem do centro de cada célula.
 - **AC-1.3** Given o Hagah em primeiro plano, when `ui.tree {format: compact}` é pedido, then cada
   linha tem `ref`, tipo e frame em pontos, e o rótulo quando o nó tem um; o botão "Open settings" do
   Diário aparece com o mesmo frame que `ui.find` devolve.
-- **AC-1.4** Given o runner ocioso, when `screen.shot` é pedido 50 vezes em JPEG/pontos, then o p95
-  da resposta é ≤ 500 ms e a imagem tem 390×844 px.
+- **AC-1.4** Given o runner ocioso com o app alvo (ou `app.explore`) em primeiro plano, when
+  `screen.shot` é pedido 50 vezes em JPEG/pontos, then o p95 da resposta é ≤ 500 ms e a imagem tem
+  390×844 px.
 - **AC-1.5** Given PX-2 ou PX-3 liberados (✅ Q-5b/c) e presentes, e o leitor do Hagah com áudio
   tocando e a palavra destacada animando, when 50 `ui.tap` são feitos num botão escolhido no SP-3
   (registrado em `spikes/SP-3.md`) cujo toque não para o áudio (tela restaurada entre toques), then p95(`tDevEndNs − tDevStartNs`)
@@ -875,9 +878,11 @@ scenes:
 2. Ao chegar num ponto de controle, o runner avalia `until` uma vez: se já é verdadeira, emite só
    `checkpoint.resolved {waitedMs: 0}` (E-5.1); senão emite `checkpoint.wait` e passa a sondar
    `until` a cada 100 ms. O Mac, ao receber um `checkpoint.wait` com `who: human`, **avisa no Mac**:
-   som curto (`paths.ffmpeg -f audiotoolbox` no `alerts.sayDevice`) e `say -a <alerts.sayDevice>` em
-   português, nunca no iPhone e nunca num dispositivo que o OBS grava (P-4, P-7); repete o aviso a
-   cada ⚠️ 20 s. `who: runner` não gera aviso.
+   som curto (`paths.ffmpeg -f audiotoolbox` com o `-audio_device_index` achado, a cada aviso, pelo
+   nome exato de `alerts.sayDevice` em `-list_devices true`; sem correspondência, nenhum som, aviso
+   `E_CONFIG` e nunca o dispositivo padrão) e `say -a <alerts.sayDevice>` em português, nunca no
+   iPhone e nunca num dispositivo que o OBS grava (P-4, P-7); repete o aviso a cada ⚠️ 20 s. `who:
+   runner` não gera aviso.
 3. Quando `until` fica verdadeira, o runner emite `checkpoint.resolved {waitedMs}` e **continua
    sozinho**, sem comando do Mac. Estourou o prazo → `checkpoint.timeout` e `onTimeout`.
 4. O runner **nunca** age no lugar da pessoa em credenciais: Face ID, código, senha. Tocar
@@ -899,7 +904,8 @@ scenes:
 - **E-5.1** A condição já é verdadeira ao chegar (ex.: o dono foi rápido) → só `checkpoint.resolved
   {waitedMs: 0}`, sem `checkpoint.wait` nem aviso sonoro (item 2).
 - **E-5.2** O Mac está sem conexão com o runner quando o ponto de controle começa → o runner espera
-  igual; o Mac avisa assim que reconecta e lê `choreo.status.state = checkpoint`.
+  igual; ao reconectar e ler `choreo.status.state = checkpoint`, o Mac avisa se o ponto de controle
+  é `who: human` (pelo `checkpoint.wait` recuperado por `events.fetch`).
 - **E-5.3** O Face ID falha e o iOS pede o código → se toques humanos funcionam, a pessoa digita; se o
   SP-1 mostrar que não, o prazo estoura e a tomada pausa (repetir a cena exige nova tomada).
 - **E-5.4** Uma folha de sistema inesperada surge no lugar da esperada → `until` não fica
@@ -1012,8 +1018,9 @@ scenes:
    100 ms. `sync.json` também traz o erro sem a correção visual (só θ, T0 e a latência medida no
    SP-6), para expor viés. Tomada fora da meta: `syncOk: false` e não é entregue sem o sim do dono
    (P-5). Com menos de 2 passos detectados, α = `sync.captureLatencyMs`, β = 0 e
-   `captureLatency.method: "calibrated"`; com menos de 10, `error` = null e `ok: false` (não
-   avaliado), e a tomada não conta para SM-2.
+   `captureLatency.method: "calibrated"` (campo vazio → α = 0, `method: "none"`, `ok: false` e aviso
+   `E_SYNC_QUALITY`); com menos de 10, `error` = null e `ok: false` (não avaliado), e a tomada não
+   conta para SM-2.
 7. **Calibração dedicada** (só manutenção/spike, nunca numa tomada): `contrarregra sync calibrate`
    lança o hospedeiro por `devicectl device process launch`, grava 10 min do relógio (S0.10) no OBS,
    decodifica os quadros e mede a distribuição da latência de captura com e sem "Use Buffering"; ao
@@ -1084,9 +1091,10 @@ scenes:
    `hold`), em ordem, pela conexão de exploração, e devolve um resultado por passo, parando no
    primeiro erro se `stopOnError`.
    Só na CLI: `runner build|logs|sever`, `obs setup`, `guide calibrate|play`, `sync
-   measure|calibrate`, `booth`, `takes prune` (✅ Q-14: lista as tomadas de `paths.takes` exceto a
-   mais recente com `status: finished` e, com um G4 do dono em lote, apaga delas só `recording.mp4`
-   e `review.mp4`; AC-12.9).
+   measure|calibrate`, `booth`, `takes prune` (✅ Q-14: por app, lista as tomadas `mode: take` em
+   estado final (`finished`, `aborted`, `failed`) que não seguram a trava do aparelho, exceto a
+   `finished` mais recente daquele app, e, com um G4 do dono em lote, apaga delas só `recording.mp4`
+   e `review.mp4`; ensaios, `dry` e tomadas em curso nunca entram na lista; AC-12.9).
 3. **Captura para o Claude Code**: JPEG em pontos (390×844, qualidade ⚠️ 0,8, ≤ 150 KB) mais uma
    linha de texto com a escala e o caminho do PNG nativo salvo em `paths.cache/explore/` (podado:
    guarda as ⚠️ 200 últimas). Coordenadas da imagem = pontos do XCUITest. Só com o app em primeiro
@@ -1094,22 +1102,24 @@ scenes:
    pastas do Claude Code (A9).
 4. **Árvore**: formato compacto, só visíveis, com `_meta['anthropic/maxResultSizeChars'] = 200000`.
 5. **Tomadas longas**: `take_start` cria um **supervisor destacado** (processo próprio) que roda a
-   tomada, segura a conexão `control` e escreve `status.json` (com batimento de 1 Hz: pid e tempo
-   monotônico) e `events.ndjson`; o MCP só lê esses arquivos e fala com o supervisor por arquivo:
-   `take_resume`/`take_abort` (e `take resume|abort` na CLI) gravam `command.json {op: resume|abort,
-   skipStep?, reason?}` na pasta da tomada e mandam `SIGUSR2` ao pid de `status.json`; o supervisor
-   repassa ao runner (`choreo.resume`/`choreo.abort`) e apaga o arquivo. Reiniciar o MCP não
-   interrompe a tomada; `take_status` reencontra o supervisor pelo `takeId` e confere o batimento.
-   Um **vigia** (processo filho do supervisor) e também `take_status`, `take_wait` e `doctor` checam
-   o batimento. Só para uma tomada ainda viva — `take.json.status` = `preparing` ou `recording` e o
-   arquivo de trava do aparelho com o `takeId` dela —, batimento velho há mais de 10 s → se
+   tomada, segura a conexão `control` e escreve `status.json` (com batimento de 1 Hz: pid do
+   supervisor, `watchdogPid` e tempo monotônico) e `events.ndjson`; o MCP só lê esses arquivos e
+   fala com o supervisor por arquivo: `take_resume`/`take_abort` (e `take resume|abort` na CLI)
+   gravam `command.json {op: resume|abort, skipStep?, reason?}` na pasta da tomada e mandam
+   `SIGUSR2` ao pid de `status.json`; o supervisor repassa ao runner
+   (`choreo.resume`/`choreo.abort`) e apaga o arquivo. Reiniciar o MCP não interrompe a tomada;
+   `take_status` reencontra o supervisor pelo `takeId` e confere o batimento. Um **vigia** (processo
+   filho do supervisor) e também `take_status`, `take_wait` e `doctor` checam o batimento. Só para
+   uma tomada ainda viva — `take.json.status` = `preparing` ou `recording` e o arquivo de trava do
+   aparelho com o `takeId` dela —, batimento velho há mais de 10 s → se
    `GetRecordStatus.outputActive = true`, `StopRecord` e espera a finalização; sempre `choreo.abort`
    (se o runner responder) e `take.json` `cause: supervisor-lost`, com `status: failed` se `scenes`
-   não terminou, ou `status` = `scenesResult` se já terminou; `cleanupPending` fica como está (S12
-   item 3); por fim solta a trava, se ela ainda tiver aquele `takeId`. Só o vigia recupera;
-   `take_status`, `take_wait` e `doctor` só recuperam se o pid do vigia sumiu, e sob um marcador
-   exclusivo (`recovery.lock`, criado com `O_EXCL`) na pasta da tomada. Ao terminar normalmente, o
-   supervisor grava o estado final em `status.json` e `take.json`, solta a trava e encerra o vigia.
+   não terminou (mais `scenesResult: aborted` se tinha começado, `scenesStartedAt`), ou `status` =
+   `scenesResult` se já terminou; `cleanupPending` fica como está (S12 item 3); por fim solta a
+   trava, se ela ainda tiver aquele `takeId`. O vigia recupera; `take_status`, `take_wait` e
+   `doctor` só recuperam se o `watchdogPid` sumiu, e sob um marcador exclusivo (`recovery.lock`,
+   criado com `O_EXCL`) na pasta da tomada. Ao terminar normalmente, o supervisor grava o estado
+   final em `status.json` e `take.json`, solta a trava e encerra o vigia.
 6. **Instruções do servidor** (≤ 2.048 caracteres, regra principal primeiro): opere o iPhone físico
    para gravar demos; prefira `@eN` e rótulos a coordenadas; nunca digite credenciais nem peça
    senha; não capture fora do app alvo; tomada = `take_start` + `take_wait`.
@@ -1140,8 +1150,9 @@ scenes:
   `description` e as instruções do servidor têm ≤ 2.048 caracteres.
 - **AC-8.2** Given uma tela do Hagah, when `screenshot` é chamado 40 vezes, then cada imagem tem
   ≤ 150 KB e 390×844 px, e o Claude Code não mostra aviso de limite.
-- **AC-8.3** Given 5 elementos achados por `ui.find`, when `tap {point}` é feito no centro do frame
-  medido na imagem de `screenshot`, then 5/5 acertam (o `expect` de cada elemento fica verdadeiro).
+- **AC-8.3** Given 5 elementos achados por `ui.find` numa tela do Hagah, when `tap {point}` é feito
+  no centro do frame medido na imagem de `screenshot`, then 5/5 acertam (o `expect` de cada elemento
+  fica verdadeiro).
 - **AC-8.4** Given uma tomada de 15 min no simulador com 3 pontos de controle, when o servidor MCP é
   morto e religado no meio, then `take_status` reencontra a tomada, todos os pontos de controle
   apareceram em `take_wait` em ≤ 2 s e a gravação foi parada exatamente uma vez.
@@ -1267,11 +1278,12 @@ scenes:
 1. Depois do alinhamento (S7), `contrarregra export <takeDir>` gera:
    - `events.json` (S0.7), com tempos em R e em F.
    - `subtitles.srt` e `subtitles.vtt` em tempo F: cada frase da fala gera uma ou mais deixas (o
-     texto da frase partido em k = ⌈caracteres/42⌉ trechos equilibrados em limites de palavra —
-     minimizando o maior, cada um ≤ 42 —, que dividem a janela da frase na proporção dos caracteres;
-     um trecho que fique com menos de 0,83 s se junta ao vizinho quando o total cabe em 42, senão a
-     deixa se estende até 0,83 s sobre a pausa seguinte; os ≥ 2 quadros entre deixas saem do fim de
-     cada deixa); linha 1 `[Snn · <caption>]` (o `caption` do último passo **com `caption`**
+     texto da frase partido em limites de palavra no menor número k ≥ ⌈caracteres/42⌉ de trechos que
+     deixa todos com ≤ 42, escolhendo entre essas divisões a que minimiza o maior trecho; os trechos
+     dividem a janela da frase na proporção dos caracteres, e cada deixa termina 2 quadros antes do
+     início da seguinte; se uma deixa, já descontados esses 2 quadros, ficar com menos de 0,83 s, a
+     fronteira com a seguinte anda até ela ter 0,83 s — na última deixa da frase, sobre a pausa que
+     segue a frase); linha 1 `[Snn · <caption>]` (o `caption` do último passo **com `caption`**
      começado na cena antes da deixa; sem nenhum, só `[Snn]`), linha 2 o trecho da fala; duração de
      cada deixa entre 0,83 s e 7 s; ≥ 2 quadros entre deixas.
    - `chapters.ffmeta` (`;FFMETADATA1`, `TIMEBASE=1/1000`, um `[CHAPTER]` por cena com o título;
@@ -1400,7 +1412,7 @@ scenes:
 | PF-07 | OBS: conectado, versões, perfil e coleção "Contrarregra" ativos, `Output.Mode = Advanced`, `AdvOut.RecFormat2 = hybrid_mp4`, 1170×2532@fps, fonte viva | auto |
 | PF-08 | disco livre ≥ limite (HC-11; ✅ Q-14) | auto |
 | PF-09 | segredo do OBS no Chaveiro | auto |
-| PF-10 | `alerts.sayDevice` existe e não é BlackHole / Multi-Output / Aggregate; nenhuma fonte de áudio do Mac na cena do OBS | auto |
+| PF-10 | `alerts.sayDevice` existe (pela mesma busca por nome exato do S5 item 2) e não é BlackHole / Multi-Output / Aggregate; nenhuma fonte de áudio do Mac na cena do OBS | auto |
 | PF-11 | Auto-Lock "Never", Low Power Mode desligado, Do Not Disturb/Focus ligado, atualizações automáticas desligadas, teclado com Auto-Correction, Predictive e Smart Punctuation desligados, pré-visualização de notificações "Never" | humano (confirmação registrada) |
 | PF-12 | nenhum ícone com nome de `bundle.displayNames` na página da tela de início onde está o ícone do app alvo, e esse ícone está tocável na página visível | auto (runner consulta o SpringBoard) |
 | PF-13 | QuickTime Player fechado | auto |
@@ -1410,35 +1422,37 @@ scenes:
 | PF-17 | a tomada anterior (S12 item 4) terminou com `cleanupPending: false` (S12 item 3); o dono confirma cada item de `confirm` da coreografia (S0.4; no Hagah, S13 item 6) | auto + humano |
 
    O pré-voo carrega a coreografia (`choreo.load`, no modo da tomada; no `take preflight` avulso,
-   modo `dry`) assim que PF-04 passa, e só então roda PF-06, PF-12 e PF-16, que consultam o runner
-   com o app alvo e o `iconLabel` dela. O relatório sai em `preflight.json`; qualquer `fail` impede
-   a gravação (`E_PREFLIGHT`, com os ids que falharam); `human` exige a confirmação do dono (`take
-   preflight <choreo> --confirm PF-11`; MCP `take_preflight {choreography, confirm: ["PF-11"]}`),
-   guardada com a hora em `paths.cache/confirmations.json` (E-12.1); com uma tomada em curso, `take
-   preflight --confirm` só grava a confirmação, sem abrir `control`. Na `take run`, uma checagem
-   `human` sem confirmação válida não aborta: o Mac avisa como num ponto de controle (S5 item 2) e
-   espera até ⚠️ 5 min pela confirmação; sem ela, `E_PREFLIGHT`. 2. **Preparo** (`prepare` da
-   coreografia, executado pelo runner com `choreo.run {section: prepare}`, sem gravar): leva o app
-   alvo ao estado inicial do vídeo e **verifica** com `assert`. Pode usar `openURL` e `terminate`.
-   Antes de apagar dado do app alvo, confere se há dado que nenhuma tomada criou e, se houver, para
-   num ponto de controle humano sem apagar nada (✅ Q-15). Termina com o app alvo encerrado e a tela
-   de início visível, para a cena 1 mostrar a abertura a frio; então PF-15. 3. **Limpeza**
-   (`cleanup`, executada pelo runner com `choreo.run {section: cleanup}` depois de parar a
-   gravação): desfaz o que a tomada deixou (no Hagah: excluir a conta de novo com revogação e sair —
-   conta Apple do aparelho, ✅ Q-2 —, S13), para a próxima tomada repetir o vídeo. Se `{network:
+   modo `dry`, depois de compilá-la ou de reaproveitar o compilado do cache) assim que PF-04 passa, e
+   só então roda PF-06, PF-12 e PF-16, que consultam o runner com o app alvo e o `iconLabel` dela. O
+   relatório sai em `preflight.json`; qualquer `fail` impede a gravação (`E_PREFLIGHT`, com os ids
+   que falharam); `human` exige a confirmação do dono (`take preflight <choreo> --confirm PF-11`;
+   MCP `take_preflight {choreography, confirm: ["PF-11"]}`), guardada com a hora em
+   `paths.cache/confirmations.json` (E-12.1); com uma tomada em curso, `take preflight --confirm` só
+   grava a confirmação, sem abrir `control`. Na `take run`, uma checagem `human` sem confirmação
+   válida não aborta: o Mac avisa como num ponto de controle (S5 item 2) e espera até ⚠️ 5 min pela
+   confirmação; sem ela, `E_PREFLIGHT`.
+2. **Preparo** (`prepare` da coreografia, executado pelo runner com `choreo.run {section: prepare}`,
+   sem gravar): leva o app alvo ao estado inicial do vídeo e **verifica** com `assert`. Pode usar
+   `openURL` e `terminate`. Antes de apagar dado do app alvo, confere se há dado que nenhuma tomada
+   criou e, se houver, para num ponto de controle humano sem apagar nada (✅ Q-15). Termina com o app
+   alvo encerrado e a tela de início visível, para a cena 1 mostrar a abertura a frio; então PF-15.
+3. **Limpeza** (`cleanup`, executada pelo runner com `choreo.run {section: cleanup}` depois de parar
+   a gravação): desfaz o que a tomada deixou (no Hagah: excluir a conta de novo com revogação e sair
+   — conta Apple do aparelho, ✅ Q-2 —, S13), para a próxima tomada repetir o vídeo. Se `{network:
    offline}`, o primeiro passo é um ponto de controle "desligue o modo avião" até `{network:
-   online}`. O `take.json` nasce com `cleanupPending: false`; o supervisor grava `true` em
-   `take.start` e, em `take.end`/`take.abort`, `scenesResult: finished|aborted`; só uma `cleanup`
-   completa (todas as `assert` passando) volta a `cleanupPending: false`. Uma `cleanup` que falha,
-   estoura o prazo ou é abortada não muda o `status` da tomada, que vem de `scenesResult`. 4.
-   **Repetir** (US-16, SM-3): `take run` encadeia limpeza da anterior (se pendente) → pré-voo →
+   online}`. O `take.json` nasce com `cleanupPending: false`; em `take.start` o supervisor grava
+   `scenesStartedAt` e `cleanupPending: true` e, em `take.end`/`take.abort`, `scenesResult:
+   finished|aborted`; só uma `cleanup` completa (todas as `assert` passando) volta a `cleanupPending:
+   false`. Uma `cleanup` que falha, estoura o prazo ou é abortada não muda o `status` da tomada, que
+   vem de `scenesResult`.
+4. **Repetir** (US-16, SM-3): `take run` encadeia limpeza da anterior (se pendente) → pré-voo →
    preparo → PF-15 → tomada → saídas, sem passos manuais além dos pontos de controle e das
    confirmações do pré-voo. "A tomada anterior" é a mais recente do mesmo `device.udid` e do mesmo
-   app que chegou a `take.start` (tem `scenesResult`); tomadas que terminaram antes disso e ensaios
-   no simulador não contam. Se ela tem `cleanupPending: true`, a limpeza roda com o `choreo.json` e
-   o `takeId` dela (os eventos vão para o `events.ndjson` dela, com o `seq` seguindo o `lastSeq`
-   dela) e, completa com todas as `assert` passando, o supervisor grava `cleanupPending: false` nela
-   e em toda tomada anterior do mesmo aparelho e app ainda pendente (PF-17).
+   app que chegou a `take.start` (tem `scenesStartedAt`); tomadas que terminaram antes disso e
+   ensaios no simulador não contam. Se ela tem `cleanupPending: true`, a limpeza roda com o
+   `choreo.json` e o `takeId` dela (os eventos vão para o `events.ndjson` dela, com o `seq` seguindo
+   o `lastSeq` dela) e, completa com todas as `assert` passando, o supervisor grava `cleanupPending:
+   false` nela e em toda tomada anterior do mesmo aparelho e app ainda pendente (PF-17).
 
 **API / Interface**
 - CLI `contrarregra take preflight <choreo> [--confirm PF-nn]`, `take run <choreo> [--mode take|dry]
@@ -1447,8 +1461,8 @@ scenes:
 **Error & Edge Cases**
 - **E-12.1** Confirmação humana com mais de ⚠️ 12 h → expira e é pedida de novo. As de PF-17 valem
   para uma tomada só: expiram no `take.start` seguinte e em toda `cleanup` completa.
-- **E-12.2** `prepare` falha numa asserção → para antes de gravar, com a asserção que falhou e a
-  captura de tela.
+- **E-12.2** `prepare` falha numa asserção → para antes de gravar, com a asserção que falhou,
+  `device.state` e, se S1 item 11 permitir (app permitido à frente), a captura de tela.
 - **E-12.3** `cleanup` exige ponto de controle (Face ID da revogação) e o dono não está → a tomada fica
   `finished` com `cleanupPending: true`; a próxima `take run` começa pela limpeza.
 
@@ -1461,9 +1475,10 @@ scenes:
 - **AC-12.3** Given um ícone com um nome de `bundle.displayNames` na mesma página da tela de início que o ícone do app alvo,
   when o pré-voo roda, then PF-12 falha dizendo para tirá-lo da tela de início (fica na Biblioteca de
   Apps).
-- **AC-12.4** Given uma tomada completa do Hagah terminada, when `take run` é dado de novo e cada ponto
-  de controle humano é resolvido em ≤ 15 s, then a limpeza, o pré-voo, o preparo, a tomada e as saídas
-  terminam em ≤ 15 min, sem contar a narração (SM-3); a soma das esperas fica em `timings.md`.
+- **AC-12.4** Given uma tomada completa do Hagah terminada, when `take run` é dado de novo e cada
+  ponto de controle humano e cada confirmação do pré-voo (PF-17) são resolvidos em ≤ 15 s, then a
+  limpeza, o pré-voo, o preparo, a tomada e as saídas terminam em ≤ 15 min, sem contar a narração
+  (SM-3); a soma das esperas fica em `timings.md`.
 - **AC-12.5** Given PF-11 confirmado há 13 h, when o pré-voo roda, then pede a confirmação de novo.
 - **AC-12.6** Given `prepare` concluído, when a cena 1 começa, then o app alvo não está rodando, a tela
   de início está em primeiro plano e `{element: {app: springboard, label: <app.iconLabel>, type:
@@ -1473,10 +1488,11 @@ scenes:
   o pré-voo pede a confirmação de PF-17 (S12 item 1) e, confirmada, a tomada segue normalmente.
 - **AC-12.8** Given o app alvo com uma entrada de diário que nenhuma tomada criou, when `prepare` roda,
   then para num ponto de controle humano antes de apagar qualquer coisa.
-- **AC-12.9** Given três tomadas `finished` e uma `aborted` do mesmo app, when `takes prune` roda e
-  o dono aprova o G4, then só o `recording.mp4` e o `review.mp4` das que não são a `finished` mais
-  recente são apagados, e `take.json`, `choreo.json`, `events.json`, as legendas e `final.mp4`
-  ficam; sem o G4, nada é apagado.
+- **AC-12.9** Given três tomadas `mode: take` `finished` e uma `aborted` do mesmo app, mais um `dry`
+  e um ensaio mais novos que elas e uma tomada de outro app, when `takes prune` roda e o dono aprova
+  o G4, then só o `recording.mp4` e o `review.mp4` das `mode: take` daquele app que não são a
+  `finished` mais recente são apagados; `take.json`, `choreo.json`, `events.json`, as legendas e
+  `final.mp4` ficam, e o `dry`, o ensaio e a outra app ficam intactos; sem o G4, nada é apagado.
 
 ---
 
