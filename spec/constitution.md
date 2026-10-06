@@ -1,6 +1,6 @@
 # Contrarregra — Constituição (invariantes do projeto)
 
-**Status:** PROPOSED
+**Status:** RATIFIED 2026-10-06
 
 > Leia uma vez por sessão, antes de qualquer tarefa. São regras de projeto que valem para toda
 > tarefa e dizem COMO a ferramenta é construída; o comportamento continua em `spec.md`. Se uma

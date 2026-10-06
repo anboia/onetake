@@ -1,4 +1,4 @@
-# Contrarregra — Especificação funcional — DRAFT
+# Contrarregra — Especificação funcional — FROZEN 2026-10-06
 
 > Projeto novo, sem código, escrito em 2026-10-02 a partir de
 > `hagah/plans/mobile/notes/v8.5-prompt-contrarregra.md` e de uma pesquisa com fontes
@@ -7,7 +7,7 @@
 > agendada para depois de um spike (lista única em `requirements.md` §5; as da ratificação foram
 > tomadas em 2026-10-06). O que só o aparelho pode provar virou **spike** (SP-n,
 > `tasks.md` Fase 0): a spec diz o comportamento exigido; o spike diz se o caminho principal ou o
-> plano B o entrega. Vira FROZEN na ratificação (G1); depois disso só o G1 a muda.
+> plano B o entrega. Congelada (FROZEN) na ratificação de 2026-10-06; daqui em diante só o G1 a muda.
 
 **Glossário.** *Tomada*: uma gravação contínua de uma coreografia. *Coreografia*: arquivo
 declarativo com cenas e passos. *Runner*: o bundle de UI test que roda no iPhone e obedece a
