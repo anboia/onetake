@@ -18,7 +18,7 @@
 |---|---|
 | Quem constrói | sessões do Claude Code, **uma tarefa por sessão** (P-6); ⚠️ ~6 tarefas por dia útil quando encadeadas |
 | Quem precisa estar no aparelho | o dono: cabo, Face ID, código, Settings, OBS. ⚠️ Fase 0: ~4 janelas de 2 h em ~8 dias úteis; depois, 2 janelas por semana |
-| Aparelhos | um iPhone 12 (iOS 26.3 hoje; ❓ Q-11) e um MacBook Air M4 16 GB; ~8,7–10 GiB livres no disco (❓ Q-14) |
+| Aparelhos | um iPhone 12 (iOS 26.3 hoje; ✅ Q-11) e um MacBook Air M4 16 GB; ~8,7–10 GiB livres no disco (✅ Q-14) |
 | Calendário | feriados no período: 2026-10-12 e 2026-11-02 (segundas), 2026-11-20 (sexta) |
 | Congelamento | sem atualizar iOS, Xcode ou OBS durante a produção (P-1, ADR-16); atualizar = G1 e refazer SP-1…SP-7 |
 
@@ -35,23 +35,24 @@ como o 1.º.** Exemplo de datas se o G1 for em 2026-10-05, uma segunda-feira:
 | 5 — Pré-voo, preparo e **tomada do Hagah** | 2 | 3 | 5 | **2026-11-10 (D+25)** |
 | 6 — MCP completo e passo a partir da exploração | 1 | 2 | 3 | 2026-11-12 (D+27) |
 | 7 — Ensaio no simulador | 1 | 2 | 3 | 2026-11-16 (D+29) |
-| 8 — Cabine de narração (❓ Q-6) | 1 | 2 | 3 | 2026-11-18 (D+31) |
+| 8 — Cabine de narração (✅ Q-6) | 1 | 2 | 3 | 2026-11-18 (D+31) |
 | 9 — Endurecimento | 1 | 2 | 3 | 2026-11-23 (D+33) |
 
 Até a tomada do Hagah: **17 / 25 / 38 dias úteis**. **Sinal de atraso** geral: se a Fase 0 passar de
 12 dias, ou um spike bloqueador (SP-1, SP-2) cair no plano B mais caro, refazer a estimativa e levar
-ao dono (❓ Q-10).
+ao dono (a revisão do Hagah espera a ferramenta, ✅ Q-10).
 
 ## Antes da Fase 0 — o que só o dono faz
 
 Lista completa, com os rótulos em inglês do iOS e os valores anteriores a anotar, em `deploy.md` D0.
 Resumo:
-- decidir Q-3, Q-11, Q-14 e Q-15 (são pré-requisito da primeira assinatura e dos spikes);
+- atualizar o iPhone para o último iOS 26.x (✅ Q-11), liberar ~20 GB no Mac (✅ Q-14) e exportar o
+  diário do Hagah (✅ Q-15) — são pré-requisito da primeira assinatura e dos spikes;
 - ligar o servidor WebSocket do OBS e guardar a senha no Chaveiro;
 - ligar o cabo e aceitar os pedidos de confiança/acessório; Settings do iPhone (Enable UI
   Automation, Auto-Lock "Never", Low Power Mode desligado, atualizações automáticas desligadas,
   teclado sem correção automática, notificações sem pré-visualização);
-- instalar o build do TestFlight (❓ Q-1);
+- instalar o build do TestFlight (✅ Q-1);
 - **antes do SP-8 e do SP-10** (que entram e excluem conta no Hagah e apagam o diário local):
   sincronizar ou exportar o diário do Hagah (D0.13) e conferir o Sign in with Apple em Settings
   (D0.14). Todo passo em Settings › [nome] (conta Apple) é feito **pelo dono, à mão** — nunca pelo
@@ -68,7 +69,7 @@ confirma).
 
 **Objetivo:** o mínimo de código para medir no aparelho, e a resposta (principal ou plano B) para
 cada risco que a spec não pôde verificar. · **Seções:** S0, partes de S1, S2, S7, S8, S9 · **Critério
-do portão:** todos os spikes aplicáveis (SP-18 só se Q-6 = sim) com `spikes/SP-n.md` preenchido
+do portão:** todos os spikes (SP-1…SP-18) com `spikes/SP-n.md` preenchido
 (medida, critério, decisão principal/B); nenhum bloqueador sem caminho; `architecture.md` A10/A11
 atualizados; Q-5 (d, f), Q-8, Q-9, Q-12, Q-13 respondidas; qualquer mudança de comportamento levada
 a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos dois caminhos.
@@ -85,7 +86,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   listados + `mac/test/core.config.test.ts`. AC: AC-0.5. Done: `node --test` verde; o shim sai em
   ≤ 1 s com Node fora de 22.x ≥ 22.18 (E-8.1); um `config.json` com outro time sai com `E_CONFIG`
   (o `typecheck` só fica verde na T-0.2, depois do G2 do `typescript`). Deps: —. Implements: S0.1, S8
-  item 7, P-1, P-3, ❓ Q-4.
+  item 7, P-1, P-3, ✅ Q-4.
 - [ ] **T-0.2** Gate G2 da primeira leva de dependências: `@modelcontextprotocol/server@2.3.0`
   (traz `@modelcontextprotocol/core` e `zod` 4), `yaml`, XcodeGen 2.45.4 (Homebrew, já instalado,
   fixado por `minimumXcodeGenVersion`); dev: `typescript`, `@types/node`, `@modelcontextprotocol/client`.
@@ -113,7 +114,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `app.kifactory.hagah`; `codesign -dvv` do hospedeiro e do `.xctrunner` com
   `TeamIdentifier=984PNJZ8B9` e `Authority=Apple Development: Andre Saboia (6NKUX5CX7G)`; `security
   find-identity -v -p codesigning` igual antes e depois; `swift test` verde. Deps: T-0.2, T-0.3.
-  Implements: S1 item 1, S0.10, A2, A5, P-3, ❓ Q-3.
+  Implements: S1 item 1, S0.10, A2, A5, P-3, ✅ Q-3.
 - [ ] **T-0.5** Núcleo do runner: no Kit, roteador, autenticação por token, controlador único e
   agenda das duas filas (testáveis com `swift test`); no runner, `testServe` (faz `press(.home)` e
   só então abre o servidor), `NWListener` WebSocket no loopback na porta da configuração (no build
@@ -169,7 +170,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   hospedeiro**; o primeiro passo é uma sonda de alcance (`runner up`, um `Connect` e
   `session.hello`): se o `Connect` for recusado com o runner vivo, repetir com o build `Spike` nas duas
   formas de `CONTRARREGRA_BIND` (G5 para instalá-lo); recusado nas duas, a tarefa para e vale o plano B
-  do SP-4 (❓ Q-13 → G1 imediato, `requirements.md` §5) antes de qualquer outro spike no aparelho;
+  do SP-4 (⏳ Q-13 → G1 imediato, `requirements.md` §5) antes de qualquer outro spike no aparelho;
   senão, mede as ACs abaixo.
   Files: `mac/src/{usbmux,device,runner}/**` (só correções que o aparelho mostrar). AC: AC-1.1,
   AC-1.2, AC-1.12, AC-1.13, AC-2.3 (parte: `runner up`/`runner status` sem cabo), AC-2.5, AC-2.7,
@@ -208,7 +209,7 @@ Regras comuns:
 - código de spike que roda no aparelho fica em `ios/ContrarregraRunner/Spikes/` e nos métodos
   `spike.*` (configuração `Spike`; cada build novo instalado é G5, P-6); chamadas a API privada ficam
   **só** em `ios/ContrarregraRunner/PrivateXCT/`, atrás de `CONTRARREGRA_PRIVATE`, e só rodam com o sim
-  do dono para aquele uso (❓ Q-5); o driver do Mac de cada spike fica em `spikes/sp-n/` e usa o
+  do dono para aquele uso (✅ Q-5); o driver do Mac de cada spike fica em `spikes/sp-n/` e usa o
   cliente JSON-RPC de `mac/src/runner` (T-0.10); nada disso vai para produção sem tarefa própria;
 - capturas, quadros e gravações de spike vão para `~/Movies/contrarregra/spikes/SP-n/`, nunca para o
   repositório; antes de cada gravação, conferir livre ≥ `max(4 GiB, 3 × estimativa + 2 GiB)` (HC-11)
@@ -230,7 +231,7 @@ Regras comuns:
   `spikes/sp-1/**`. AC: AC-13.8 (parte do aviso). Done: **sucesso** = 0 quadros com o aviso
   em ~360 amostras enquanto ele está visível no aparelho, **e** 100 % dos toques humanos fazem efeito;
   **plano B** = (1) pontos de controle `who: runner` com `steps` em tudo que não é credencial (avião,
-  arrasto de destravar); (2) comparar com a Gravação de Tela do iOS; (3) levar ❓ Q-9 ao dono com os
+  arrasto de destravar); (2) comparar com a Gravação de Tela do iOS; (3) levar ⏳ Q-9 ao dono com os
   quadros. Deps: T-0.11, T-0.13, T-0.14, T-0.17. Implements: HC-6, S1 item 9, S5 item 6.
 - [ ] **T-0.17** **SP-2 (bloqueador) — sessão do XCTest × modo avião; forçar o cabo.** Ligar o cabo e
   sondar `devicectl list devices --json-output <arquivo temporário>` a cada 1 s, lendo
@@ -245,11 +246,11 @@ Regras comuns:
   `.xctrunner` sem `Frameworks/XC*`, lançá-lo por `devicectl device process launch` e repetir — G5
   antes de re-assinar (só com `Apple Development: Andre Saboia (6NKUX5CX7G)`) e antes de instalar o
   `.xctrunner` modificado; `codesign -dvv` confere `TeamIdentifier=984PNJZ8B9` e `security
-  find-identity -v -p codesigning` fica igual antes e depois; se falhar também, levar ❓ Q-12 ao dono
+  find-identity -v -p codesigning` fica igual antes e depois; se falhar também, levar ⏳ Q-12 ao dono
   num G1 imediato (`requirements.md` §5; nada que ponha o runner na tela durante a tomada entra antes
   dele). Deps: T-0.11. Implements: HC-4, S2, ADR-10.
-- [ ] **T-0.18** **SP-3 (alto) — toques com o app animando.** Pré-condição: Q-5b/c respondidas;
-  variante sem o sim do dono não roda. No leitor do Hagah com o Salmo 23 tocando: escolher e registrar
+- [ ] **T-0.18** **SP-3 (alto) — toques com o app animando.** Pré-condição: PX-2 e PX-3 em
+  `runner.privateAllowed` (✅ Q-5b/c). No leitor do Hagah com o Salmo 23 tocando: escolher e registrar
   um botão cujo toque não para o áudio (ex.: "Forward 15 seconds" no Now Playing) e fazer 50 toques
   nele em quatro variantes — (a) `XCUIElement.tap()` público; (b) dentro de
   `_performWithInteractionOptions:` com pular pré/pós; (c) troca do método de quiescência; (d)
@@ -259,7 +260,7 @@ Regras comuns:
   `ios/ContrarregraRunner/Spikes/**`. AC: AC-1.5, AC-1.18. Done: **sucesso** = pelo menos uma de (b),
   (c), (d) com p95 ≤ 150 ms, p99 ≤ 300 ms e 0 linhas de espera; (a) caracterizada. **Plano B** = (d)
   para todo passo com tempo; se nada servir, pausar o áudio antes dos toques que não precisam dele (G1
-  na coreografia do Hagah). Deps: T-0.11. Implements: S1 item 5, A10 PX-2/PX-3, ❓ Q-5b/c.
+  na coreografia do Hagah). Deps: T-0.11. Implements: S1 item 5, A10 PX-2/PX-3, ✅ Q-5b/c.
 - [ ] **T-0.19** **SP-4 (alto) — canal usbmux → WebSocket no loopback.** Duas formas de prender o
   listener (`requiredInterfaceType = .loopback`; `requiredLocalEndpoint 127.0.0.1:P`), no build
   `Spike`. 1.000 ecos de 64 bytes e 100 de 64 KB numa conexão persistente e 1.000 com conexão nova;
@@ -267,7 +268,7 @@ Regras comuns:
   conexão; registrar o `SerialNumber` cru do usbmuxd. Files: `spikes/SP-4.md`, `spikes/sp-4/**`. AC:
   AC-2.1, AC-2.6 (só a reconexão, sem `events.fetch`). Done: **sucesso** = o loopback é alcançável;
   p50 ≤ 5 ms, p95 ≤ 20 ms; conexão nova p95 ≤ 50 ms; desvio do θ ≤ 1 ms; sem mudança com avião.
-  **Plano B** = se o loopback não for alcançável por usbmux, parar e levar ao dono ❓ Q-13 num G1
+  **Plano B** = se o loopback não for alcançável por usbmux, parar e levar ao dono ⏳ Q-13 num G1
   imediato (emenda de P-3/P-7 e HC-4); nenhuma escuta fora do loopback antes desse G1. Deps: T-0.11,
   T-0.17. Implements: S2, ADR-9.
 - [ ] **T-0.20** **SP-5 (alto) — OBS, parte 1: fonte, áudio e gravação longa.** Quatro configurações
@@ -278,12 +279,12 @@ Regras comuns:
   AC-9.3 (parcial: o chute sem pré-voo), AC-9.7. Done: **sucesso** = 1170×2532 sem cor lavada
   (diferença ≤ 3/255 em áreas lisas), picos entre −20 e −3 dBFS, defasagem A/V ≤ ±45 ms, 0 quadros
   pulados, fonte recuperada pelo chute em ≤ 15 s. **Plano B** = HEVC; 30 fps; QuickTime manual. Deps:
-  T-0.12, T-0.13. Implements: S9 itens 1, 3 e 6, ADR-4, ADR-14, ❓ Q-8.
+  T-0.12, T-0.13. Implements: S9 itens 1, 3 e 6, ADR-4, ADR-14, ⏳ Q-8.
 - [ ] **T-0.21** **SP-5 (alto) — OBS, parte 2: capítulos e finalização.** 3 capítulos com títulos
   UTF-8; 30 paradas (10 × 1 min, 10 × 5 min, 10 × 10 min ≈ 19 GB no total, cada arquivo apagado logo
   depois de medido, pela regra comum). Files: `spikes/SP-5.md`, `spikes/sp-5/**`. AC: AC-9.2, AC-9.6.
   Done: **sucesso** = capítulos exatos e 0 falsos prontos. **Plano B** = QuickTime manual com
-  capítulos do FFMETADATA. Deps: T-0.20. Implements: S9 item 5, ADR-4, ❓ Q-8.
+  capítulos do FFMETADATA. Deps: T-0.20. Implements: S9 item 5, ADR-4, ⏳ Q-8.
 - [ ] **T-0.22** Núcleo de relógio e alinhamento para o SP-6 (sem aparelho): NTP com ajuste
   Theil-Sen (S7 item 2), T0 pelas marcas (item 3), detecção por região e ajuste V = α + (1+β)·P com o
   erro deixando um de fora (itens 4–6), decodificador do código de S0.10, e o invólucro do
@@ -306,26 +307,26 @@ Regras comuns:
   latência medidos na T-0.23. Files: `spikes/SP-6.md`, `spikes/sp-6/**`. AC: AC-7.3 (método). Done:
   **sucesso** = ≥ 90 % dos toques detectados no quadro certo (±1) e nenhuma detecção mais de 100 ms
   antes da ação. **Plano B** = só alinhamento visual por tomada. Deps: T-0.23. Implements: S7, SM-2.
-- [ ] **T-0.25** **SP-7 (médio) — travar, acender e destravar (cena 3).** Só com Q-5a = sim; senão,
-  medir só o ponto de controle humano (botão lateral). `pressLockButton` ×10 com leitura de
-  `com.apple.springboard.lockstate` e captura do OBS (nunca `screen.shot` com a tela travada); áudio
-  segue tocando; `device.wake` (um `press(.home)` com a tela travada, ninguém olhando) mostra os
-  controles da tela travada sem destravar; a pessoa destrava com Face ID; medir quando o `lockstate`
-  vira 0 e quando a tela travada sai de fato (vídeo alinhado pelo núcleo da T-0.22 com o T0 e a
-  latência da T-0.23); se preciso, o arrasto para cima é do `spike.unlockDrag` (só na configuração
-  `Spike`, recusado com `locked: true`) ou do dono; runner e captura atravessam travas de 10 s, 60 s
-  e 5 min. Files: `spikes/SP-7.md`, `spikes/sp-7/**`,
+- [ ] **T-0.25** **SP-7 (médio) — travar, acender e destravar (cena 3).** Com PX-1 liberado (✅
+  Q-5a); se a sondagem o der ausente, medir só o ponto de controle humano (botão lateral).
+  `pressLockButton` ×10 com leitura de `com.apple.springboard.lockstate` e captura do OBS (nunca
+  `screen.shot` com a tela travada); áudio segue tocando; `device.wake` (um `press(.home)` com a
+  tela travada, ninguém olhando) mostra os controles da tela travada sem destravar; a pessoa
+  destrava com Face ID; medir quando o `lockstate` vira 0 e quando a tela travada sai de fato (vídeo
+  alinhado pelo núcleo da T-0.22 com o T0 e a latência da T-0.23); se preciso, o arrasto para cima é
+  do `spike.unlockDrag` (só na configuração `Spike`, recusado com `locked: true`) ou do dono; runner
+  e captura atravessam travas de 10 s, 60 s e 5 min. Files: `spikes/SP-7.md`, `spikes/sp-7/**`,
   `ios/ContrarregraRunner/PrivateXCT/Lock.swift`, `ios/ContrarregraRunner/Spikes/**`. AC: AC-1.9,
   AC-1.21, AC-1.23 (parcial: `ui.drag` na tela travada com `locked: true` → `E_FORBIDDEN_APP`),
   AC-5.6 (parcial: `lockstate` → 0 × primeiro quadro sem a tela travada, sem ponto de controle).
   Done: **sucesso** = 10/10 travas em ≤ 2 s; `wake` não destrava; destrave detectado em ≤ 1 s depois
   de a tela travada sair; runner e captura sem queda. **Plano B** = evento HID 0x0C/0x30; ou ponto
   de controle humano (botão lateral). Deps: T-0.11, T-0.13, T-0.23. Implements: S1 itens 8 e 11, S5,
-  PX-1, ❓ Q-5a.
+  PX-1, ✅ Q-5a.
 - [ ] **T-0.26** **SP-8 (médio) — Sign in with Apple no aparelho.** Pré-condições: o dono já fez o
   backup do diário (D0.13) e confere a lista do Sign in with Apple **à mão** (D0.14); nenhum passo em
   Settings da conta Apple é feito pelo runner ou pelo agente. Sem gravar, com a conta do aparelho
-  (❓ Q-2): tocar o botão do Hagah e registrar qual processo expõe a folha
+  (✅ Q-2): tocar o botão do Hagah e registrar qual processo expõe a folha
   (`com.apple.AuthKitUIService`? SpringBoard?), os rótulos dos botões ("Continue"…) só por
   `ui.find`, quanto tempo a folha leva para aparecer, a variante de primeiro cadastro × conta já
   vinculada, e a sequência da exclusão (alerta → folha de revogação → "Account deleted" → "OK"). Files:
@@ -373,10 +374,10 @@ Regras comuns:
   comandos periódicos (SM-5); 10 falhas induzidas; registrar todo pedido de código de automação e o
   "Untrusted Developer", se aparecer. Files: `spikes/SP-12.md`, `spikes/sp-12/**`. AC: AC-1.11, AC-2.8.
   Done: **sucesso** = 0 religamentos em 4 h; RSS cresce < 100 MB; 1 pedido de código só na subida.
-  **Plano B** = subir um runner novo antes de cada tomada; PX-4 só com o sim do dono (❓ Q-5d, decidido
+  **Plano B** = subir um runner novo antes de cada tomada; PX-4 só com o sim do dono (⏳ Q-5d, decidido
   na T-0.39). Deps: T-0.11. Implements: S1 item 2, SM-5.
 - [ ] **T-0.31** **SP-12 (médio) — parte 2: alertas.** Um alerta de um botão sobre o Hagah com um
-  toque num elemento coberto, com e sem PX-5 (só com Q-5e = sim), registrando se o XCTest o fecha
+  toque num elemento coberto, com e sem PX-5 (PX-5 liberado, ✅ Q-5e), registrando se o XCTest o fecha
   sozinho. Fonte: o alerta "Account deleted" do próprio Hagah, provocado com o dono presente
   repetindo o login e a exclusão do SP-8 (dois Face ID; pré-condições D0.13 e D0.14); se ele não
   servir, o primeiro alerta de um botão que aparecer durante a T-0.30; sem nenhum, a T-0.39 registra
@@ -384,7 +385,7 @@ Regras comuns:
   `ios/ContrarregraRunner/PrivateXCT/Interruptions.swift`, `ios/ContrarregraRunner/Spikes/**`. AC:
   —. Done: **sucesso** = comportamento de alertas documentado com e sem PX-5. **Plano B** = todo
   alerta esperado com `expect` explícito (E-1.4). Deps: T-0.26, T-0.30. Implements: E-1.4, A10 PX-5,
-  ❓ Q-5e.
+  ✅ Q-5e.
 - [ ] **T-0.32** **SP-12 (médio) — parte 3: nada visível.** Ícones do hospedeiro e do runner tirados
   da tela de início e o runner ainda sobe, com os nomes exibidos de verdade (para
   `bundle.displayNames`); uma subida com a captura automática do XCTest ligada × as configurações de S1
@@ -427,7 +428,7 @@ Regras comuns:
   confirmação?). Files: `spikes/SP-17.md`, `spikes/sp-17/**`. AC: —. Done: arquivo idêntico em ≤ 5 s nos
   dois estados; comportamento do link documentado. **Plano B** = `events.fetch` pelo canal; preparo só
   pela UI. Deps: T-0.11. Implements: S4 item 4, S12 item 2.
-- [ ] **T-0.38** **SP-18 (baixo, só se ❓ Q-6 = sim) — cabine.** Laço de 10 cliques no Chrome
+- [ ] **T-0.38** **SP-18 (baixo; ✅ Q-6) — cabine.** Laço de 10 cliques no Chrome
   (AudioWorklet) e com `ffmpeg -f avfoundation` (caminho fixado), fone com fio e alto-falante
   embutido; Microfone liberado ao Chrome e ao processo que roda o ffmpeg (`deploy.md` D0.3). Files:
   `spikes/SP-18.md`, `spikes/sp-18/**`. AC: AC-10.8. Done: p95 ≤ 20 ms depois de uma calibração.
@@ -439,7 +440,7 @@ Regras comuns:
   Hagah, variante da folha em AC-13.6, prova da sincronia); atualizar as estimativas desta página e
   `bundle.displayNames`. Files: `spec/architecture.md`, `spec/tasks.md`, `spec/spec.md` e
   `spec/requirements.md` (só via G1). AC: —. Done: todo spike aplicável com decisão; G1 respondidos.
-  Deps: T-0.16…T-0.37, e T-0.38 se Q-6 = sim. Implements: P-6.
+  Deps: T-0.16…T-0.38. Implements: P-6.
 
 ## Fase 1 — Esqueleto ambulante
 **Objetivo:** a fatia mais fina por todas as camadas: coreografia de uma cena (cena 1 do Hagah: tela
@@ -450,13 +451,13 @@ S7, S8, S9, S10 · **Portão:** AC-0.6; uma tomada de uma cena gera `review.mp4`
 e `sync.json` calculado · **Data-alvo:** D+11 · **Sinal de atraso:** integração OBS↔runner > 2 dias.
 
 ## Fase 2 — Runner, transporte e exploração
-**Objetivo:** todas as operações de S1 e o transporte de S2 completos; ferramentas MCP de exploração.
-· **Seções:** S1, S2, S8 (exploração) · **Portão:** AC-1.1…AC-1.24 (AC-1.24 só a parte do aparelho;
-a do simulador vai à Fase 7), exceto AC-1.5 se Q-5b/c = não, AC-1.9 se Q-5a = não, e AC-1.8 e
-AC-1.23 (Fase 3, que traz as seções da coreografia e os pontos de controle); AC-1.10 e AC-1.18
-sempre; AC-2.1…AC-2.3, AC-2.5…AC-2.9 (AC-2.4 e AC-2.10 dependem do pré-voo: Fase 5);
-AC-8.1…AC-8.3 · **Data-alvo:** D+14 · **Sinal de atraso:** APIs privadas exigindo mais que
-PX-1…PX-6.
+**Objetivo:** todas as operações de S1 e o transporte de S2 completos; ferramentas MCP de
+exploração. · **Seções:** S1, S2, S8 (exploração) · **Portão:** AC-1.1…AC-1.24 (AC-1.24 só a parte
+do aparelho; a do simulador vai à Fase 7), exceto AC-1.5 se o SP-3 cair no plano B, AC-1.9 se o SP-7
+cair no plano B, e AC-1.8 e AC-1.23 (Fase 3, que traz as seções da coreografia e os pontos de
+controle); AC-1.10 e AC-1.18 sempre; AC-2.1…AC-2.3, AC-2.5…AC-2.9 (AC-2.4 e AC-2.10 dependem do
+pré-voo: Fase 5); AC-8.1…AC-8.3 · **Data-alvo:** D+14 · **Sinal de atraso:** APIs privadas exigindo
+mais que PX-1…PX-6.
 
 ## Fase 3 — Coreografia, execução, pontos de controle e guia
 **Objetivo:** formato completo, executor com prazos absolutos, espera de alvo, blocos e repetição,
@@ -488,11 +489,11 @@ SM-6, SM-7 medidos numa tomada real · **Data-alvo:** D+25 (2026-11-10 se o G1 f
 **Portão:** AC-11.1…AC-11.4, AC-1.24 (parte do simulador), AC-3.7, AC-7.5, AC-8.4 ·
 **Data-alvo:** D+29.
 
-## Fase 8 — Cabine de narração (❓ Q-6)
+## Fase 8 — Cabine de narração (✅ Q-6)
 **Objetivo:** página local que toca o vídeo com as falas e grava o microfone sincronizado. ·
 **Seções:** S10 item 3 · **Portão:** AC-10.8, AC-10.9 · **Data-alvo:** D+31.
 
 ## Fase 9 — Endurecimento
 **Objetivo:** longa duração (SM-5), mensagens de erro acionáveis, `doctor` completo, procedimentos de
-`deploy.md` automatizados, `takes prune` (❓ Q-14), limpeza de capturas antigas. · **Seções:** todas ·
+`deploy.md` automatizados, `takes prune` (✅ Q-14), limpeza de capturas antigas. · **Seções:** todas ·
 **Portão:** AC-2.8; `doctor` cobre cada falha da lista de PF · **Data-alvo:** D+33.

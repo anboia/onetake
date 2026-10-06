@@ -3,8 +3,9 @@
 > Projeto novo, sem código, escrito em 2026-10-02 a partir de
 > `hagah/plans/mobile/notes/v8.5-prompt-contrarregra.md` e de uma pesquisa com fontes
 > (`architecture.md` A12; notas em `research/`). Marcas de **status de decisão** (não de evidência
-> em código): ✅ decidido · ⚠️ padrão proposto, vale salvo objeção na ratificação · ❓ decisão do dono
-> (lista única em `requirements.md` §5). O que só o aparelho pode provar virou **spike** (SP-n,
+> em código): ✅ decidido · ⚠️ padrão proposto, vale salvo objeção na ratificação · ⏳ decisão do dono
+> agendada para depois de um spike (lista única em `requirements.md` §5; as da ratificação foram
+> tomadas em 2026-10-06). O que só o aparelho pode provar virou **spike** (SP-n,
 > `tasks.md` Fase 0): a spec diz o comportamento exigido; o spike diz se o caminho principal ou o
 > plano B o entrega. Vira FROZEN na ratificação (G1); depois disso só o G1 a muda.
 
@@ -37,11 +38,11 @@ mesclado sobre `config/defaults.json` do repositório. Campos:
 | `signing.team` | string | `984PNJZ8B9` | fixo (P-3); outro valor → `E_CONFIG` |
 | `signing.identity` | string | `Apple Development: Andre Saboia (6NKUX5CX7G)` | conferida no `codesign` (HC-8) |
 | `signing.ascKeyPath` | string? | vazio | só o **caminho** da `.p8` para o plano B de assinatura; nunca lida pela ferramenta |
-| `bundle.host` | string | `app.kifactory.contrarregra` | ❓ Q-3 |
-| `bundle.runnerTest` | string | `app.kifactory.contrarregra.runner` | o app instalado é `<isto>.xctrunner` (❓ Q-3) |
-| `bundle.displayNames` | string[] | `["Contrarregra", "ContrarregraRunner-Runner"]` ⚠️ | nomes que o hospedeiro e o runner mostram no aparelho (❓ Q-3; o SP-12 confirma o do runner); usados em PF-12 e AC-13.7 |
+| `bundle.host` | string | `app.kifactory.contrarregra` | ✅ Q-3 |
+| `bundle.runnerTest` | string | `app.kifactory.contrarregra.runner` | o app instalado é `<isto>.xctrunner` (✅ Q-3) |
+| `bundle.displayNames` | string[] | `["Contrarregra", "ContrarregraRunner-Runner"]` ⚠️ | nomes que o hospedeiro e o runner mostram no aparelho (✅ Q-3; o SP-12 confirma o do runner); usados em PF-12 e AC-13.7 |
 | `runner.port` | int | `8700` ⚠️ | porta do runner no loopback do aparelho |
-| `runner.privateAllowed` | string[] | `[]` | ids PX-n liberados pelo dono (❓ Q-5); o `runner up` os passa em `CONTRARREGRA_PRIVATE`; vazio = só caminhos públicos |
+| `runner.privateAllowed` | string[] | `[]` | ids PX-n liberados pelo dono (✅ Q-5: `["PX-1", "PX-2", "PX-3", "PX-5"]` no `config.json` desta máquina; PX-4 e PX-6 ⏳); o `runner up` os passa em `CONTRARREGRA_PRIVATE`; vazio = só caminhos públicos |
 | `usbmux.socketPath` | string | `/var/run/usbmuxd` | trocado nos testes por um usbmuxd falso |
 | `app.explore` | string? | vazio | bundle id do app alvo fora de tomada (exploração e spikes); fica no `config.json` da máquina (ex.: `app.kifactory.hagah`), nunca em `config/defaults.json` (US-17); `{app: target}` resolve para ele quando não há coreografia carregada |
 | `apps.allowed` | string[] | `[]` | bundle ids que o runner pode operar além do app alvo (da coreografia carregada ou `app.explore`) e do hospedeiro |
@@ -58,7 +59,7 @@ mesclado sobre `config/defaults.json` do repositório. Campos:
 | `guide.sentenceGapMs`, `guide.padBeforeMs`, `guide.padAfterMs` | int | `400`, `1000`, `1500` ⚠️ | |
 | `disk.minFreeGiB`, `disk.criticalGiB` | number | `4`, `2` ⚠️ | HC-11 |
 | `record.fps`, `record.bitrateKbps` | int | `60`, `16000` ⚠️ | ≈ 122 MB/min |
-| `toolchain.validated` | objeto | Xcode `26.6 (17F113)`, iOS `26.3 (23D127)` (❓ Q-11), macOS `26.5.x`, OBS `31.1.2` (❓ Q-8), obs-websocket `5.6.2`, ffmpeg `8.1.1`, Node `22.x >=22.18` | o conjunto em que os spikes passaram |
+| `toolchain.validated` | objeto | Xcode `26.6 (17F113)`, iOS: o último 26.x instalado antes da Fase 0 (✅ Q-11; era `26.3 (23D127)` em 2026-10-02), macOS `26.5.x`, OBS `31.1.2` (⏳ Q-8), obs-websocket `5.6.2`, ffmpeg `8.1.1`, Node `22.x >=22.18` | o conjunto em que os spikes passaram |
 
 ### S0.2 Ponto (`Point`) e Alvo (`Target`)
 
@@ -112,7 +113,7 @@ quando PX-2 está liberado; ver S1).
 
 ```yaml
 schema: contrarregra.choreography/1
-app: {bundleId: app.kifactory.hagah, iconLabel: "Hagah Bible", expectVersion: "1.0.0 (5)",  # ❓ Q-1
+app: {bundleId: app.kifactory.hagah, iconLabel: "Hagah Bible", expectVersion: "1.0.0 (5)",  # ✅ Q-1
      urlPrefixes: ["hagah://"]}                    # links que o preparo/limpeza podem abrir
 device: {language: en, screenPt: {w: 390, h: 844}, textSize: large, appearance: light}
 guide: {voice: Samantha, targetWpm: 150}          # opcional; senão vem de Config
@@ -312,7 +313,7 @@ por amostragem do centro de cada célula.
    para sair da frente, **só então** abre o servidor (S2) e gira o run loop principal até
    `runner.shutdown`. Tempo limite de teste desligado (`-test-timeouts-enabled NO`). Falhas do XCTest
    não derrubam o teste: `continueAfterFailure = true`, `record(_:)` só registra, e todo alvo é
-   resolvido antes de agir (S0.2); PX-4 só com ❓ Q-5d. Se mesmo assim o método terminar, o runner
+   resolvido antes de agir (S0.2); PX-4 só com ⏳ Q-5d. Se mesmo assim o método terminar, o runner
    cai e nada o religa sozinho (S2 item 7).
 3. **Duas filas.** *Fila de controle* (fora da main thread): `session.hello`, `health`,
    `clock.ping`, `choreo.status`, `choreo.abort`, `events.fetch` — nunca espera o XCTest. *Fila do
@@ -323,7 +324,7 @@ por amostragem do centro de cada célula.
    - `screen.shot {format: jpeg|png, scale: points|native, quality?}` → imagem base64 + tamanho em
      px e escala. Usa `XCUIScreen.main.screenshot()` (público; a tela inteira, qualquer app à frente)
      e recodifica em JPEG; padrão JPEG em pontos (390×844 no iPhone 12). Plano B se o AC-1.4 falhar:
-     PX-6 (❓ Q-5f).
+     PX-6 (⏳ Q-5f).
    - `ui.tree {app?, visibleOnly?: true, maxDepth?, format: compact|json}` → `{treeVersion,
      nodes}` (S0.6). `app` padrão = o app em primeiro plano.
    - `ui.find {target}` → candidatos com `ref`, `frame`, `visible`, `hittable`.
@@ -345,11 +346,11 @@ por amostragem do centro de cada célula.
      `choreo.resume`, `choreo.abort`, `choreo.status`, `events.fetch {takeId, sinceSeq}` (S4).
    - `runner.capabilities` (S0.5); `runner.shutdown`.
 5. **Tocar.** Todo toque e arrasto vai a uma coordenada absoluta da tela (o alvo resolvido dá o
-   ponto). Caminho principal (❓ Q-5c), só com PX-3 liberado em `runner.privateAllowed` e confirmado
+   ponto). Caminho principal (✅ Q-5c), só com PX-3 liberado em `runner.privateAllowed` e confirmado
    pela sondagem: evento sintetizado num único registro, sem esperar a ociosidade do app. Caminho
    público (plano B): `XCUICoordinate` do SpringBoard com
    `press(forDuration:thenDragTo:withVelocity:thenHoldForDuration:)`. A espera de ociosidade do
-   XCTest fica desligada para o app alvo só com PX-2 liberado e presente (❓ Q-5b), substituída por
+   XCTest fica desligada para o app alvo só com PX-2 liberado e presente (✅ Q-5b), substituída por
    `expect` com sondagem; sem ele, o toque público espera a ociosidade, e essa espera fica em
    `tDispatchNs − tDevStartNs` do `step.end` (e em `overrunMs`, se passar do `hold`).
    Cada ação registra `tDevStartNs` (início da resolução), `tDispatchNs` (envio do evento),
@@ -361,7 +362,7 @@ por amostragem do centro de cada célula.
    (`icons["<iconLabel>"]`); `device.home` = `XCUIDevice.shared.press(.home)` (sem desligar a
    ociosidade do SpringBoard); Central de Controle por arrasto do canto superior direito
    (0,9 · 0,01 → 0,9 · 0,2); modo avião pelo interruptor `airplane-mode-button` do SpringBoard.
-8. **Travar e acender a tela.** Não há API pública de travar. `device.lock` usa PX-1 (❓ Q-5a); sem
+8. **Travar e acender a tela.** Não há API pública de travar. `device.lock` usa PX-1 (✅ Q-5a); sem
    ele, responde `E_CAPABILITY_MISSING` e a coreografia usa um ponto de controle (o dono aperta o
    botão lateral). `device.wake` acende a tela travada sem destravar (um `press(.home)` com a tela
    travada; o SP-7 confirma; plano B: ponto de controle "aperte o botão lateral sem olhar para o
@@ -374,7 +375,7 @@ por amostragem do centro de cada célula.
    até `take.end`; S4) recusa `press volumeUp/volumeDown` (mostram o HUD), `app.launch` e
    `app.openURL` (`E_FORBIDDEN_IN_TAKE`); emite `device.state` a cada troca do app em primeiro
    plano. O aviso do iOS "Automation Running — Hold both volume buttons to stop" aparece enquanto há
-   sessão de automação; se ele entra na captura USB é o **SP-1**, e o tratamento é ❓ Q-9.
+   sessão de automação; se ele entra na captura USB é o **SP-1**, e o tratamento é ⏳ Q-9.
 10. **Idioma, geometria, texto e aparência** são lidos pelo próprio runner (`Locale`, tela em
     pontos, categoria de tamanho de texto e estilo da interface do seu processo) e expostos em
     `device.state`.
@@ -419,7 +420,7 @@ por amostragem do centro de cada célula.
   capacidade como ausente; os comandos dela respondem `E_CAPABILITY_MISSING`; a tomada que precisa
   dela é recusada no pré-voo (S12, PF-04).
 - **E-1.4** Alerta de sistema inesperado cobre o app → `expect` falha e o passo segue `onFail`. Com
-  PX-5 liberado (❓ Q-5e), o XCTest não toca alertas sozinho; sem ele, o tratamento padrão do XCTest
+  PX-5 liberado (✅ Q-5e), o XCTest não toca alertas sozinho; sem ele, o tratamento padrão do XCTest
   pode fechar um alerta de um botão que bloqueie um toque, e o evento registra
   `detail.interruptionHandled`. Alertas esperados sempre têm `expect`/`waitFor` explícito.
 - **E-1.5** Pedido de digitar credencial (E_SECURE_FIELD, item 4) → recusado mesmo se o texto vier
@@ -437,7 +438,7 @@ por amostragem do centro de cada célula.
   Diário aparece com o mesmo frame que `ui.find` devolve.
 - **AC-1.4** Given o runner ocioso, when `screen.shot` é pedido 50 vezes em JPEG/pontos, then o p95
   da resposta é ≤ 500 ms e a imagem tem 390×844 px.
-- **AC-1.5** Given PX-2 ou PX-3 liberados (❓ Q-5b/c) e presentes, e o leitor do Hagah com áudio
+- **AC-1.5** Given PX-2 ou PX-3 liberados (✅ Q-5b/c) e presentes, e o leitor do Hagah com áudio
   tocando e a palavra destacada animando, when 50 `ui.tap` são feitos num botão escolhido no SP-3
   (registrado em `spikes/SP-3.md`) cujo toque não para o áudio (tela restaurada entre toques), then p95(`tDevEndNs − tDevStartNs`)
   ≤ 150 ms, p99 ≤ 300 ms e 0 linhas "Wait for app.kifactory.hagah to idle" em `xcodebuild.log`.
@@ -451,7 +452,7 @@ por amostragem do centro de cada célula.
   volumeUp}`, `app.launch` do app alvo ou `app.openURL {url: "hagah://…"}`, then a resposta é
   `E_FORBIDDEN_IN_TAKE`; Given `choreo.status.section = cleanup`, when `app.openURL {url:
   "hagah://…"}`, then executa.
-- **AC-1.9** Given PX-1 liberado (❓ Q-5a) e presente, when `device.lock` é chamado 10 vezes (com desbloqueio
+- **AC-1.9** Given PX-1 liberado (✅ Q-5a) e presente, when `device.lock` é chamado 10 vezes (com desbloqueio
   humano entre elas), then 10/10 travam em ≤ 2 s confirmados por `device.state.locked = true`.
 - **AC-1.10** Given PX-1 ausente ou não liberado, when `device.lock` é chamado, then a resposta é
   `E_CAPABILITY_MISSING` e nada mais acontece.
@@ -476,7 +477,7 @@ por amostragem do centro de cada célula.
   "com.apple.Preferences"}`, `app.openURL {url: "tel:123"}` ou `ui.tap {target: {app: springboard,
   label: "Settings", type: icon}}`, then a resposta é `E_FORBIDDEN_APP` e nada muda na tela; Given a
   folha do Sign in with Apple à frente, when `ui.tree` ou `screen.shot`, then `E_FORBIDDEN_APP`.
-- **AC-1.18** Given PX-2 e PX-3 não liberados (❓ Q-5b/c), when 50 `ui.tap` são feitos com o áudio
+- **AC-1.18** Given PX-2 e PX-3 não liberados (✅ Q-5b/c), when 50 `ui.tap` são feitos com o áudio
   tocando, then todos respondem `path: "public"` e a espera de cada um fica registrada em
   `tDispatchNs − tDevStartNs`.
 - **AC-1.19** Given um campo de texto comum em foco, when `ui.type {text: "someone@icloud.com"}` é
@@ -544,7 +545,7 @@ por amostragem do centro de cada célula.
    status` mostra `state: down` e todo comando que fala com o runner responde `E_RUNNER_DOWN` com a
    dica `runner up`. Nada religa sozinho: fora de tomada, quem religa é o dono ou o agente (`runner
    up`); **durante tomada nunca religa** (religar põe o runner na frente da tela, P-4): a tomada
-   aborta (E-2.6). O caso "a sessão não sobrevive ao modo avião" é o SP-2 (❓ Q-12).
+   aborta (E-2.6). O caso "a sessão não sobrevive ao modo avião" é o SP-2 (⏳ Q-12).
 8. **Gancho de teste**: `contrarregra runner sever --for <s>` acha o dono da conexão `control` (o
    supervisor, pelo arquivo de trava do aparelho, ou o próprio processo fora de tomada) e lhe pede,
    por um arquivo `sever.json {forS}` na pasta da tomada mais `SIGUSR1`, que feche os próprios
@@ -609,7 +610,7 @@ por amostragem do centro de cada célula.
    faixa-guia por frase (S6), grava os tempos de cada frase e a permanência mínima de cada cena, e
    calcula `compiled.sha256` (S0.4).
 3. O mesmo formato serve para qualquer app (US-17): nada no runner ou no Mac conhece o Hagah; tudo
-   que é do Hagah mora em `choreographies/hagah/` (❓ Q-4).
+   que é do Hagah mora em `choreographies/hagah/` (✅ Q-4).
 4. **Do exploratório ao passo** (US-4): depois de uma ação bem-sucedida pelo MCP/CLI, `record_step`
    devolve o passo YAML equivalente, escolhendo o seletor mais estável na ordem: `identifier` →
    `label` exato + `type` (único) → `labelPrefix` + `type` → `within`/`index` → `ocr` → `point`
@@ -874,7 +875,7 @@ scenes:
 5. **Pontos de controle de preparo** (antes de gravar, no pré-voo): código do aparelho ao subir a
    automação ("Enable UI Automation"), e a lista que só a pessoa confirma (S12, PF-11).
 6. Pontos de controle **da tomada do Hagah** (S13 item 6): Face ID do cadastro, da revogação e do novo
-   login (cena 7; conta Apple do aparelho, ❓ Q-2); destravar depois da tela travada (cena 3; acender
+   login (cena 7; conta Apple do aparelho, ✅ Q-2); destravar depois da tela travada (cena 3; acender
    é o passo `wake`, ponto de controle só no plano B do SP-7); modo avião ligar (cena 9) e desligar (cena 10) — `who: human` por padrão ✅ (ADR-7). Se o SP-1
    mostrar que toques humanos são bloqueados durante a automação, a coreografia passa a usar `who:
    runner` com `steps` para o modo avião e para o arrasto de destravar depois do Face ID.
@@ -937,7 +938,7 @@ scenes:
 4. Depois da tomada, o Mac monta `guide.aligned.wav`: cada frase posicionada no tempo F em que sua
    cena e seu `cue` realmente aconteceram (`adelay` + `amix` sem normalizar + `apad` até a duração do
    vídeo), para o dono dublar ouvindo a guia.
-5. Gemini TTS: só se o dono pedir (❓ Q-7), como outro gerador atrás da mesma interface.
+5. Gemini TTS: só se o dono pedir (✅ Q-7), como outro gerador atrás da mesma interface.
 
 **API / Interface**
 - CLI `contrarregra guide build <choreo>`, `guide calibrate`, `guide play <scene>`; MCP
@@ -981,7 +982,7 @@ scenes:
    liga a fonte de cor "Sync Flash" por 2 quadros, em intervalos aleatórios de 400–900 ms, anotando
    T1 de cada envio; no arquivo, cada marca é achada pela luminância média (`signalstats` YAVG). T0ᵢ =
    T1ᵢ − kᵢ·Δ + Δ/2; T0 = média dos T0ᵢ; erro padrão = desvio-padrão/√n. Pré + pós dão a deriva. O
-   pré e o pós-rolo são aparados no vídeo entregue (❓ Q-16).
+   pré e o pós-rolo são aparados no vídeo entregue (✅ Q-16).
 4. **Latência de captura (tela do iPhone → quadro no OBS)**: estimada por tomada com os passos
    `visual: true`: para cada um, recorta uma região em volta do alvo (frame em pontos × 3 px/pt) e acha
    o primeiro quadro que muda depois do previsto (`signalstats` YDIF; classificação com `tblend` YMAX
@@ -1067,7 +1068,7 @@ scenes:
    `hold`), em ordem, pela conexão de exploração, e devolve um resultado por passo, parando no
    primeiro erro se `stopOnError`.
    Só na CLI: `runner build|logs|sever`, `obs setup`, `guide calibrate|play`, `sync
-   measure|calibrate`, `booth`, `takes prune` (G4, com o dono; ❓ Q-14).
+   measure|calibrate`, `booth`, `takes prune` (G4, com o dono; ✅ Q-14).
 3. **Captura para o Claude Code**: JPEG em pontos (390×844, qualidade ⚠️ 0,8, ≤ 150 KB) mais uma
    linha de texto com a escala e o caminho do PNG nativo salvo em `paths.cache/explore/` (podado:
    guarda as ⚠️ 200 últimas). Coordenadas da imagem = pontos do XCUITest. Só com o app em primeiro
@@ -1157,7 +1158,7 @@ scenes:
    inteira, desligada). Áudio da área de trabalho e microfone do Mac desligados.
 2. **Conexão e guarda do perfil**: cliente WebSocket próprio (Node 22, sem dependência), subprotocolo
    `obswebsocket.json`, autenticação `base64(sha256(base64(sha256(senha+salt))+challenge))`,
-   assinaturas de evento 323. Confere `obsStudioVersion = 31.1.2` (❓ Q-8), `obsWebSocketVersion = 5.6.2`,
+   assinaturas de evento 323. Confere `obsStudioVersion = 31.1.2` (⏳ Q-8), `obsWebSocketVersion = 5.6.2`,
    `rpcVersion = 1` e que `CreateRecordChapter` existe. Prazo ⚠️ 5 s por pedido (`StopRecord` 10 s);
    fechar a conexão rejeita os pendentes; pedidos dependentes esperam a resposta do anterior (o
    servidor processa fora de ordem). **Antes de qualquer pedido que escreve** (`SetRecordDirectory`,
@@ -1174,7 +1175,7 @@ scenes:
    depois disso, `E_OBS_SOURCE`.
 4. **Disco**: antes de gravar, `fs.statfs` na pasta e `GetStats.availableDiskSpace`; exige livre ≥
    `max(disk.minFreeGiB, 3 × estimativa + 2 GiB)` (HC-11; estimativa = bitrate × duração prevista da
-   coreografia × 1,25; o 3 cobre a gravação, `review.mp4` e `final.mp4`; ❓ Q-14). Durante, consulta a
+   coreografia × 1,25; o 3 cobre a gravação, `review.mp4` e `final.mp4`; ✅ Q-14). Durante, consulta a
    cada 5 s; abaixo de `disk.criticalGiB`, para a gravação (para o arquivo ser finalizado com
    capítulos) e aborta a tomada.
 5. **Gravar**: `SetRecordDirectory` (pasta da tomada) → `StartRecord` → espera `RecordStateChanged
@@ -1211,7 +1212,7 @@ scenes:
 
 **Acceptance Criteria (Given/When/Then)**
 - **AC-9.1** Given o OBS aberto com o perfil "Contrarregra", when `obs status` roda, then mostra as
-  versões 31.1.2/5.6.2/rpc 1 (❓ Q-8), `outputMode = Advanced`, `recFormat = hybrid_mp4`, vídeo 1170×2532 a 60
+  versões 31.1.2/5.6.2/rpc 1 (⏳ Q-8), `outputMode = Advanced`, `recFormat = hybrid_mp4`, vídeo 1170×2532 a 60
   fps e a fonte viva.
 - **AC-9.2** Given uma gravação de teste com 3 `record_chapter` com títulos UTF-8 ("Cena 9 — Modo
   avião"), when finalizada, then o `ffprobe -show_chapters` lista os 3 títulos idênticos, mais no
@@ -1252,7 +1253,7 @@ scenes:
      `=`, `;`, `#`, `\` e quebra de linha escapados).
    - `timings.md` e `timings.csv`: por cena — início/fim em F, duração, duração da guia, folga
      (duração − guia), tempo em pontos de controle, `overrunMs`.
-   - `review.mp4` (❓ Q-16): o vídeo aparado com vídeo copiado sem recodificar: começa no último keyframe ≤
+   - `review.mp4` (✅ Q-16): o vídeo aparado com vídeo copiado sem recodificar: começa no último keyframe ≤
      início da cena 1, **sem edit list** (o trecho extra, `trim.leadInS` ≤ 1 s, só mostra a tela de
      início parada do pré-rolo), termina no fim da última cena, com os capítulos de `chapters.ffmeta`, só
      a faixa de áudio 1.
@@ -1264,7 +1265,7 @@ scenes:
    duas passadas para −16 LUFS, pico −1,5 dBTP; 48 kHz; AAC 192 kbps; vídeo copiado (H.264 do OBS);
    capítulos mantidos; `+faststart` → `final.mp4`. `--debug-stems` grava também `stems/app.ducked.wav` e
    `stems/voice.limited.wav` (48 kHz, antes do `amix`). Sem cortes, zoom ou legenda queimada (NG-5).
-3. **Cabine de narração** (❓ Q-6, opcional): `contrarregra booth <takeDir>` serve uma página em
+3. **Cabine de narração** (✅ Q-6, opcional): `contrarregra booth <takeDir>` serve uma página em
    `http://127.0.0.1:<porta>` para o Chrome: toca `review.mp4` (áudio do app baixo), mostra a frase
    atual grande e a próxima menor (a partir do `.vtt`), grava o microfone em PCM (AudioWorklet, sem
    cancelamento de eco, supressão de ruído nem ganho automático), mapeia o tempo do vídeo ao do áudio
@@ -1306,9 +1307,9 @@ scenes:
 - **AC-10.7** Given `final.mp4`, when inspecionado, then não tem legenda embutida nem trilha de áudio
   extra e mantém os capítulos.
 - **AC-10.8** Given a cabine com 10 cliques tocados em tempos conhecidos e captados em laço, when
-  calibrada uma vez, then o p95 de |erro| dos 10 cliques na gravação é ≤ 20 ms. (Só se Q-6 = sim.)
+  calibrada uma vez, then o p95 de |erro| dos 10 cliques na gravação é ≤ 20 ms. (Fase 8; ✅ Q-6.)
 - **AC-10.9** Given o dono gravou na cabine, when `voice.json` é salvo, then `mix` usa o `offsetMs`
-  dele sem parâmetro manual. (Só se Q-6 = sim.)
+  dele sem parâmetro manual. (Fase 8; ✅ Q-6.)
 
 ---
 
@@ -1365,14 +1366,14 @@ scenes:
 
 | Id | Checagem | Tipo |
 |---|---|---|
-| PF-01 | ferramentas: Xcode 26.6 (17F113), macOS 26.5.x, OBS 31.1.2 (❓ Q-8), ffmpeg/ffprobe 8.1.1 fixados, Node 22.x ≥ 22.18; iOS do aparelho = o validado (❓ Q-11) | auto (diferença → `E_TOOLCHAIN_MISMATCH`) |
+| PF-01 | ferramentas: Xcode 26.6 (17F113), macOS 26.5.x, OBS 31.1.2 (⏳ Q-8), ffmpeg/ffprobe 8.1.1 fixados, Node 22.x ≥ 22.18; iOS do aparelho = o validado (✅ Q-11) | auto (diferença → `E_TOOLCHAIN_MISMATCH`) |
 | PF-02 | usbmuxd lista o UDID como `USB` | auto |
 | PF-03 | `devicectl`: `transportType = wired`, `tunnelState = connected`, `developerModeStatus = enabled`, `ddiServicesAvailable = true` | auto |
 | PF-04 | runner responde `session.hello` em ≤ 2 s ao supervisor; capacidades privadas que a coreografia exige liberadas e presentes | auto |
-| PF-05 | app alvo instalado, versão (build) = `app.expectVersion` (❓ Q-1), instalado pelo TestFlight/App Store e não pelo desenvolvedor (campo de origem do `devicectl device info apps --json-output`, a confirmar no SP-10; sem esse campo, o dono confirma) | auto / humano |
+| PF-05 | app alvo instalado, versão (build) = `app.expectVersion` (✅ Q-1), instalado pelo TestFlight/App Store e não pelo desenvolvedor (campo de origem do `devicectl device info apps --json-output`, a confirmar no SP-10; sem esse campo, o dono confirma) | auto / humano |
 | PF-06 | aparelho: idioma = `device.language`, tela em pontos = `device.screenPt`, tamanho de texto = `device.textSize`, aparência = `device.appearance` | auto (runner) |
 | PF-07 | OBS: conectado, versões, perfil e coleção "Contrarregra" ativos, `Output.Mode = Advanced`, `AdvOut.RecFormat2 = hybrid_mp4`, 1170×2532@fps, fonte viva | auto |
-| PF-08 | disco livre ≥ limite (HC-11; ❓ Q-14) | auto |
+| PF-08 | disco livre ≥ limite (HC-11; ✅ Q-14) | auto |
 | PF-09 | segredo do OBS no Chaveiro | auto |
 | PF-10 | `alerts.sayDevice` existe e não é BlackHole / Multi-Output / Aggregate; nenhuma fonte de áudio do Mac na cena do OBS | auto |
 | PF-11 | Auto-Lock "Never", Low Power Mode desligado, Do Not Disturb/Focus ligado, atualizações automáticas desligadas, teclado com Auto-Correction, Predictive e Smart Punctuation desligados, pré-visualização de notificações "Never" | humano (confirmação registrada) |
@@ -1391,11 +1392,11 @@ scenes:
    sem gravar): leva o app alvo ao estado inicial do vídeo e
    **verifica** com `assert`. Pode usar `openURL` e `terminate`. Antes de apagar dado do app alvo,
    confere se há dado que nenhuma tomada criou e, se houver, para num ponto de controle humano sem
-   apagar nada (❓ Q-15). Termina com o app alvo encerrado e a tela de início visível, para a cena 1
+   apagar nada (✅ Q-15). Termina com o app alvo encerrado e a tela de início visível, para a cena 1
    mostrar a abertura a frio; então PF-15.
 3. **Limpeza** (`cleanup`, executada pelo runner com `choreo.run {section: cleanup}` depois de parar
    a gravação): desfaz o que a tomada deixou (no Hagah: excluir a conta de novo com revogação e sair
-   — conta Apple do aparelho, ❓ Q-2 —, S13), para a próxima tomada repetir o vídeo. Se `{network:
+   — conta Apple do aparelho, ✅ Q-2 —, S13), para a próxima tomada repetir o vídeo. Se `{network:
    offline}`, o primeiro passo é um ponto de controle "desligue o modo avião" até `{network:
    online}`. O `take.json` nasce com `cleanupPending: false`; o supervisor grava `true` em
    `take.start` e, em `take.end`/`take.abort`, `scenesResult: finished|aborted`; só uma `cleanup`
@@ -1447,7 +1448,7 @@ scenes:
 
 1. A coreografia `choreographies/hagah/v8.5-review.choreo.yaml` executa as 10 cenas de
    `hagah/plans/mobile/notes/v8.5-roteiro-video.md` com o iPhone em inglês, build do TestFlight
-   (❓ Q-1), conta Apple do aparelho (❓ Q-2). O catálogo de alvos medido no SP-10 fica no próprio
+   (✅ Q-1), conta Apple do aparelho (✅ Q-2). O catálogo de alvos medido no SP-10 fica no próprio
    arquivo, em `targets:`.
 2. **Rótulos e fluxos reais do app nativo** (o roteiro cita vários textos da PWA que o app não tem; a
    coreografia segue o app, e o roteiro deve ser corrigido no repositório do Hagah — `deploy.md` D0):
@@ -1472,7 +1473,7 @@ scenes:
 
 3. **Estado inicial** (`prepare`): sem idioma do app gravado (ou "English"); deslogado; diário com 0
    entradas (se houver entrada além da que as tomadas criam — Salmo 23:1 com a nota "Meditate on this
-   tonight" —, ponto de controle e nada apagado; ❓ Q-15); "Parallel" desligado; Repeat "Chapter" ·
+   tonight" —, ponto de controle e nada apagado; ✅ Q-15); "Parallel" desligado; Repeat "Chapter" ·
    "∞", eco "Off", velocidade "1×", timer "Off", predefinições padrão; última posição Salmo 1 NIV (não
    o 23, senão o seletor da cena 2 não muda nada); "Download while listening" **ligado** (`assert` no
    `value` do interruptor = "1"); Salmo 23 NIV com texto, tempos e áudio baixados e Salmo 23 NVI aberto
@@ -1496,7 +1497,7 @@ scenes:
    destaque só aparece na lente "Reading"; o dia atual do plano é achado por OCR de "CURRENT DAY" com
    deslocamento medido no SP-10 (o número do dia muda todo dia).
 6. **Pontos de controle**: preparo — código para a automação ("Enable UI Automation", S5 item 5);
-   cena 3 — `lock` (PX-1, ❓ Q-5a; ou a pessoa aperta o botão lateral), `wait` 5 s, `wake` (com o dono
+   cena 3 — `lock` (PX-1, ✅ Q-5a; ou a pessoa aperta o botão lateral), `wait` 5 s, `wake` (com o dono
    **sem olhar** para o iPhone, senão o Face ID destrava), `hold` mostrando os controles da tela
    travada, e o ponto de controle de destravar (`until: {all: [{locked: false}, {element: {label:
    "Previous verse", type: button}, state: hittable}]}`); cena 7 — três Face ID; cena 9 — "Abra a
@@ -1506,7 +1507,7 @@ scenes:
    tem `assert`s de que a revogação chegou ao alerta "Account deleted" e não ao "Delete without
    confirming with Apple?" (exclusão sem revogar o vínculo na Apple), e o cabeçalho `confirm` pede ao
    dono que confira que o Hagah não está em Settings › [nome] › Sign-In & Security › Sign in with
-   Apple (PF-17; ❓ Q-2).
+   Apple (PF-17; ✅ Q-2).
 7. **Prova do modo avião na cena 9**: durante a captura USB o iOS provavelmente troca a barra de
    estado por uma limpa (9:41, sinal cheio; confirmado até o iOS 17.1, SP-9 confirma no 26.x), então
    não se conta com o ícone de avião. A prova é a Central de Controle aberta ~2 s com o botão de avião
@@ -1521,7 +1522,7 @@ scenes:
 **Error & Edge Cases**
 - **E-13.1** A folha do Sign in with Apple aparece na variante de "conta já vinculada" (sem nome) →
   a tomada segue, mas o vídeo não serve como "cadastro"; PF-17 da próxima tomada pega a causa.
-- **E-13.2** O app mostra outra versão ou não veio do TestFlight → PF-05 falha (❓ Q-1).
+- **E-13.2** O app mostra outra versão ou não veio do TestFlight → PF-05 falha (✅ Q-1).
 
 **Acceptance Criteria (Given/When/Then)**
 - **AC-13.1** Given o build do TestFlight em inglês, when a coreografia roda em `--mode dry`, then todo
@@ -1546,7 +1547,7 @@ scenes:
 - **AC-13.7** Given `review.mp4` de uma tomada completa, when amostrado a 2 fps e passado por OCR (Mac),
   then há 0 ocorrências de qualquer nome de `bundle.displayNames` (SM-6).
 - **AC-13.8** Given `review.mp4` de uma tomada completa, when o dono revê 1 s depois de cada início de
-  capítulo com a lista de verificação (sobreposição, ícone, HUD de volume, aviso do iOS — este segue ❓
+  capítulo com a lista de verificação (sobreposição, ícone, HUD de volume, aviso do iOS — este segue ⏳
   Q-9), then nenhum item é marcado (procedimento registrado em `tasks.md`).
 - **AC-13.9** Given a coreografia completa em `--mode dry`, when roda as cenas 2–9, then o player nunca
   mostra o Salmo 24 e as `assert`/`expect` do item 4 passam.
@@ -1558,9 +1559,10 @@ scenes:
 
 ## Itens em aberto
 
-Todas as decisões do dono estão em `requirements.md` §5 (Q-1…Q-16), com a regra de quando cada uma é
-decidida. Os riscos técnicos sem resposta estão como spikes ordenados por risco em `tasks.md` Fase 0
-(SP-1…SP-18). Eles podem mudar o caminho técnico (principal ou plano B) e, em seis casos, levar o
-dono a uma decisão já listada: SP-1 → Q-9; SP-2 → Q-12; SP-4 → Q-13; SP-5 → Q-8; SP-12 → Q-5 (d); e
-AC-1.4 → Q-5 (f). Toda mudança de comportamento que um spike exigir vai ao G1 pela tarefa de consolidação
-(T-0.39).
+Todas as decisões do dono estão em `requirements.md` §5 (Q-1…Q-16): as da ratificação foram tomadas
+em 2026-10-06; Q-5 (d, f), Q-8, Q-9, Q-12 e Q-13 estão agendadas (⏳) para o G1 da tarefa de
+consolidação ou para um G1 imediato (§5). Os riscos técnicos sem resposta estão como spikes
+ordenados por risco em `tasks.md` Fase 0 (SP-1…SP-18). Eles podem mudar o caminho técnico (principal
+ou plano B) e, em seis casos, levar o dono a uma decisão já listada: SP-1 → Q-9; SP-2 → Q-12; SP-4 →
+Q-13; SP-5 → Q-8; SP-12 → Q-5 (d); e AC-1.4 → Q-5 (f). Toda mudança de comportamento que um spike
+exigir vai ao G1 pela tarefa de consolidação (T-0.39).

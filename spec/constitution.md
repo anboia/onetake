@@ -16,13 +16,14 @@
   fica vivo e obedece a comandos — o mesmo princípio do WebDriverAgent. É o único caminho sancionado
   pela Apple para tocar noutro app num iPhone real.
 - Lado do Mac: **TypeScript em Node 22.x (≥ 22.18), rodando `.ts` direto, sem etapa de build**,
-  entregue como uma CLI (`contrarregra`; nome ❓ Q-3) e um servidor MCP (stdio) para o Claude Code, sobre o mesmo
+  entregue como uma CLI (`contrarregra`; nome ✅ Q-3) e um servidor MCP (stdio) para o Claude Code, sobre o mesmo
   núcleo; CLI e MCP não têm lógica própria. Node de outra versão maior (há um Node 26 do Homebrew
   instalado) é recusado.
-- Toolchain **congelado na produção**: Xcode 26.6 (17F113), iOS 26.x validado (hoje 26.3 23D127;
-  ❓ Q-11), macOS 26.5.x, OBS 31.1.2 (obs-websocket 5.6.2; ❓ Q-8), ffmpeg/ffprobe 8.1.1 chamados
-  pelo caminho absoluto (o do PATH é o 4.4.7). O pré-voo recusa tomada fora desse conjunto; mudar
-  qualquer item é G1 e obriga a refazer os spikes SP-1…SP-7.
+- Toolchain **congelado na produção**: Xcode 26.6 (17F113), iOS 26.x validado (o último 26.x,
+  instalado antes da Fase 0; era 26.3 23D127; ✅ Q-11), macOS 26.5.x, OBS 31.1.2 (obs-websocket
+  5.6.2; ⏳ Q-8), ffmpeg/ffprobe 8.1.1 chamados pelo caminho absoluto (o do PATH é o 4.4.7). O
+  pré-voo recusa tomada fora desse conjunto; mudar qualquer item é G1 e obriga a refazer os spikes
+  SP-1…SP-7.
 
 ## P-2 — Stack (sem trocas silenciosas)
 
@@ -31,7 +32,7 @@
   licença no arquivo que as usa.
 - **Gravação = OBS** controlado por **obs-websocket v5**; capítulos por `CreateRecordChapter` em
   **MP4 híbrido**. **QuickTime manual** é o plano B documentado, não um segundo caminho automatizado.
-- **Faixa-guia = `say` do macOS.** TTS pago só com o sim do dono (❓ Q-7) e gate G5.
+- **Faixa-guia = `say` do macOS.** TTS pago só com o sim do dono (✅ Q-7) e gate G5.
 - **Pós = ffmpeg**, chamado como processo; nenhuma biblioteca de edição de vídeo.
 - Dependências mínimas: cada pacote ou ferramenta nova (npm, SwiftPM, Homebrew) passa pelo gate G2.
   Preferir a biblioteca padrão do Node 22 e os frameworks da Apple. Previstas na v1 (G2 na Fase 0):
@@ -63,7 +64,7 @@
 - O servidor de comandos do runner escuta **só em loopback no aparelho**, exige o **token de
   sessão** gerado a cada subida, aceita um controlador por vez e não anuncia Bonjour; o Mac só o
   alcança pelo usbmuxd no aparelho (entrada `USB`; se o SP-4 provar o loopback inalcançável,
-  ❓ Q-13) e, no simulador (S11), pelo loopback do próprio Mac. Exceção registrada fora do nosso
+  ⏳ Q-13) e, no simulador (S11), pelo loopback do próprio Mac. Exceção registrada fora do nosso
   controle: o obs-websocket 5.6.2 escuta em todas as interfaces do Mac sem opção de loopback — senha
   forte obrigatória e servidor desligado no OBS fora das sessões de gravação (passo do dono).
 - O runner e o MCP só operam os apps e links permitidos (o app alvo, `apps.allowed`, os prefixos de
@@ -88,15 +89,15 @@
   commit, com as variáveis de loja e sem ganchos, produzido no repositório do app alvo.
 - **API privada do XCTest** só quando não existe alternativa pública, **isolada no módulo
   `PrivateXCT`**, registrada em `architecture.md` A10 com risco e plano B, desligável por
-  configuração (`runner.privateAllowed`), e com o sim do dono para aquele uso (❓ Q-5). Inclui o
-  código de spike que a usa.
+  configuração (`runner.privateAllowed`), e com o sim do dono para aquele uso (✅ Q-5: PX-1, PX-2,
+  PX-3 e PX-5; ⏳ PX-4 e PX-6). Inclui o código de spike que a usa.
 - **Nada da ferramenta aparece no vídeo entregue** (`review.mp4`, `final.mp4`; HC-6): sem
   sobreposição, sem o hospedeiro/runner em primeiro plano entre o início e o fim da gravação, sem
   som do Mac na trilha gravada. Única exceção, só no arquivo bruto `recording.mp4`: as marcas "Sync
-  Flash" do OBS no pré-rolo e no pós-rolo de calibração, que são aparadas (❓ Q-16).
-- O vídeo final cumpre o pedido da App Review: aparelho físico, iOS conforme ❓ Q-11, começa na tela
+  Flash" do OBS no pré-rolo e no pós-rolo de calibração, que são aparadas (✅ Q-16).
+- O vídeo final cumpre o pedido da App Review: aparelho físico, iOS conforme ✅ Q-11, começa na tela
   de início, uma tomada contínua sem cortes dentro das cenas (HC-10). Aparar o pré-rolo e o pós-rolo
-  de calibração (antes da cena 1 e depois da última) não é corte dentro de cena (❓ Q-16).
+  de calibração (antes da cena 1 e depois da última) não é corte dentro de cena (✅ Q-16).
 - Durante uma tomada o runner não chama `launch()` no app alvo, não aperta botões de volume
   (mostram o HUD; os dois juntos encerram a automação), não abre links e nunca é religado (religar
   o põe na frente da tela); o projeto do runner nunca contém alvo com o bundle id do app alvo (o
@@ -128,7 +129,7 @@
   segurança, conta Apple ou credenciais. São G5: a primeira instalação do runner/hospedeiro no
   iPhone e a instalação de um build novo deles (um `runner up` de build já aprovado não é);
   desinstalar; e qualquer escrita na configuração do OBS do dono.
-- A ferramenta cria e usa **perfil e coleção de cenas próprios no OBS** ("Contrarregra"; ❓ Q-3); nunca
+- A ferramenta cria e usa **perfil e coleção de cenas próprios no OBS** ("Contrarregra"; ✅ Q-3); nunca
   escreve no perfil/cenas que o dono já tem e confere o perfil ativo antes de cada escrita.
 - Decisões já tomadas na análise anterior (ADR-1…ADR-8) só se reabrem com motivo forte registrado e
   G1.
@@ -139,7 +140,7 @@ Não digitar nem ler credenciais, nem pedir senha ao dono · não contornar Face
 físico (a simulação de biometria do próprio Simulador é permitida no ensaio) · não usar certificado
 de outro time · não ler o conteúdo da `.p8` · não pôr segredo, vídeo, captura de tela ou perfil de
 provisionamento no git · não instalar nada no app alvo nem pedir build especial dele (salvo o build
-Release de simulador do ensaio, P-4) · não deixar o runner escutar fora do loopback (❓ Q-13) nem
+Release de simulador do ensaio, P-4) · não deixar o runner escutar fora do loopback (⏳ Q-13) nem
 anunciar Bonjour · não operar apps ou links fora da lista permitida · não mostrar nada da ferramenta no vídeo
 entregue · não apertar botões de volume, chamar `launch()`, abrir links nem religar o runner durante
 a tomada · não tocar som no iPhone para avisar o dono (iria para a gravação) · não tocar avisos num

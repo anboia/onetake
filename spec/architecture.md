@@ -138,7 +138,7 @@ Esquemas versionados: `contrarregra.choreography/1`, `contrarregra.events/1`,
 ## A5. Árvore de arquivos (planejada)
 
 ```
-contrarregra/                      # repositório separado em ~/project/contrarregra (❓ Q-4; alternativa: hagah/tools/contrarregra)
+contrarregra/                      # repositório separado em ~/project/contrarregra (✅ Q-4; alternativa: hagah/tools/contrarregra)
 ├── spec/                          # esta spec + research/ (único conteúdo do primeiro commit)
 ├── package.json                   # "type": "module", engines node ">=22.18 <23", scripts test/typecheck
 ├── tsconfig.json                  # noEmit, allowImportingTsExtensions, erasableSyntaxOnly, verbatimModuleSyntax, module nodenext, target esnext
@@ -152,7 +152,7 @@ contrarregra/                      # repositório separado em ~/project/contrarr
 ├── mac/tools/ocr.swift            # ajudante de OCR (Vision) para quadros de vídeo
 ├── mac/test/                      # *.test.ts + fixtures (usbmuxd falso, respostas do OBS, protocolo); vídeos de teste gerados no próprio teste com ffmpeg -f lavfi, nunca versionados
 ├── ios/
-│   ├── project.yml                # XcodeGen; DEVELOPMENT_TEAM 984PNJZ8B9; assinatura automática; configuração Spike (bundle ids ❓ Q-3)
+│   ├── project.yml                # XcodeGen; DEVELOPMENT_TEAM 984PNJZ8B9; assinatura automática; configuração Spike (bundle ids ✅ Q-3)
 │   ├── ContrarregraHost/          # app hospedeiro (tela de relógio de calibração)
 │   ├── ContrarregraRunner/        # RunnerTests.swift (testServe) + Server/ Driver/ PrivateXCT/ OCR/ Choreo/ Log/ Spikes/
 │   └── ContrarregraKit/           # pacote Swift (Package.swift, Sources/, Tests/)
@@ -170,7 +170,7 @@ Reabrir exige motivo forte e G1 (P-6).
 
 - **ADR-1 Aparelho físico no vídeo final; simulador só ensaio.** Contexto: a App Review pediu "screen
   recording captured on a physical device" com o iOS mais recente (`v8.5-rejeicao-2.1.md` §1). →
-  HC-1 (versão: ❓ Q-11); o simulador usa outro binário do app (o do TestFlight não roda em
+  HC-1 (versão: ✅ Q-11); o simulador usa outro binário do app (o do TestFlight não roda em
   simulador), então serve para a coreografia e o alinhamento, não para o vídeo.
 - **ADR-2 Toque via XCUITest; app alvo intocado.** Contexto: em iPhone real, só um bundle de UI test
   pode sintetizar toques noutro app; ganchos no app mudariam o binário que a Apple revisa. → runner +
@@ -187,7 +187,7 @@ Reabrir exige motivo forte e G1 (P-6).
   indicador; o OBS 31.1.2 já instalado captura tela e áudio do iPhone pelo cabo e expõe o
   obs-websocket v5. → perfil próprio no OBS; como o OBS 31.1.2 carimba o capítulo no DTS do último
   pacote (alguns quadros antes), os capítulos ao vivo servem de navegação e os finais são regenerados
-  de `events.json` (FFMETADATA). Atualizar para o OBS ≥ 32 daria capítulos exatos (❓ Q-8).
+  de `events.json` (FFMETADATA). Atualizar para o OBS ≥ 32 daria capítulos exatos (⏳ Q-8).
 - **ADR-5 Saídas para a narração: `events.json`, `.srt`/`.vtt`, capítulos, tabela de tempos.**
   Contexto: o dono narra depois, em inglês, e precisa saber em que instante do vídeo cada ação
   acontece e que fala cabe em cada janela. → S10.
@@ -200,7 +200,7 @@ Reabrir exige motivo forte e G1 (P-6).
   operar o Mac no meio da tomada; o runner precisa detectar sozinho que a pessoa terminou. → S5; o
   aviso sai por um dispositivo de som que o OBS não grava; nunca som no iPhone.
 - **ADR-8 Uma tomada contínua, sem edição; pós mínima com ffmpeg.** Contexto: a App Review quer ver o
-  fluxo real, do início, sem montagem. → cortar só o pré/pós-rolo de calibração (fora das cenas; ❓
+  fluxo real, do início, sem montagem. → cortar só o pré/pós-rolo de calibração (fora das cenas; ✅
   Q-16); mixagem com ducking; vídeo copiado.
 
 ## A7. Decisões desta spec
@@ -214,7 +214,7 @@ Reabrir exige motivo forte e G1 (P-6).
   | Opção | Achado | Decisão |
   |---|---|---|
   | usbmux `Connect` (o mesmo que `iproxy`, `ios forward` do go-ios, `usbmux forward` do pymobiledevice3, o forwarder do Appium) | só USB por construção (no macOS 26 o usbmuxd só lista o iPhone com cabo); alcança listener em loopback (devicekit-ios do mobile-mcp); sem root | **escolhido**; SP-4 mede |
-  | túnel CoreDevice (IPv6 `fdxx::`) | segue o transporte que o CoreDevice escolheu (hoje Wi-Fi); 4,5 s para re-sondar depois de ocioso; exigiria escutar fora do loopback | só como plano B com `wired` e emenda de P-3/P-7/HC-4 (❓ Q-13) |
+  | túnel CoreDevice (IPv6 `fdxx::`) | segue o transporte que o CoreDevice escolheu (hoje Wi-Fi); 4,5 s para re-sondar depois de ocioso; exigiria escutar fora do loopback | só como plano B com `wired` e emenda de P-3/P-7/HC-4 (⏳ Q-13) |
   | Wi-Fi direto | morre com o modo avião e expõe o servidor | rejeitado |
   | túneis de terceiros (go-ios, pymobiledevice3) | quebras no iOS 26.2+/26.5 e briga com o `remoted` | rejeitado em tempo de execução |
 
@@ -250,7 +250,7 @@ Reabrir exige motivo forte e G1 (P-6).
   avaliado sem o próprio passo para não esconder viés. Os capítulos do OBS 31.1.2 não servem de
   âncora.
 - **ADR-16 Ferramentas congeladas na produção.** O conjunto validado (Xcode 26.6 17F113, iOS 26.x
-  conforme ❓ Q-11, macOS 26.5.x, OBS 31.1.2 conforme ❓ Q-8, ffmpeg 8.1.1, Node 22.x) entra no
+  conforme ✅ Q-11, macOS 26.5.x, OBS 31.1.2 conforme ⏳ Q-8, ffmpeg 8.1.1, Node 22.x) entra no
   pré-voo; qualquer mudança é G1 e exige rodar de novo SP-1…SP-7. O WDA mostra que cada iOS/Xcode novo
   quebra algo privado (travar no iOS 27, cabeçalhos no Xcode 26).
 
@@ -263,15 +263,15 @@ BSD-3 e `THIRD_PARTY_NOTICES.md` traz a licença completa; nada dos `PrivateHead
 despejos do SDK da Apple, nem do `LRUCache` Apache-2.0):
 - um único teste que nunca retorna e gira o run loop principal; tempos limite de teste desligados;
 - base "à prova de falha": `continueAfterFailure`, `record(_:)` que só registra (e, se preciso, as
-  flags privadas de parar, A10 PX-4, ❓ Q-5d);
+  flags privadas de parar, A10 PX-4, ⏳ Q-5d);
 - capturas automáticas do XCTest desligadas — nós pelos meios documentados (`-collect-test-diagnostics
   never`, chaves do `.xctestrun`), não pelas `UserDefaults` não documentadas que o WDA usa — e
-  tratamento automático de interrupções desligado (PX-5, ❓ Q-5e);
+  tratamento automático de interrupções desligado (PX-5, ✅ Q-5e);
 - rotas "standalone" → nossa fila de controle que nunca espera o XCTest;
 - snapshot público do app como fonte da árvore; visibilidade = frame ∩ tela;
 - captura de tela: o WDA usa um pedido privado ao testmanagerd com JPEG/HEIC; nós usamos o público
   `XCUIScreen.main.screenshot()` (que não mostra o aviso "Automation Running") e só passamos ao
-  privado (PX-6, ❓ Q-5f) se a latência não servir;
+  privado (PX-6, ⏳ Q-5f) se a latência não servir;
 - tela de início: o WDA ativa o SpringBoard pelo pid privado do AX; nós usamos o público
   `XCUIDevice.shared.press(.home)` e `XCUIApplication(bundleIdentifier: "com.apple.springboard")` para
   os ícones, sem desligar a ociosidade do SpringBoard (Appium #21427);
@@ -312,7 +312,7 @@ sem autenticação (contra P-3).
   runner recusa digitar em campo seguro, texto com cara de credencial e em telas de autenticação; a
   captura do iOS esconde campos de senha e o teclado.
 - Dados pessoais no iPhone: o preparo não apaga dado do app alvo que nenhuma tomada criou sem a
-  confirmação do dono (❓ Q-15).
+  confirmação do dono (✅ Q-15).
 - Assinatura: `DEVELOPMENT_TEAM=984PNJZ8B9` no `project.yml` e na linha de comando; o build falha se o
   `.xctrunner` não tiver esse `TeamIdentifier` e a identidade `6NKUX5CX7G` (AC-1.14); uma identidade
   nova no chaveiro depois de assinar para tudo (G5).
@@ -321,8 +321,8 @@ sem autenticação (contra P-3).
 
 Cada uma: sondagem na subida (`respondsToSelector` / `class_getInstanceMethod` / `dlsym`), mapa em
 `runner.capabilities`, liga/desliga por `runner.privateAllowed` → `CONTRARREGRA_PRIVATE`, e só com o
-sim do dono (❓ Q-5). Os símbolos de PX-1…PX-5 existem no Xcode 26.6 (verificado por `nm`/`otool`
-nos binários locais).
+sim do dono (✅ Q-5 para PX-1, PX-2, PX-3 e PX-5; ⏳ para PX-4 e PX-6). Os símbolos de PX-1…PX-5
+existem no Xcode 26.6 (verificado por `nm`/`otool` nos binários locais).
 
 | Id | Capacidade | Símbolos | Sem alternativa pública porque | Risco | Plano B | Q-5 |
 |---|---|---|---|---|---|---|
@@ -346,10 +346,10 @@ no `PrivateXCT` e levadas ao dono como uso de Q-5.
 
 | Risco | Severidade | Spike | Se falhar |
 |---|---|---|---|
-| Aviso "Automation Running" na captura / toques humanos bloqueados | bloqueador | SP-1 | ❓ Q-9; pontos de controle viram `who: runner` com `steps` onde não for credencial |
-| Sessão do XCTest cai no modo avião | bloqueador | SP-2 | `devicectl process launch`; se falhar também, ❓ Q-12 (emenda de P-4 por G1 antes de qualquer religamento na tela) |
-| Toques atrasam com a animação contínua | alto | SP-3 | PX-2/PX-3 (❓ Q-5b/c); pausar o áudio antes de toques |
-| Canal usbmux→loopback no iOS 26.3 | alto | SP-4 | ❓ Q-13: emenda de P-3/P-7/HC-4 por G1 (túnel CoreDevice com `wired`, ou todas as interfaces com filtro de origem); nada fora do loopback antes disso |
+| Aviso "Automation Running" na captura / toques humanos bloqueados | bloqueador | SP-1 | ⏳ Q-9; pontos de controle viram `who: runner` com `steps` onde não for credencial |
+| Sessão do XCTest cai no modo avião | bloqueador | SP-2 | `devicectl process launch`; se falhar também, ⏳ Q-12 (emenda de P-4 por G1 antes de qualquer religamento na tela) |
+| Toques atrasam com a animação contínua | alto | SP-3 | PX-2/PX-3 (✅ Q-5b/c); pausar o áudio antes de toques |
+| Canal usbmux→loopback no iOS 26.3 | alto | SP-4 | ⏳ Q-13: emenda de P-3/P-7/HC-4 por G1 (túnel CoreDevice com `wired`, ou todas as interfaces com filtro de origem); nada fora do loopback antes disso |
 | OBS: resolução, áudio, codificador, fonte morta, capítulos, finalização | alto | SP-5 | HEVC / 30 fps / QuickTime manual |
 | Orçamento de ±100 ms | alto | SP-6 | latência medida por tomada; desligar buffering |
 | Travar/acender/destravar | médio | SP-7 | ponto de controle humano |
@@ -357,7 +357,7 @@ no `PrivateXCT` e levadas ao dono como uso de Q-5.
 | Central de Controle / rede / barra de estado limpa | médio | SP-9 | pessoa toca o avião; prova pela Central de Controle e pelo app |
 | Rótulos reais, gestos e linha do tempo do áudio do Hagah | médio | SP-10 | catálogo de alvos corrigido; roteiro corrigido |
 | OCR da palavra | médio | SP-11 | posição estimada no versículo; OCR no Mac |
-| Runner de longa duração, alertas, nada visível | médio | SP-12 | religar antes de cada tomada; PX-4/PX-5 (❓ Q-5d/e) |
+| Runner de longa duração, alertas, nada visível | médio | SP-12 | religar antes de cada tomada; PX-4/PX-5 (⏳ Q-5d / ✅ Q-5e) |
 | Limites do Claude Code no MCP; supervisor morto | médio | SP-13 | tomada pela CLI em segundo plano; vigia |
 
 ## A12. Fontes
