@@ -34,8 +34,10 @@
   arrastar dezenas de dependências; o protocolo é pequeno e verificado.
 - **WebSocket nativo do Node 22** (estável desde 22.4) — para o runner (via repassador local) e para
   o obs-websocket; sem `ws` nem `obs-websocket-js`; o servidor WebSocket dos testes é escrito à mão.
-- **`node:test`, `util.parseArgs`, `fs.statfs`, `/usr/bin/security`, `say`, `afplay`** — tudo
-  embutido; `typescript`, `@types/node` e `@modelcontextprotocol/client` só como dev.
+- **`node:test`, `util.parseArgs`, `fs.statfs`, `/usr/bin/security`, `say`** — tudo embutido (o som
+  curto dos avisos sai pelo ffmpeg fixado com `-f audiotoolbox` no `alerts.sayDevice`, porque o
+  `afplay` não escolhe o dispositivo); `typescript`, `@types/node` e `@modelcontextprotocol/client`
+  só como dev.
 - **Ajudante de OCR do Mac (`mac/tools/ocr.swift`, Vision)** — o Node não chama o Vision; o
   ajudante, rodado com `xcrun swift`, lê quadros do vídeo para as checagens de S7/S13 e para o plano
   B do OCR no aparelho. Framework da Apple, sem G2.
@@ -101,16 +103,16 @@ tempos D. `record_step` lê o último pedido bem-sucedido e a árvore seguinte e
 
 **Tomada (US-6…US-10).** `take_start` → `take/supervisor` (processo destacado, `caffeinate`, vigia
 filho, batimento em `status.json`) → limpeza pendente (`choreo.load` do `choreo.json` da tomada
-anterior + `choreo.run {section: cleanup}`) → pré-voo (S12) → `choreo compile` (com guia) →
-`choreo.load` → `choreo.run {section: prepare}` → PF-15 → rajada de sincronia pré pela conexão
-`sync` → OBS (com guarda de perfil): `SetRecordDirectory`, `StartRecord`, espera `STARTED`, pré-rolo
-com 8 marcas `SerialFrame` → `choreo.run {section: scenes}` → o aparelho executa sozinho; eventos
-chegam por notificação e vão para `events.ndjson`; `scene.start` → `CreateRecordChapter`;
-`checkpoint.wait` → aviso no Mac → (a pessoa age) → o runner segue → … → `take.end` → pós-rolo →
-`StopRecord` → espera finalização → `choreo.run {section: cleanup}` → `events.fetch` (completa
-buracos) → rajada pós → `align` (marcas + regiões + ajuste) → `export` (S10) → `status: finished`.
-O MCP lê `status.json`/`events.ndjson` e fala com o supervisor só por `command.json` + `SIGUSR2`
-(S8 item 5).
+anterior + `choreo.run {section: cleanup}`) → `choreo compile` (com guia) → pré-voo (S12), com
+`choreo.load` assim que PF-04 passa → `choreo.run {section: prepare}` → PF-15 → rajada de sincronia
+pré pela conexão `sync` → OBS (com guarda de perfil): `SetRecordDirectory`, `StartRecord`, espera
+`STARTED`, pré-rolo com 8 marcas `SerialFrame` → `choreo.run {section: scenes}` → o aparelho executa
+sozinho; eventos chegam por notificação e vão para `events.ndjson`; `scene.start` →
+`CreateRecordChapter`; `checkpoint.wait` → aviso no Mac → (a pessoa age) → o runner segue → … →
+`take.end` → pós-rolo → `StopRecord` → espera finalização → `choreo.run {section: cleanup}` →
+`events.fetch` (completa buracos) → rajada pós → `align` (marcas + regiões + ajuste) → `export`
+(S10) → `status: finished`. O MCP lê `status.json`/`events.ndjson` e fala com o supervisor só por
+`command.json` + `SIGUSR2` (S8 item 5).
 
 **Pós (US-11…US-13).** `review.mp4` + `subtitles.vtt` + `guide.aligned.wav` → o dono narra (cabine
 ou outro gravador) → `voice.wav` → `mix` → `final.mp4`.
@@ -340,7 +342,7 @@ As chaves de `UserDefaults` `DisableScreenshots`/`DisableDiagnosticScreenRecordi
 **não** são usadas enquanto os meios documentados bastarem (S1 item 9). O SP-12 compara uma subida com
 a captura automática ligada × desligada (latência, indicador na captura, atividade de gravação no
 registro); se a captura continuar, essas chaves (não documentadas, risco baixo) são o plano B, postas
-no `PrivateXCT` e levadas ao dono como uso de Q-5.
+no `PrivateXCT` e levadas ao dono no G1 da T-0.39 como uso novo de Q-5.
 
 ## A11. Riscos e onde são resolvidos
 
@@ -349,7 +351,7 @@ no `PrivateXCT` e levadas ao dono como uso de Q-5.
 | Aviso "Automation Running" na captura / toques humanos bloqueados | bloqueador | SP-1 | ⏳ Q-9; pontos de controle viram `who: runner` com `steps` onde não for credencial |
 | Sessão do XCTest cai no modo avião | bloqueador | SP-2 | `devicectl process launch`; se falhar também, ⏳ Q-12 (emenda de P-4 por G1 antes de qualquer religamento na tela) |
 | Toques atrasam com a animação contínua | alto | SP-3 | PX-2/PX-3 (✅ Q-5b/c); pausar o áudio antes de toques |
-| Canal usbmux→loopback no iOS 26.3 | alto | SP-4 | ⏳ Q-13: emenda de P-3/P-7/HC-4 por G1 (túnel CoreDevice com `wired`, ou todas as interfaces com filtro de origem); nada fora do loopback antes disso |
+| Canal usbmux→loopback no iOS 26.x validado | alto | SP-4 | ⏳ Q-13: emenda de P-3/P-7/HC-4 por G1 (túnel CoreDevice com `wired`, ou todas as interfaces com filtro de origem); nada fora do loopback antes disso |
 | OBS: resolução, áudio, codificador, fonte morta, capítulos, finalização | alto | SP-5 | HEVC / 30 fps / QuickTime manual |
 | Orçamento de ±100 ms | alto | SP-6 | latência medida por tomada; desligar buffering |
 | Travar/acender/destravar | médio | SP-7 | ponto de controle humano |

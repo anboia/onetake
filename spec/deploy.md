@@ -51,8 +51,8 @@ Fase 0: atualizar o iOS (Q-11, item 7), liberar ~20 GB (Q-14, item 17) e exporta
 11. Idioma do iPhone em **English** (Settings › General › Language & Region) nas tomadas.
 12. Instalar pelo TestFlight o build que vai à revisão (✅ Q-1); ele substitui o build Release de
     desenvolvimento que está no aparelho com o mesmo bundle id. Conferir em Hagah › Settings › About.
-13. Dados do Hagah (✅ Q-15): sincronizar ou exportar o diário antes do SP-8 e do SP-10 da Fase 0
-    (T-0.26, T-0.28), que entram e excluem conta e apagam o diário local; o preparo das tomadas deixa o
+13. Dados do Hagah (✅ Q-15): sincronizar ou exportar o diário antes da Fase 0 — o SP-8 e o SP-10
+    (T-0.26, T-0.28) entram e excluem conta e apagam o diário local; o preparo das tomadas deixa o
     app deslogado e com o diário vazio.
 14. Para a cena 7 (✅ Q-2): em Settings › [nome] › Sign-In & Security › Sign in with Apple, confirmar
     que o Hagah **não** está na lista (assim a folha de primeiro cadastro aparece).
@@ -76,8 +76,8 @@ Fase 0: atualizar o iOS (Q-11, item 7), liberar ~20 GB (Q-14, item 17) e exporta
 
 | Ambiente | O quê | Quem mexe |
 |---|---|---|
-| Mac do dono | MacBook Air M4 16 GB, macOS 26.5.2, Xcode 26.6 (17F113), OBS 31.1.2 (obs-websocket 5.6.2), Node 22.19 (nvm) e 26.0 (Homebrew; recusado pelo shim), ffmpeg 8.1.1 em `/opt/homebrew/opt/ffmpeg/bin` (o do PATH é o 4.4.7), XcodeGen 2.45.4, BlackHole 2ch | dono; a ferramenta só escreve no perfil "Contrarregra" do OBS (G5) |
-| iPhone 12 "VIVO_00G7" | iOS 26.3 (23D127; ✅ Q-11), UDID `00008101-001E79203A68001E`, CoreDevice `DC77A78E-5E8D-5825-B2EE-C297FBC14ABD`, modo desenvolvedor ligado | dono; a ferramenta instala só o runner e o hospedeiro (G5) e só opera os apps permitidos |
+| Mac do dono | MacBook Air M4 16 GB, macOS 26.5.2, Xcode 26.6 (17F113), OBS 31.1.2 (obs-websocket 5.6.2), Node 22.19 (nvm) e 26.0 (Homebrew; recusado pelo shim), ffmpeg 8.1.1 em `/opt/homebrew/opt/ffmpeg/bin` (o do PATH é o 4.4.7), XcodeGen 2.45.4, BlackHole 2ch | dono; a ferramenta só escreve no perfil "Contrarregra" do OBS (criá-lo ou reconciliá-lo com `obs setup` é G5; pedidos de gravação e ajustes de spike nesse perfil não são) |
+| iPhone 12 "VIVO_00G7" | iOS 26.x — o último, instalado antes da Fase 0 (✅ Q-11; era 26.3 23D127 em 2026-10-02; versão e build anotados em D0.7), UDID `00008101-001E79203A68001E`, CoreDevice `DC77A78E-5E8D-5825-B2EE-C297FBC14ABD`, modo desenvolvedor ligado | dono; a ferramenta instala só o runner e o hospedeiro (G5) e só opera os apps permitidos |
 | Simulador "Contrarregra iPhone 12" | runtime iOS 26.5 (instalado), mesma geometria do iPhone 12 | ferramenta (`rehearse`) |
 
 ## D2. Segredos (só nomes)
@@ -89,7 +89,7 @@ Fase 0: atualizar o iOS (Q-11, item 7), liberar ~20 GB (Q-14, item 17) e exporta
 | `ASC_KEY_ID`, `ASC_ISSUER_ID` | Chaveiro, serviço `contrarregra` | dono, se quiser o plano B | assinar sem a sessão do Xcode (`-authenticationKeyID`, `-authenticationKeyIssuerID`) |
 | caminho da `.p8` | `config.json` → `signing.ascKeyPath` (só o caminho em `~/.appstoreconnect/private_keys/`) | dono | `-authenticationKeyPath`; **o conteúdo nunca é lido nem impresso** pela ferramenta |
 | `EXPO_PUBLIC_YVP_APP_KEY` | `.env` do repositório do Hagah (fora deste repositório) | dono | build de simulador do ensaio (D3.5); o Contrarregra nunca lê, copia nem registra |
-| `GEMINI_API_KEY` | Chaveiro, serviço `contrarregra` | dono, só se ✅ Q-7 = sim | faixa-guia pelo Gemini TTS |
+| `GEMINI_API_KEY` | Chaveiro, serviço `contrarregra` | dono, só se pedir o Gemini (G5; ✅ Q-7: na v1 só `say`) | faixa-guia pelo Gemini TTS |
 
 Nada disso vai para o git, para logs, para resultados de ferramenta MCP ou para a pasta da tomada. A
 ferramenta nunca pede senha: segredo ausente → `E_SECRET_MISSING` com o comando acima.
@@ -97,8 +97,12 @@ ferramenta nunca pede senha: segredo ausente → `E_SECRET_MISSING` com o comand
 ## D3. Procedimentos
 
 **D3.1 Instalar a ferramenta** (depois do G2 de T-0.2). No `~/.config/contrarregra/config.json` da
-máquina, pôr `"app": {"explore": "app.kifactory.hagah"}` para poder explorar o Hagah fora de tomada
-(S0.1); o resto vem de `config/defaults.json`:
+máquina, pôr `"app": {"explore": "app.kifactory.hagah"}` (explorar o Hagah fora de tomada),
+`"runner": {"privateAllowed": ["PX-1", "PX-2", "PX-3", "PX-5"]}` (✅ Q-5), `"urls":
+{"allowedPrefixes": ["hagah://"]}` (links do Hagah fora de tomada, SP-17) e, em
+`toolchain.validated`, a versão e o build do iOS anotados em D0.7 (S0.1); os demais campos vêm de
+`config/defaults.json`. Depois do primeiro `runner up`, `runner.capabilities` mostra `allowed: true`
+nesses quatro PX:
 
 ```bash
 npm ci
@@ -155,8 +159,10 @@ Entregar o `.app` com `--app-path`. É a única exceção de build especial (P-4
    inglês, Do Not Disturb ligado.
 2. `bin/contrarregra runner up` (código da automação, se pedido).
 3. `bin/contrarregra take preflight choreographies/hagah/v8.5-review.choreo.yaml` → resolver o que
-   falhar → confirmar PF-11 e PF-17. Com limpeza pendente, PF-17 falha aqui de propósito: o `take run`
-   do passo 4 começa pela limpeza (S12 item 4) e só então repete o pré-voo.
+   falhar → confirmar PF-11 e, sem limpeza pendente, PF-17. Com limpeza pendente, PF-17 falha aqui
+   de propósito: o `take run` do passo 4 começa pela limpeza (S12 item 4), repete o pré-voo e pede
+   nessa hora a confirmação de PF-17 (o Mac avisa; confirmar com `take preflight <choreo> --confirm
+   PF-17`).
 4. `bin/contrarregra take run choreographies/hagah/v8.5-review.choreo.yaml` (ou `take_start` pelo
    Claude Code). Ficar perto do iPhone, **sem olhar para ele na cena 3 até ser chamado**: o Mac fala
    quando é a vez da pessoa (Face ID, modo avião).
@@ -193,6 +199,9 @@ Entregar o `.app` com `--app-path`. É a única exceção de build especial (P-4
   xcrun devicectl device uninstall app --device 00008101-001E79203A68001E app.kifactory.contrarregra
   ```
 
+- Mac — Ajustes do Sistema › Privacidade e Segurança: tirar o Microfone dado em D0.3 ao Terminal ou
+  ao app do Claude Code e ao Chrome e, se não existiam antes, a Câmera e o Microfone do OBS,
+  conforme anotado.
 - Restaurar o iPhone com os valores anotados em D0: Auto-Lock e idioma; atualizações automáticas
   ligadas depois do aceite do vídeo; Wired Accessories como antes; Enable UI Automation desligado;
   Newly Downloaded Apps como antes; teclado e pré-visualização de notificações como antes.

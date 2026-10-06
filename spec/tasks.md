@@ -23,20 +23,21 @@
 | Congelamento | sem atualizar iOS, Xcode ou OBS durante a produção (P-1, ADR-16); atualizar = G1 e refazer SP-1…SP-7 |
 
 **Estimativa de três pontos** em dias úteis. **Convenção: D+n = n.º dia útil, contando o dia do G1
-como o 1.º.** Exemplo de datas se o G1 for em 2026-10-05, uma segunda-feira:
+como o 1.º.** Datas com o G1 em 2026-10-06, uma terça-feira (se o congelamento for noutro dia,
+deslocar):
 
 | Fase | Otimista | Provável | Pessimista | Fim provável |
 |---|---|---|---|---|
-| 0 — Fundação e spikes | 5 | 8 | 12 | 2026-10-15 (D+8) |
-| 1 — Esqueleto ambulante | 2 | 3 | 4 | 2026-10-20 (D+11) |
-| 2 — Runner, transporte e exploração | 2 | 3 | 5 | 2026-10-23 (D+14) |
-| 3 — Coreografia, execução, pontos de controle, guia | 3 | 4 | 6 | 2026-10-29 (D+18) |
-| 4 — Gravação, sincronia e saídas | 3 | 4 | 6 | 2026-11-05 (D+22) |
-| 5 — Pré-voo, preparo e **tomada do Hagah** | 2 | 3 | 5 | **2026-11-10 (D+25)** |
-| 6 — MCP completo e passo a partir da exploração | 1 | 2 | 3 | 2026-11-12 (D+27) |
-| 7 — Ensaio no simulador | 1 | 2 | 3 | 2026-11-16 (D+29) |
-| 8 — Cabine de narração (✅ Q-6) | 1 | 2 | 3 | 2026-11-18 (D+31) |
-| 9 — Endurecimento | 1 | 2 | 3 | 2026-11-23 (D+33) |
+| 0 — Fundação e spikes | 5 | 8 | 12 | 2026-10-16 (D+8) |
+| 1 — Esqueleto ambulante | 2 | 3 | 4 | 2026-10-21 (D+11) |
+| 2 — Runner, transporte e exploração | 2 | 3 | 5 | 2026-10-26 (D+14) |
+| 3 — Coreografia, execução, pontos de controle, guia | 3 | 4 | 6 | 2026-10-30 (D+18) |
+| 4 — Gravação, sincronia e saídas | 3 | 4 | 6 | 2026-11-06 (D+22) |
+| 5 — Pré-voo, preparo e **tomada do Hagah** | 2 | 3 | 5 | **2026-11-11 (D+25)** |
+| 6 — MCP completo e passo a partir da exploração | 1 | 2 | 3 | 2026-11-13 (D+27) |
+| 7 — Ensaio no simulador | 1 | 2 | 3 | 2026-11-17 (D+29) |
+| 8 — Cabine de narração (✅ Q-6) | 1 | 2 | 3 | 2026-11-19 (D+31) |
+| 9 — Endurecimento | 1 | 2 | 3 | 2026-11-24 (D+33) |
 
 Até a tomada do Hagah: **17 / 25 / 38 dias úteis**. **Sinal de atraso** geral: se a Fase 0 passar de
 12 dias, ou um spike bloqueador (SP-1, SP-2) cair no plano B mais caro, refazer a estimativa e levar
@@ -53,8 +54,8 @@ Resumo:
   Automation, Auto-Lock "Never", Low Power Mode desligado, atualizações automáticas desligadas,
   teclado sem correção automática, notificações sem pré-visualização);
 - instalar o build do TestFlight (✅ Q-1);
-- **antes do SP-8 e do SP-10** (que entram e excluem conta no Hagah e apagam o diário local):
-  sincronizar ou exportar o diário do Hagah (D0.13) e conferir o Sign in with Apple em Settings
+- **antes do SP-8 e do SP-10** (que entram e excluem conta no Hagah e apagam o diário local; o
+  diário já foi exportado antes da Fase 0, D0.13): conferir o Sign in with Apple em Settings
   (D0.14). Todo passo em Settings › [nome] (conta Apple) é feito **pelo dono, à mão** — nunca pelo
   runner nem pelo agente;
 - atualizar o Claude Code para ≥ 2.1.283;
@@ -107,14 +108,14 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `mac/test/fixtures/protocol/`), hospedeiro com a tela do relógio de calibração. **Q-3 respondida
   antes; G5 na primeira assinatura** (`-allowProvisioningUpdates` cria App IDs e perfis no time).
   Files: `ios/project.yml`, `ios/ContrarregraHost/**`, `ios/ContrarregraKit/**`,
-  `ios/ContrarregraRunner/RunnerTests.swift`. AC: AC-0.6 (lado Swift), AC-0.8, AC-1.14. Done:
-  `xcodegen generate` + `xcodebuild build-for-testing -destination 'generic/platform=iOS'` com exit 0;
-  um único `*.xctestrun`; `xcodebuild -showBuildSettings` de cada alvo: todo
-  `PRODUCT_BUNDLE_IDENTIFIER` começa com `app.kifactory.contrarregra` e nenhum é
-  `app.kifactory.hagah`; `codesign -dvv` do hospedeiro e do `.xctrunner` com
-  `TeamIdentifier=984PNJZ8B9` e `Authority=Apple Development: Andre Saboia (6NKUX5CX7G)`; `security
-  find-identity -v -p codesigning` igual antes e depois; `swift test` verde. Deps: T-0.2, T-0.3.
-  Implements: S1 item 1, S0.10, A2, A5, P-3, ✅ Q-3.
+  `ios/ContrarregraRunner/RunnerTests.swift`. AC: AC-0.6 (lado Swift), AC-0.8 (parte: o Kit codifica
+  e desenha o código), AC-1.14. Done: `xcodegen generate` + `xcodebuild build-for-testing
+  -destination 'generic/platform=iOS'` com exit 0; um único `*.xctestrun`; `xcodebuild
+  -showBuildSettings` de cada alvo: todo `PRODUCT_BUNDLE_IDENTIFIER` começa com
+  `app.kifactory.contrarregra` e nenhum é `app.kifactory.hagah`; `codesign -dvv` do hospedeiro e do
+  `.xctrunner` com `TeamIdentifier=984PNJZ8B9` e `Authority=Apple Development: Andre Saboia
+  (6NKUX5CX7G)`; `security find-identity -v -p codesigning` igual antes e depois; `swift test`
+  verde. Deps: T-0.2, T-0.3. Implements: S1 item 1, S0.10, A2, A5, P-3, ✅ Q-3.
 - [ ] **T-0.5** Núcleo do runner: no Kit, roteador, autenticação por token, controlador único e
   agenda das duas filas (testáveis com `swift test`); no runner, `testServe` (faz `press(.home)` e
   só então abre o servidor), `NWListener` WebSocket no loopback na porta da configuração (no build
@@ -233,22 +234,23 @@ Regras comuns:
   **plano B** = (1) pontos de controle `who: runner` com `steps` em tudo que não é credencial (avião,
   arrasto de destravar); (2) comparar com a Gravação de Tela do iOS; (3) levar ⏳ Q-9 ao dono com os
   quadros. Deps: T-0.11, T-0.13, T-0.14, T-0.17. Implements: HC-6, S1 item 9, S5 item 6.
-- [ ] **T-0.17** **SP-2 (bloqueador) — sessão do XCTest × modo avião; forçar o cabo.** Ligar o cabo e
-  sondar `devicectl list devices --json-output <arquivo temporário>` a cada 1 s, lendo
-  `transportType`/`tunnelState`; se seguir `localNetwork`, desligar o Wi-Fi do iPhone em Settings por
-  10 s e religar; medir até `wired` e se continua `wired` por 30 min. Depois: runner subido, `health` a
-  10 Hz, modo avião 60 s ligado/desligado ×10; registrar PID (`devicectl device info processes`), vida
-  do `xcodebuild`, maior intervalo, linhas "Exiting due to IDE disconnection"; uma vez de propósito em
-  `localNetwork` (controle negativo). Files: `spikes/SP-2.md`, `spikes/sp-2/**`. AC: AC-2.2, AC-2.4
-  (parcial: a leitura do `devicectl` em `localNetwork` no controle negativo, sem pré-voo).
-  Done: **sucesso** = `wired` em ≤ 30 s por um procedimento documentado e estável por 30 min; 10/10
-  com o mesmo PID e intervalo ≤ 2 s; o controle em Wi-Fi reproduz a morte. **Plano B** = re-assinar o
-  `.xctrunner` sem `Frameworks/XC*`, lançá-lo por `devicectl device process launch` e repetir — G5
-  antes de re-assinar (só com `Apple Development: Andre Saboia (6NKUX5CX7G)`) e antes de instalar o
-  `.xctrunner` modificado; `codesign -dvv` confere `TeamIdentifier=984PNJZ8B9` e `security
-  find-identity -v -p codesigning` fica igual antes e depois; se falhar também, levar ⏳ Q-12 ao dono
-  num G1 imediato (`requirements.md` §5; nada que ponha o runner na tela durante a tomada entra antes
-  dele). Deps: T-0.11. Implements: HC-4, S2, ADR-10.
+- [ ] **T-0.17** **SP-2 (bloqueador) — sessão do XCTest × modo avião; forçar o cabo.** Ligar o cabo
+  e sondar `devicectl list devices --json-output <arquivo temporário>` a cada 1 s, lendo
+  `transportType`/`tunnelState`; se seguir `localNetwork`, o dono, à mão, desliga o Wi-Fi do iPhone
+  em Settings por 10 s e religar; medir até `wired` e se continua `wired` por 30 min. Depois: runner
+  subido, `health` a 10 Hz, modo avião 60 s ligado/desligado ×10; registrar PID (`devicectl device
+  info processes`), vida do `xcodebuild`, maior intervalo, linhas "Exiting due to IDE
+  disconnection"; uma vez de propósito em `localNetwork` (controle negativo). Files:
+  `spikes/SP-2.md`, `spikes/sp-2/**`. AC: AC-2.2, AC-2.4 (parcial: a leitura do `devicectl` em
+  `localNetwork` no controle negativo, sem pré-voo). Done: **sucesso** = `wired` em ≤ 30 s por um
+  procedimento documentado e estável por 30 min; 10/10 com o mesmo PID e intervalo ≤ 2 s; o controle
+  em Wi-Fi reproduz a morte. **Plano B** = re-assinar o `.xctrunner` sem `Frameworks/XC*`, lançá-lo
+  por `devicectl device process launch` e repetir — G5 antes de re-assinar (só com `Apple
+  Development: Andre Saboia (6NKUX5CX7G)`) e antes de instalar o `.xctrunner` modificado; `codesign
+  -dvv` confere `TeamIdentifier=984PNJZ8B9` e `security find-identity -v -p codesigning` fica igual
+  antes e depois; se falhar também, levar ⏳ Q-12 ao dono num G1 imediato (`requirements.md` §5; nada
+  que ponha o runner na tela durante a tomada entra antes dele). Deps: T-0.11. Implements: HC-4, S2,
+  ADR-10.
 - [ ] **T-0.18** **SP-3 (alto) — toques com o app animando.** Pré-condição: PX-2 e PX-3 em
   `runner.privateAllowed` (✅ Q-5b/c). No leitor do Hagah com o Salmo 23 tocando: escolher e registrar
   um botão cujo toque não para o áudio (ex.: "Forward 15 seconds" no Now Playing) e fazer 50 toques
@@ -282,18 +284,19 @@ Regras comuns:
   T-0.12, T-0.13. Implements: S9 itens 1, 3 e 6, ADR-4, ADR-14, ⏳ Q-8.
 - [ ] **T-0.21** **SP-5 (alto) — OBS, parte 2: capítulos e finalização.** 3 capítulos com títulos
   UTF-8; 30 paradas (10 × 1 min, 10 × 5 min, 10 × 10 min ≈ 19 GB no total, cada arquivo apagado logo
-  depois de medido, pela regra comum). Files: `spikes/SP-5.md`, `spikes/sp-5/**`. AC: AC-9.2, AC-9.6.
-  Done: **sucesso** = capítulos exatos e 0 falsos prontos. **Plano B** = QuickTime manual com
+  depois de medido, pela regra comum). Files: `spikes/SP-5.md`, `spikes/sp-5/**`. AC: AC-9.2,
+  AC-9.6. Done: **sucesso** = os 3 títulos idênticos no `ffprobe -show_chapters` (mais no máximo o
+  capítulo automático em 0, AC-9.2) e 0 falsos prontos (AC-9.6). **Plano B** = QuickTime manual com
   capítulos do FFMETADATA. Deps: T-0.20. Implements: S9 item 5, ADR-4, ⏳ Q-8.
 - [ ] **T-0.22** Núcleo de relógio e alinhamento para o SP-6 (sem aparelho): NTP com ajuste
-  Theil-Sen (S7 item 2), T0 pelas marcas (item 3), detecção por região e ajuste V = α + (1+β)·P com o
-  erro deixando um de fora (itens 4–6), decodificador do código de S0.10, e o invólucro do
+  Theil-Sen (S7 item 2), T0 pelas marcas (item 3), detecção por região e ajuste V = α + (1+β)·P com
+  o erro deixando um de fora (itens 4–6), decodificador do código de S0.10, e o invólucro do
   ffmpeg/ffprobe fixados (`paths.*`) com extração de quadros. Files: `mac/src/{clock,align}/**`,
-  `mac/src/media/{ffmpeg,frames}.ts`, `mac/test/{clock,align}.test.ts`. AC: — (medidas nas T-0.23 e
-  T-0.24). Done: `node --test` verde com dados sintéticos: rajadas com deslocamento e deriva plantados
-  e recuperados, vídeos de teste gerados por `ffmpeg -f lavfi` num diretório temporário (marcas,
-  mudança de região, código de S0.10 desenhado com `drawbox`). Deps: T-0.3. Implements: S0.10, S7
-  itens 2–6, ADR-15. [P]
+  `mac/src/media/{ffmpeg,frames}.ts`, `mac/test/{clock,align}.test.ts`. AC: AC-0.8 (parte: o
+  decodificador do Mac); o resto é medido nas T-0.23 e T-0.24). Done: `node --test` verde com dados
+  sintéticos: rajadas com deslocamento e deriva plantados e recuperados, vídeos de teste gerados por
+  `ffmpeg -f lavfi` num diretório temporário (marcas, mudança de região, código de S0.10 desenhado
+  com `drawbox`). Deps: T-0.3. Implements: S0.10, S7 itens 2–6, ADR-15. [P]
 - [ ] **T-0.23** **SP-6 (alto) — sincronia ponta a ponta, parte 1: marcas e latência de captura.**
   Com o núcleo da T-0.22, mede: (a) 8 marcas `SerialFrame` no pré-rolo achadas por `signalstats`;
   (b) 10 min do relógio do hospedeiro (S0.10) na tela, decodificado por quadro, com e sem "Use
@@ -306,7 +309,8 @@ Regras comuns:
   nas cenas 2 e 5, com detecção por região e erro deixando um de fora (S7 item 6), usando o T0 e a
   latência medidos na T-0.23. Files: `spikes/SP-6.md`, `spikes/sp-6/**`. AC: AC-7.3 (método). Done:
   **sucesso** = ≥ 90 % dos toques detectados no quadro certo (±1) e nenhuma detecção mais de 100 ms
-  antes da ação. **Plano B** = só alinhamento visual por tomada. Deps: T-0.23. Implements: S7, SM-2.
+  antes da ação; os toques usam o caminho escolhido no SP-3 (`path` registrado em cada um). **Plano
+  B** = só alinhamento visual por tomada. Deps: T-0.18, T-0.23. Implements: S7, SM-2.
 - [ ] **T-0.25** **SP-7 (médio) — travar, acender e destravar (cena 3).** Com PX-1 liberado (✅
   Q-5a); se a sondagem o der ausente, medir só o ponto de controle humano (botão lateral).
   `pressLockButton` ×10 com leitura de `com.apple.springboard.lockstate` e captura do OBS (nunca
@@ -388,13 +392,13 @@ Regras comuns:
   ✅ Q-5e.
 - [ ] **T-0.32** **SP-12 (médio) — parte 3: nada visível.** Ícones do hospedeiro e do runner tirados
   da tela de início e o runner ainda sobe, com os nomes exibidos de verdade (para
-  `bundle.displayNames`); uma subida com a captura automática do XCTest ligada × as configurações de S1
-  item 9 (latência p50 de 50 `ui.tap`, indicador na captura do OBS, atividade de gravação no registro);
-  tempo até o runner sair da frente. Files: `spikes/SP-12.md`, `spikes/sp-12/**`,
+  `bundle.displayNames`); uma subida com a captura automática do XCTest ligada × as configurações de
+  S1 item 9 (latência p50 de 50 `ui.tap`, indicador na captura do OBS, atividade de gravação no
+  registro); tempo até o runner sair da frente. Files: `spikes/SP-12.md`, `spikes/sp-12/**`,
   `ios/ContrarregraRunner/Spikes/**`. AC: AC-1.13, AC-1.20, AC-12.3 (medição). Done: **sucesso** =
   runner fora da frente em ≤ 5 s; nenhum ícone na página do Hagah; sem diferença com a captura
-  desligada. **Plano B** = chaves não documentadas de captura (A10). Deps: T-0.11, T-0.13. Implements:
-  S1 item 9, SM-6.
+  desligada. **Plano B** = chaves não documentadas de captura (A10), só com o sim do dono no G1 da
+  T-0.39. Deps: T-0.11, T-0.13. Implements: S1 item 9, SM-6.
 - [ ] **T-0.33** **SP-13 (médio) — limites do Claude Code no MCP.** Protótipo de `take_start` +
   `take_wait` com supervisor destacado e vigia (tomada simulada de 15 min, sem simulador nem
   aparelho, 3 pontos de controle, MCP morto no meio, supervisor morto no meio); capturas JPEG
@@ -433,29 +437,31 @@ Regras comuns:
   embutido; Microfone liberado ao Chrome e ao processo que roda o ffmpeg (`deploy.md` D0.3). Files:
   `spikes/SP-18.md`, `spikes/sp-18/**`. AC: AC-10.8. Done: p95 ≤ 20 ms depois de uma calibração.
   **Plano B** = só ffmpeg + palma. Deps: T-0.1. Implements: S10 item 3. [P]
-- [ ] **T-0.39** Consolidar a Fase 0: atualizar `architecture.md` A10/A11 com o caminho escolhido por
-  spike; levar ao dono, num G1, Q-5 (d, f), Q-8, Q-9 e, se ainda não decididas num G1 imediato
+- [ ] **T-0.39** Consolidar a Fase 0: atualizar `architecture.md` A10/A11 com o caminho escolhido
+  por spike; levar ao dono, num G1, Q-5 (d, f), Q-8, Q-9 e, se ainda não decididas num G1 imediato
   (`requirements.md` §5), Q-12 e Q-13, com os números; emitir G1 para cada mudança de comportamento
   que os spikes exigirem (ex.: pontos de controle `who: runner`, pausas de áudio na coreografia do
   Hagah, variante da folha em AC-13.6, prova da sincronia); atualizar as estimativas desta página e
-  `bundle.displayNames`. Files: `spec/architecture.md`, `spec/tasks.md`, `spec/spec.md` e
-  `spec/requirements.md` (só via G1). AC: —. Done: todo spike aplicável com decisão; G1 respondidos.
-  Deps: T-0.16…T-0.38. Implements: P-6.
+  `bundle.displayNames` e, se o SP-12 parte 3 cair no plano B, levar as chaves de captura de A10 ao
+  dono (uso novo de Q-5). Files: `spec/architecture.md`, `spec/tasks.md`, `config/defaults.json`,
+  `spec/constitution.md`, `spec/spec.md` e `spec/requirements.md` (só via G1). AC: —. Done: todo
+  spike aplicável com decisão; G1 respondidos. Deps: T-0.16…T-0.38. Implements: P-6.
 
 ## Fase 1 — Esqueleto ambulante
 **Objetivo:** a fatia mais fina por todas as camadas: coreografia de uma cena (cena 1 do Hagah: tela
 de início → toque no ícone → abertura) compilada, carregada e executada no aparelho; OBS grava com
-pré-rolo, marcas e um capítulo; `events.json`, `.srt` e `review.mp4` saem alinhados; acionada pela CLI
-e por `take_start`/`take_wait` no MCP, com supervisor e vigia. · **Seções:** fatias de S1, S2, S3, S4,
-S7, S8, S9, S10 · **Portão:** AC-0.6; uma tomada de uma cena gera `review.mp4` com capítulo e legenda,
-e `sync.json` calculado · **Data-alvo:** D+11 · **Sinal de atraso:** integração OBS↔runner > 2 dias.
+pré-rolo, marcas e um capítulo; `events.json`, `.srt` e `review.mp4` saem alinhados; acionada pela
+CLI e por `take_start`/`take_wait` no MCP, com supervisor e vigia. · **Seções:** fatias de S1, S2,
+S3, S4, S6, S7, S8, S9, S10 · **Portão:** AC-0.6; uma tomada de uma cena gera `review.mp4` com
+capítulo e legenda, e `sync.json` calculado (método `calibrated` aceito, S7 item 6) · **Data-alvo:**
+D+11 · **Sinal de atraso:** integração OBS↔runner > 2 dias.
 
 ## Fase 2 — Runner, transporte e exploração
 **Objetivo:** todas as operações de S1 e o transporte de S2 completos; ferramentas MCP de
 exploração. · **Seções:** S1, S2, S8 (exploração) · **Portão:** AC-1.1…AC-1.24 (AC-1.24 só a parte
-do aparelho; a do simulador vai à Fase 7), exceto AC-1.5 se o SP-3 cair no plano B, AC-1.9 se o SP-7
-cair no plano B, e AC-1.8 e AC-1.23 (Fase 3, que traz as seções da coreografia e os pontos de
-controle); AC-1.10 e AC-1.18 sempre; AC-2.1…AC-2.3, AC-2.5…AC-2.9 (AC-2.4 e AC-2.10 dependem do
+do aparelho; a do simulador vai à Fase 7), exceto AC-1.5 se o SP-3 cair no plano B, AC-1.9 e AC-1.21
+se o SP-7 cair no plano B, e AC-1.8 e AC-1.23 (Fase 3, que traz as seções da coreografia e os pontos
+de controle); AC-1.10 e AC-1.18 sempre; AC-2.1…AC-2.3, AC-2.5…AC-2.9 (AC-2.4 e AC-2.10 dependem do
 pré-voo: Fase 5); AC-8.1…AC-8.3 · **Data-alvo:** D+14 · **Sinal de atraso:** APIs privadas exigindo
 mais que PX-1…PX-6.
 
@@ -474,20 +480,22 @@ AC-9.5…AC-9.10, AC-10.1…AC-10.7 · **Data-alvo:** D+22 · **Sinal de atraso:
 duas tomadas seguidas.
 
 ## Fase 5 — Pré-voo, preparo e a tomada do Hagah
-**Objetivo:** pré-voo, `prepare`/`cleanup`, a coreografia das 10 cenas e a tomada final entregue ao
-dono. · **Seções:** S12, S13, S8 item 5 · **Portão:** AC-2.4, AC-2.10, AC-7.4, AC-8.9, AC-9.3,
-AC-9.4, AC-12.1…AC-12.8, AC-13.1…AC-13.10 (AC-13.8 como procedimento com o dono); SM-1, SM-2, SM-3,
-SM-6, SM-7 medidos numa tomada real · **Data-alvo:** D+25 (2026-11-10 se o G1 for em 2026-10-05) ·
-**Sinal de atraso:** uma cena precisando de intervenção não planejada em duas tomadas.
+**Objetivo:** pré-voo, `prepare`/`cleanup`, `takes prune` (✅ Q-14), a coreografia das 10 cenas e a
+tomada final entregue ao dono. · **Seções:** S12, S13, S8 item 5 · **Portão:** AC-2.4, AC-2.10,
+AC-7.4, AC-8.9, AC-9.3, AC-9.4, AC-12.1…AC-12.9, AC-13.1…AC-13.10 (AC-13.8 como procedimento com o
+dono); SM-1, SM-2, SM-3, SM-6, SM-7 medidos numa tomada real · **Data-alvo:** D+25 (2026-11-11 com o
+G1 em 2026-10-06) · **Sinal de atraso:** uma cena precisando de intervenção não planejada em duas
+tomadas.
 
 ## Fase 6 — MCP completo e passo a partir da exploração
 **Objetivo:** todas as ferramentas de S8, `record_step`, paridade CLI/MCP. · **Seções:** S8, S3 item
-4 · **Portão:** AC-8.6, AC-8.7, AC-8.8 (procedimento), AC-3.5, AC-3.6; SM-4 · **Data-alvo:** D+27.
+4 · **Portão:** AC-8.6 (exceto `rehearse_start`/`rehearse --detach`: Fase 7), AC-8.7, AC-8.8
+(procedimento), AC-3.5, AC-3.6; SM-4 · **Data-alvo:** D+27.
 
 ## Fase 7 — Ensaio no simulador
 **Objetivo:** a mesma coreografia no simulador, com gravação e saídas. · **Seções:** S11 ·
-**Portão:** AC-11.1…AC-11.4, AC-1.24 (parte do simulador), AC-3.7, AC-7.5, AC-8.4 ·
-**Data-alvo:** D+29.
+**Portão:** AC-11.1…AC-11.4, AC-1.24 (parte do simulador), AC-8.6 (parte de `rehearse_start`),
+AC-3.7, AC-7.5, AC-8.4 · **Data-alvo:** D+29.
 
 ## Fase 8 — Cabine de narração (✅ Q-6)
 **Objetivo:** página local que toca o vídeo com as falas e grava o microfone sincronizado. ·
@@ -495,5 +503,5 @@ SM-6, SM-7 medidos numa tomada real · **Data-alvo:** D+25 (2026-11-10 se o G1 f
 
 ## Fase 9 — Endurecimento
 **Objetivo:** longa duração (SM-5), mensagens de erro acionáveis, `doctor` completo, procedimentos de
-`deploy.md` automatizados, `takes prune` (✅ Q-14), limpeza de capturas antigas. · **Seções:** todas ·
+`deploy.md` automatizados, limpeza de capturas antigas. · **Seções:** todas ·
 **Portão:** AC-2.8; `doctor` cobre cada falha da lista de PF · **Data-alvo:** D+33.
