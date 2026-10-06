@@ -28,7 +28,8 @@ estes tipos; nenhum dos dois inventa campo fora daqui. Todo arquivo JSON gerado 
 ### S0.1 Configuração (`Config`)
 
 Arquivo por máquina `~/.config/contrarregra/config.json` (fora do repositório, **sem segredos**),
-mesclado sobre `config/defaults.json` do repositório. Campos:
+mesclado sobre `config/defaults.json` do repositório (mescla recursiva: objetos chave a chave;
+listas e valores simples do `config.json` substituem os padrões). Campos:
 
 | Campo | Tipo | Padrão | Nota |
 |---|---|---|---|
@@ -1095,6 +1096,7 @@ scenes:
    estado final (`finished`, `aborted`, `failed`) que não seguram a trava do aparelho, exceto a
    `finished` mais recente daquele app, e, com um G4 do dono em lote, apaga delas só `recording.mp4`
    e `review.mp4`; ensaios, `dry` e tomadas em curso nunca entram na lista; AC-12.9).
+
 3. **Captura para o Claude Code**: JPEG em pontos (390×844, qualidade ⚠️ 0,8, ≤ 150 KB) mais uma
    linha de texto com a escala e o caminho do PNG nativo salvo em `paths.cache/explore/` (podado:
    guarda as ⚠️ 200 últimas). Coordenadas da imagem = pontos do XCUITest. Só com o app em primeiro
@@ -1280,12 +1282,13 @@ scenes:
    - `subtitles.srt` e `subtitles.vtt` em tempo F: cada frase da fala gera uma ou mais deixas (o
      texto da frase partido em limites de palavra no menor número k ≥ ⌈caracteres/42⌉ de trechos que
      deixa todos com ≤ 42, escolhendo entre essas divisões a que minimiza o maior trecho; os trechos
-     dividem a janela da frase na proporção dos caracteres, e cada deixa termina 2 quadros antes do
-     início da seguinte; se uma deixa, já descontados esses 2 quadros, ficar com menos de 0,83 s, a
-     fronteira com a seguinte anda até ela ter 0,83 s — na última deixa da frase, sobre a pausa que
-     segue a frase); linha 1 `[Snn · <caption>]` (o `caption` do último passo **com `caption`**
-     começado na cena antes da deixa; sem nenhum, só `[Snn]`), linha 2 o trecho da fala; duração de
-     cada deixa entre 0,83 s e 7 s; ≥ 2 quadros entre deixas.
+     dividem a janela da frase na proporção dos caracteres; cada deixa termina 2 quadros antes do
+     início da seguinte da mesma frase, e a última termina no fim da janela da frase; se uma deixa,
+     já descontados esses 2 quadros, ficar com menos de 0,83 s, a fronteira com a seguinte anda até
+     ela ter 0,83 s — na última deixa da frase, sobre a pausa que segue a frase); linha 1 `[Snn ·
+     <caption>]` (o `caption` do último passo **com `caption`** começado na cena antes da deixa; sem
+     nenhum, só `[Snn]`), linha 2 o trecho da fala; duração de cada deixa entre 0,83 s e 7 s; ≥ 2
+     quadros entre deixas.
    - `chapters.ffmeta` (`;FFMETADATA1`, `TIMEBASE=1/1000`, um `[CHAPTER]` por cena com o título;
      `=`, `;`, `#`, `\` e quebra de linha escapados).
    - `timings.md` e `timings.csv`: por cena — início/fim em F, duração, duração da guia, folga
@@ -1431,6 +1434,7 @@ scenes:
    grava a confirmação, sem abrir `control`. Na `take run`, uma checagem `human` sem confirmação
    válida não aborta: o Mac avisa como num ponto de controle (S5 item 2) e espera até ⚠️ 5 min pela
    confirmação; sem ela, `E_PREFLIGHT`.
+
 2. **Preparo** (`prepare` da coreografia, executado pelo runner com `choreo.run {section: prepare}`,
    sem gravar): leva o app alvo ao estado inicial do vídeo e **verifica** com `assert`. Pode usar
    `openURL` e `terminate`. Antes de apagar dado do app alvo, confere se há dado que nenhuma tomada
@@ -1442,9 +1446,10 @@ scenes:
    offline}`, o primeiro passo é um ponto de controle "desligue o modo avião" até `{network:
    online}`. O `take.json` nasce com `cleanupPending: false`; em `take.start` o supervisor grava
    `scenesStartedAt` e `cleanupPending: true` e, em `take.end`/`take.abort`, `scenesResult:
-   finished|aborted`; só uma `cleanup` completa (todas as `assert` passando) volta a `cleanupPending:
-   false`. Uma `cleanup` que falha, estoura o prazo ou é abortada não muda o `status` da tomada, que
-   vem de `scenesResult`.
+   finished|aborted`; só uma `cleanup` completa (todas as `assert` passando) volta a
+   `cleanupPending: false`. Uma `cleanup` que falha, estoura o prazo ou é abortada não muda o
+   `status` da tomada, que vem de `scenesResult` (salvo `failed` com `cause: supervisor-lost`, S8
+   item 5).
 4. **Repetir** (US-16, SM-3): `take run` encadeia limpeza da anterior (se pendente) → pré-voo →
    preparo → PF-15 → tomada → saídas, sem passos manuais além dos pontos de controle e das
    confirmações do pré-voo. "A tomada anterior" é a mais recente do mesmo `device.udid` e do mesmo
@@ -1489,10 +1494,11 @@ scenes:
 - **AC-12.8** Given o app alvo com uma entrada de diário que nenhuma tomada criou, when `prepare` roda,
   then para num ponto de controle humano antes de apagar qualquer coisa.
 - **AC-12.9** Given três tomadas `mode: take` `finished` e uma `aborted` do mesmo app, mais um `dry`
-  e um ensaio mais novos que elas e uma tomada de outro app, when `takes prune` roda e o dono aprova
-  o G4, then só o `recording.mp4` e o `review.mp4` das `mode: take` daquele app que não são a
-  `finished` mais recente são apagados; `take.json`, `choreo.json`, `events.json`, as legendas e
-  `final.mp4` ficam, e o `dry`, o ensaio e a outra app ficam intactos; sem o G4, nada é apagado.
+  e um ensaio mais novos que elas e uma única tomada `mode: take` `finished` de outro app, when
+  `takes prune` roda e o dono aprova o G4, then só o `recording.mp4` e o `review.mp4` das `mode:
+  take` daquele app que não são a `finished` mais recente são apagados; `take.json`, `choreo.json`,
+  `events.json`, as legendas e `final.mp4` ficam, e o `dry`, o ensaio e a tomada do outro app ficam
+  intactos; sem o G4, nada é apagado.
 
 ---
 

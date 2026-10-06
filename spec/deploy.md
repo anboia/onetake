@@ -29,6 +29,7 @@ Fase 0: atualizar o iOS (Q-11, item 7), liberar ~20 GB (Q-14, item 17) e exporta
    `paths.ffmpeg -f avfoundation`) e ao Chrome, para o SP-15, o SP-18 e a cabine (✅ Q-6).
 
 **No iPhone (iOS 26.x; ✅ Q-11)**
+
 4. Ligar o cabo USB com o iPhone destravado; aceitar "Trust This Computer" e, no Mac, "Permitir
    acessório". Settings › Privacy & Security › Wired Accessories: **Automatically Allow When
    Unlocked**.
@@ -58,6 +59,7 @@ Fase 0: atualizar o iOS (Q-11, item 7), liberar ~20 GB (Q-14, item 17) e exporta
     que o Hagah **não** está na lista (assim a folha de primeiro cadastro aparece).
 
 **No Mac**
+
 15. Atualizar o Claude Code para ≥ 2.1.283 (mantém o progresso de chamadas MCP em segundo plano).
 16. Não atualizar Xcode (26.6), OBS (31.1.2) nem macOS durante a produção (ADR-16); a atualização do
     OBS para 32.x é ⏳ Q-8.
@@ -67,6 +69,7 @@ Fase 0: atualizar o iOS (Q-11, item 7), liberar ~20 GB (Q-14, item 17) e exporta
     `~/.cache/huggingface` e 6,6 GB de simuladores.
 
 **No repositório do Hagah (fora do Contrarregra; o dono ou uma sessão do Hagah aberta por ele)**
+
 18. Corrigir o roteiro `plans/mobile/notes/v8.5-roteiro-video.md` pelos rótulos reais de `spec.md` S13
     item 2 (textos da PWA, build 4 → 5, prova do modo avião sem a barra de estado, gravação pelo OBS
     em vez do Control Center).
@@ -76,7 +79,7 @@ Fase 0: atualizar o iOS (Q-11, item 7), liberar ~20 GB (Q-14, item 17) e exporta
 
 | Ambiente | O quê | Quem mexe |
 |---|---|---|
-| Mac do dono | MacBook Air M4 16 GB, macOS 26.5.2, Xcode 26.6 (17F113), OBS 31.1.2 (obs-websocket 5.6.2), Node 22.19 (nvm) e 26.0 (Homebrew; recusado pelo shim), ffmpeg 8.1.1 em `/opt/homebrew/opt/ffmpeg/bin` (o do PATH é o 4.4.7), XcodeGen 2.45.4, BlackHole 2ch | dono; a ferramenta só escreve no perfil "Contrarregra" do OBS (criar ou reconciliar o perfil e a coleção com `obs setup` é G5; pedidos de gravação, o "chute" da fonte, o `sync calibrate` e ajustes de spike neles não são) |
+| Mac do dono | MacBook Air M4 16 GB, macOS 26.5.2, Xcode 26.6 (17F113), OBS 31.1.2 (obs-websocket 5.6.2), Node 22.19 (nvm) e 26.0 (Homebrew; recusado pelo shim), ffmpeg 8.1.1 em `/opt/homebrew/opt/ffmpeg/bin` (o do PATH é o 4.4.7), XcodeGen 2.45.4, BlackHole 2ch | dono; a ferramenta só escreve no perfil e na coleção "Contrarregra" do OBS (criar ou reconciliar o perfil e a coleção com `obs setup` é G5; pedidos de gravação, o "chute" da fonte, o `sync calibrate` e ajustes de spike neles não são) |
 | iPhone 12 "VIVO_00G7" | iOS 26.x — o último, instalado antes da Fase 0 (✅ Q-11; era 26.3 23D127 em 2026-10-02; versão e build anotados em D0.7), UDID `00008101-001E79203A68001E`, CoreDevice `DC77A78E-5E8D-5825-B2EE-C297FBC14ABD`, modo desenvolvedor ligado | dono; a ferramenta instala só o runner e o hospedeiro (G5) e só opera os apps permitidos |
 | Simulador "Contrarregra iPhone 12" | runtime iOS 26.5 (instalado), mesma geometria do iPhone 12 | ferramenta (`rehearse`) |
 
