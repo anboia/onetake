@@ -88,7 +88,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   ≤ 1 s com Node fora de 22.x ≥ 22.18 (E-8.1); um `config.json` com outro time sai com `E_CONFIG`
   (o `typecheck` só fica verde na T-0.2, depois do G2 do `typescript`). Deps: —. Implements: S0.1, S8
   item 7, P-1, P-3, ✅ Q-4.
-- [ ] **T-0.2** Gate G2 da primeira leva de dependências: `@modelcontextprotocol/server@2.3.0`
+- [x] **T-0.2** Gate G2 da primeira leva de dependências: `@modelcontextprotocol/server@2.3.0`
   (traz `@modelcontextprotocol/core` e `zod` 4), `yaml`, XcodeGen 2.45.4 (Homebrew, já instalado,
   fixado por `minimumXcodeGenVersion`); dev: `typescript`, `@types/node`, `@modelcontextprotocol/client`.
   Files: `package.json`, `package-lock.json`. AC: —. Done: G2 emitido e respondido; lockfile gerado
