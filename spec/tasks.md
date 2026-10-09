@@ -76,7 +76,7 @@ atualizados; Q-5 (d, f), Q-8, Q-9, Q-12, Q-13 respondidas; qualquer mudança de 
 a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos dois caminhos.
 
 **Fundação**
-- [ ] **T-0.1** Esqueleto do repositório do Mac: `package.json` (`"type": "module"`, `engines.node
+- [x] **T-0.1** Esqueleto do repositório do Mac: `package.json` (`"type": "module"`, `engines.node
   ">=22.18 <23"`, scripts `test` e `typecheck`), `tsconfig.json` (`noEmit`, `allowImportingTsExtensions`,
   `erasableSyntaxOnly`, `verbatimModuleSyntax`, `module: nodenext`, `target: esnext`), `.gitignore`
   (`ios/*.xcodeproj`, `.build/`, `node_modules/`, `*.mp4`, `*.mov`, `*.wav`, `*.aiff`, `*.aif`,

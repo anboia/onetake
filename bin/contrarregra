@@ -1,0 +1,124 @@
+#!/bin/sh
+# Shim POSIX da Contrarregra (spec S8 item 7, E-8.1; constituição P-1).
+#
+# Acha um Node 22.x >= 22.18 e roda o ponto de entrada em TypeScript direto (type stripping, sem
+# etapa de build): primeiro o maior 22.x >= 22.18 do nvm (o 22.19 desta máquina), depois o primeiro
+# do PATH. Qualquer outra versão (ex.: o Node 26 do Homebrew) é recusada na hora, sem rodar nada.
+#
+# Chamado como `contrarregra` roda a CLI (mac/src/cli/main.ts); como `contrarregra-mcp` (link para
+# este arquivo) roda o servidor MCP stdio (mac/src/mcp/main.ts). Nada vai para a saída padrão antes
+# do exec: no MCP ela é o canal do protocolo.
+
+name=${0##*/}
+
+# Raiz do repositório: segue os links simbólicos até este arquivo.
+self=$0
+while [ -L "$self" ]; do
+  link=$(readlink -- "$self") || exit 1
+  case $link in
+    /*) self=$link ;;
+    *)
+      # Link relativo: vale a partir da pasta do link ($0 pode vir sem barra, ex.: `sh contrarregra-mcp`).
+      case $self in
+        */*) self=${self%/*}/$link ;;
+        *) self=$link ;;
+      esac
+      ;;
+  esac
+done
+case $self in
+  */*) bindir=${self%/*} ;;
+  *) bindir=. ;;
+esac
+root=$(CDPATH= cd -P -- "$bindir/.." && pwd) || exit 1
+
+case $name in
+  contrarregra-mcp) entry=$root/mac/src/mcp/main.ts ;;
+  *) entry=$root/mac/src/cli/main.ts ;;
+esac
+
+wanted='Node 22.x >= 22.18'
+
+# node_minor vX.Y.Z → imprime Y se X = 22 e Y >= 18; senão falha.
+node_minor() {
+  v=${1#v}
+  case $v in
+    22.*.*) ;;
+    *) return 1 ;;
+  esac
+  minor=${v#22.}
+  minor=${minor%%.*}
+  case $minor in
+    '' | *[!0-9]*) return 1 ;;
+  esac
+  [ "$minor" -ge 18 ] || return 1
+  echo "$minor"
+}
+
+node=
+refused=
+refused_count=0
+
+# refuse VERSÃO CAMINHO → anota um Node recusado para a mensagem final.
+refuse() {
+  [ -z "$refused" ] || refused="$refused, "
+  refused="${refused}Node $1 em $2"
+  refused_count=$((refused_count + 1))
+}
+
+# 1) nvm: o maior 22.x >= 22.18 instalado (a versão vem do nome da pasta); os demais são anotados.
+nvm_dir=${NVM_DIR:-${HOME:-}/.nvm}
+best_minor=-1
+best_patch=-1
+for candidate in "$nvm_dir"/versions/node/v*/bin/node; do
+  [ -x "$candidate" ] || continue
+  version=${candidate%/bin/node}
+  version=${version##*/}
+  patch=${version##*.}
+  minor=$(node_minor "$version") || minor=
+  case $patch in
+    '' | *[!0-9]*) minor= ;;
+  esac
+  if [ -z "$minor" ]; then
+    refuse "$version" "$candidate"
+    continue
+  fi
+  if [ "$minor" -gt "$best_minor" ] || { [ "$minor" -eq "$best_minor" ] && [ "$patch" -gt "$best_patch" ]; }; then
+    node=$candidate
+    best_minor=$minor
+    best_patch=$patch
+  fi
+done
+
+# 2) PATH: o primeiro `node` que responde 22.x >= 22.18; os recusados são anotados.
+if [ -z "$node" ]; then
+  saved_ifs=$IFS
+  IFS=:
+  set -f
+  for dir in ${PATH:-}; do
+    [ -n "$dir" ] || continue
+    candidate=$dir/node
+    [ -f "$candidate" ] && [ -x "$candidate" ] || continue
+    version=$("$candidate" --version 2>/dev/null) || version='(sem versão)'
+    if node_minor "$version" >/dev/null; then
+      node=$candidate
+      break
+    fi
+    refuse "$version" "$candidate"
+  done
+  set +f
+  IFS=$saved_ifs
+fi
+
+if [ -z "$node" ]; then
+  if [ "$refused_count" -gt 1 ]; then
+    echo "$name: $refused recusados; a Contrarregra precisa de $wanted (instale com: nvm install 22)." >&2
+  elif [ "$refused_count" -eq 1 ]; then
+    echo "$name: $refused recusado; a Contrarregra precisa de $wanted (instale com: nvm install 22)." >&2
+  else
+    echo "$name: nenhum Node no nvm ($nvm_dir) nem no PATH; a Contrarregra precisa de $wanted (instale com: nvm install 22)." >&2
+  fi
+  exit 1
+fi
+
+exec "$node" "$entry" "$@"

@@ -1,0 +1,34 @@
+# Projeto do Xcode gerado pelo XcodeGen e artefatos de build
+ios/*.xcodeproj
+.build/
+node_modules/
+
+# Vídeo, áudio e imagem nunca entram no git (HC-7, P-3)
+*.mp4
+*.mov
+*.wav
+*.aiff
+*.aif
+*.m4a
+*.caf
+*.png
+*.jpg
+*.jpeg
+*.heic
+
+# Resultados e sessões do XCTest (o .xctestrun leva o token de sessão)
+*.xcresult
+*.xctestrun
+
+# Registros
+*.log
+*.ndjson
+
+# Chaves, certificados e perfis de provisionamento (P-3)
+*.p8
+*.p12
+*.mobileprovision
+*.cer
+
+# Saídas dos spikes
+spikes/sp-*/out/
