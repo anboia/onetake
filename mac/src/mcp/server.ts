@@ -2,19 +2,23 @@
 // lógica está em `mac/src/commands`, a mesma que a CLI chama. A configuração é carregada a cada chamada,
 // antes de qualquer processo filho ou conexão (AC-0.5). Erros viram resultado `isError` com
 // `{error: {code, message, data}}`, o mesmo objeto da CLI em `--json`; segredo nenhum passa por aqui (P-3).
+// Inclusive os de argumento: o SDK confere o `inputSchema` antes do handler e, se falhar, responde só o
+// texto dele ("Input validation error: …"); por isso o `inputSchema` aqui só anuncia a forma (o JSON Schema
+// dos esquemas de `commands`, para o modelo ver) e aceita qualquer objeto, e a conferência estrita é a do
+// comando (`E_CHOREO_INVALID` com `data.errors`).
 // Fase 0 (T-0.15): as 5 ★ `doctor`, `device_status`, `screenshot`, `ui_tree` e `tap`; `take_wait` (a 6ª ★)
 // e as demais ferramentas de S8 item 2 entram com as tarefas delas.
 
 import { readFileSync } from 'node:fs';
 
-import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
+import { fromJsonSchema, McpServer, type CallToolResult, type JsonSchemaType, type JsonSchemaValidator, type jsonSchemaValidator } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 
-import { errorObject, loadContext, type ContextOptions } from '../commands/context.ts';
+import { errorObject, loadContext, NoArgsSchema, parseArgs, type ContextOptions } from '../commands/context.ts';
 import { deviceStatus } from '../commands/device.ts';
 import { doctor } from '../commands/doctor.ts';
 import { screenshot } from '../commands/screenshot.ts';
-import { tap, TargetSchema, TREE_FORMATS, uiTree, type TreeArgs } from '../commands/ui.ts';
+import { parseTapArgs, parseTreeArgs, tap, TapArgsSchema, TreeArgsSchema, uiTree } from '../commands/ui.ts';
 
 export const SERVER_NAME = 'contrarregra';
 const PACKAGE = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')) as { version: string };
@@ -39,7 +43,7 @@ const DESCRIPTIONS = {
   screenshot:
     'Captura a tela do iPhone: JPEG 390×844 em pontos (coordenadas da imagem = pontos de tap {point}) mais uma linha com a escala e o caminho do PNG nativo salvo no cache. Só funciona com o app alvo ou um app permitido em primeiro plano (senão E_FORBIDDEN_APP, e nada é capturado).',
   ui_tree:
-    'Árvore de acessibilidade do app em primeiro plano, só nós visíveis. format "compact" (padrão): treeVersion e uma linha por nó — `@e12 button "Open settings" (342,52 40x40)`, mais id=, value= e estados fora do padrão (disabled, selected). format "json": {treeVersion, nodes} com os nós completos. app: "target", "springboard", "controlcenter", "authkit" ou um bundle id permitido. Os @eN valem até a tela mudar.',
+    'Árvore de acessibilidade do app em primeiro plano, só nós visíveis. format "compact" (padrão): treeVersion e uma linha por nó — `@e12 button "Open settings" (342,52 40x40)`, mais id=, value= e estados fora do padrão (disabled, selected). format "json": {treeVersion, nodes} com os nós completos. app: "target" (padrão: o app alvo) ou o bundle id de um app permitido; a árvore só sai do app alvo ou de um app permitido à frente (senão E_FORBIDDEN_APP). Os @eN valem até a tela mudar.',
   tap:
     'Toca um alvo no iPhone. target com exatamente um seletor primário: {ref: "@e12"} da árvore atual, {label}, {labelPrefix}, {labelContains}, {identifier}, {ocr: {text}} ou {point: {x, y}} em pontos da tela; modificadores opcionais type, app, within, below, above, index, offset, fallback. Devolve {point, nodeRef?, tDevStartNs, tDispatchNs, tDevEndNs, path}.',
 } as const satisfies Record<(typeof STARRED_TOOLS)[number], string>;
@@ -47,6 +51,19 @@ const DESCRIPTIONS = {
 const meta = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({ 'anthropic/alwaysLoad': true, ...extra });
 
 const json = (value: unknown): CallToolResult => ({ content: [{ type: 'text', text: JSON.stringify(value) }] });
+
+/** Aceita qualquer entrada: a conferência é a do comando, que responde `{error: {code, message, data}}`. */
+const ACCEPT_ANY: jsonSchemaValidator = {
+  getValidator<T>(): JsonSchemaValidator<T> {
+    return (input) => ({ valid: true, data: input as T, errorMessage: undefined });
+  },
+};
+
+/** `inputSchema` que só anuncia a forma de `schema` (JSON Schema 2020-12, como o SDK geraria) e aceita tudo. */
+const shapeOf = (schema: z.ZodType) =>
+  fromJsonSchema(z.toJSONSchema(schema, { target: 'draft-2020-12', io: 'input' }) as JsonSchemaType, ACCEPT_ANY);
+
+const noArgs = (args: unknown, tool: string): void => void parseArgs(NoArgsSchema, args, tool);
 
 /** Roda o comando; erro → `isError` com `{error: {code, message, data}}`. */
 async function run(fn: () => Promise<CallToolResult>): Promise<CallToolResult> {
@@ -64,21 +81,30 @@ export function createContrarregraServer(options: ContextOptions = {}): McpServe
 
   server.registerTool(
     'doctor',
-    { title: 'Diagnóstico', description: DESCRIPTIONS.doctor, inputSchema: z.object({}), annotations: { readOnlyHint: true }, _meta: meta() },
-    () => run(async () => json(await doctor(options))),
+    { title: 'Diagnóstico', description: DESCRIPTIONS.doctor, inputSchema: shapeOf(NoArgsSchema), annotations: { readOnlyHint: true }, _meta: meta() },
+    (args) =>
+      run(async () => {
+        noArgs(args, 'doctor');
+        return json(await doctor(options));
+      }),
   );
 
   server.registerTool(
     'device_status',
-    { title: 'Estado do iPhone', description: DESCRIPTIONS.device_status, inputSchema: z.object({}), annotations: { readOnlyHint: true }, _meta: meta() },
-    () => run(async () => json(await deviceStatus(context()))),
+    { title: 'Estado do iPhone', description: DESCRIPTIONS.device_status, inputSchema: shapeOf(NoArgsSchema), annotations: { readOnlyHint: true }, _meta: meta() },
+    (args) =>
+      run(async () => {
+        noArgs(args, 'device_status');
+        return json(await deviceStatus(context()));
+      }),
   );
 
   server.registerTool(
     'screenshot',
-    { title: 'Captura de tela', description: DESCRIPTIONS.screenshot, inputSchema: z.object({}), annotations: { readOnlyHint: true }, _meta: meta() },
-    () =>
+    { title: 'Captura de tela', description: DESCRIPTIONS.screenshot, inputSchema: shapeOf(NoArgsSchema), annotations: { readOnlyHint: true }, _meta: meta() },
+    (args) =>
       run(async () => {
+        noArgs(args, 'screenshot');
         const shot = await screenshot(context());
         const { jpeg, png } = shot;
         return {
@@ -98,18 +124,13 @@ export function createContrarregraServer(options: ContextOptions = {}): McpServe
     {
       title: 'Árvore de acessibilidade',
       description: DESCRIPTIONS.ui_tree,
-      inputSchema: z.object({
-        app: z.string().min(1).optional().describe('target | springboard | controlcenter | authkit | bundle id permitido; padrão: o app em primeiro plano'),
-        format: z.enum(TREE_FORMATS).optional().describe('compact (padrão) ou json'),
-      }),
+      inputSchema: shapeOf(TreeArgsSchema),
       annotations: { readOnlyHint: true },
       _meta: meta({ 'anthropic/maxResultSizeChars': 200_000 }),
     },
     (args) =>
       run(async () => {
-        const treeArgs: TreeArgs = {};
-        if (args.app !== undefined) treeArgs.app = args.app;
-        if (args.format !== undefined) treeArgs.format = args.format;
+        const treeArgs = parseTreeArgs(args);
         const tree = await uiTree(context(), treeArgs);
         if (tree.format === 'json') return json({ treeVersion: tree.treeVersion, nodes: tree.nodes });
         return { content: [{ type: 'text', text: [`treeVersion ${tree.treeVersion}`, ...tree.nodes].join('\n') }] };
@@ -121,11 +142,15 @@ export function createContrarregraServer(options: ContextOptions = {}): McpServe
     {
       title: 'Tocar',
       description: DESCRIPTIONS.tap,
-      inputSchema: z.object({ target: TargetSchema.describe('Target de S0.2: exatamente um seletor primário') }),
+      inputSchema: shapeOf(TapArgsSchema),
       annotations: { readOnlyHint: false, destructiveHint: false },
       _meta: meta(),
     },
-    (args) => run(async () => json(await tap(context(), { target: args.target }))),
+    (args) =>
+      run(async () => {
+        const tapArgs = parseTapArgs(args);
+        return json(await tap(context(), tapArgs));
+      }),
   );
 
   return server;

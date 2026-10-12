@@ -2,8 +2,11 @@
 // (AC-0.5) e, só nos testes, as ferramentas trocadas por falsos. CLI e MCP montam o contexto por aqui e
 // não importam nada abaixo de `commands` (architecture.md A2).
 
+import { z } from 'zod';
+
 import { loadConfig, type Config, type LoadConfigOptions } from '../core/config.ts';
 import { isContrarregraError } from '../core/errors.ts';
+import { parseOrThrow } from '../core/schema.ts';
 import { RpcProtocolError } from '../runner/rpc.ts';
 import type { RunnerTools } from '../runner/xcodebuild.ts';
 
@@ -47,3 +50,15 @@ export function errorObject(error: unknown): { error: ErrorObject } {
   }
   return { error: { code: null, message: error instanceof Error ? error.message : String(error), data: {} } };
 }
+
+/**
+ * Argumentos de um comando conferidos contra a forma dele (campo desconhecido, tipo, regra do seletor
+ * primário de S0.2): fora dela → `E_CHOREO_INVALID` com `data.errors` (`{path, rule, message}`), antes de
+ * qualquer efeito. CLI e MCP passam por aqui, e o erro sai como `{error: {code, message, data}}`.
+ */
+export function parseArgs<T>(schema: z.ZodType<T>, value: unknown, what: string): T {
+  return parseOrThrow(schema, value, 'E_CHOREO_INVALID', `argumentos de ${what}`);
+}
+
+/** Comando sem argumentos (`doctor`, `device_status`, `screenshot`): qualquer campo é desconhecido. */
+export const NoArgsSchema = z.strictObject({});

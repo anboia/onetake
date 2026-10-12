@@ -16,8 +16,15 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 
-import { Client, InMemoryTransport } from '@modelcontextprotocol/client';
-import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
+import {
+  Client,
+  InMemoryTransport,
+  isJSONRPCNotification,
+  isJSONRPCResultResponse,
+  LATEST_PROTOCOL_VERSION,
+  parseJSONRPCMessage,
+  type JSONRPCMessage,
+} from '@modelcontextprotocol/client';
 
 import { BUSY_RETRY_MS } from '../src/commands/explore.ts';
 import { EXPLORE_KEEP, JPEG_QUALITY } from '../src/commands/screenshot.ts';
@@ -565,17 +572,17 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
     assert.notEqual(compact.isError, true, textOf(compact));
     assert.equal(textOf(compact), [`treeVersion ${TREE_VERSION}`, ...TREE_LINES].join('\n'));
 
-    const json = jsonOf(await call(client, 'ui_tree', { format: 'json', app: 'springboard' }));
+    const json = jsonOf(await call(client, 'ui_tree', { format: 'json', app: 'com.example.target' }));
     assert.deepEqual(json, { treeVersion: TREE_VERSION, nodes: [TREE_ROOT] });
 
     const trees = env.runner.calls.filter((c) => c.method === 'ui.tree').map((c) => c.params);
     assert.deepEqual(trees, [
       { format: 'compact', visibleOnly: true },
-      { format: 'json', visibleOnly: true, app: 'springboard' },
+      { format: 'json', visibleOnly: true, app: 'com.example.target' },
     ]);
 
-    const bad = await call(client, 'ui_tree', { format: 'xml' });
-    assert.equal(bad.isError, true, 'formato fora de compact|json é recusado antes do runner');
+    const bad = errorOf(await call(client, 'ui_tree', { format: 'xml' }));
+    assert.equal(bad.code, 'E_CHOREO_INVALID', 'formato fora de compact|json é recusado antes do runner');
     assert.equal(env.runner.calls.filter((c) => c.method === 'ui.tree').length, 2);
   });
 
@@ -589,13 +596,70 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
     assert.deepEqual(taps, [{ target }, { target: { point: { x: 362, y: 72 } } }]);
 
     const before = env.runner.calls.length;
-    const bad = await call(client, 'tap', { target: { label: 'Open settings', ref: '@e12' } });
-    assert.equal(bad.isError, true);
-    assert.match(textOf(bad), /seletores primários/);
+    const bad = errorOf(await call(client, 'tap', { target: { label: 'Open settings', ref: '@e12' } }));
+    assert.equal(bad.code, 'E_CHOREO_INVALID');
+    assert.match(bad.message, /seletores primários/);
     assert.equal(env.runner.calls.length, before, 'o runner não foi chamado');
 
     env.runner.failWith.set('ui.tap', { code: -32010, message: 'E_TARGET_NOT_FOUND: nada com esse rótulo', data: { target } });
     assert.equal(errorOf(await call(client, 'tap', { target })).code, 'E_TARGET_NOT_FOUND');
+  });
+
+  test('argumentos fora da forma (S0.2, AC-0.3) → isError com {error: {code: E_CHOREO_INVALID, message, data}}, nunca o texto do SDK; sem falar com o runner; tools/list ainda anuncia a forma', async () => {
+    const env = await setup();
+    const client = await connect(env);
+    const cases: [string, Record<string, unknown>, RegExp][] = [
+      ['tap', { target: { label: 'a', ref: '@e1' } }, /seletores primários/],
+      ['tap', {}, /target/],
+      ['tap', { target: 'Open settings' }, /target/],
+      ['tap', { target: { ref: '@e1' }, force: true }, /force/],
+      ['ui_tree', { format: 'xml' }, /format/],
+      ['ui_tree', { app: '' }, /app/],
+      ['ui_tree', { app: 7 }, /app/],
+      ['ui_tree', { visibleOnly: false }, /visibleOnly/],
+      ['screenshot', { scale: 2 }, /scale/],
+      ['device_status', { verbose: true }, /verbose/],
+      ['doctor', { fix: true }, /fix/],
+    ];
+    for (const [name, args, mentions] of cases) {
+      const result = await call(client, name, args);
+      const label = `${name} ${JSON.stringify(args)}`;
+      assert.doesNotMatch(textOf(result), /Input validation error/, label);
+      const error = errorOf(result);
+      assert.equal(error.code, 'E_CHOREO_INVALID', label);
+      assert.match(error.message, mentions, label);
+      assert.ok(Array.isArray(error.data['errors']) && (error.data['errors'] as unknown[]).length > 0, `${label}: data.errors`);
+    }
+    assert.deepEqual(env.runner.calls, [], 'nenhum argumento inválido chegou ao runner');
+
+    // O modelo continua vendo a forma (o JSON Schema dos esquemas do núcleo).
+    const { tools } = await client.listTools();
+    const schemaOf = (name: string) => tools.find((tool) => tool.name === name)!.inputSchema as { properties?: Record<string, { enum?: string[] }>; required?: string[] };
+    const tapSchema = schemaOf('tap');
+    assert.deepEqual(tapSchema.required, ['target']);
+    const target = JSON.stringify(tapSchema.properties?.['target']);
+    for (const key of ['ref', 'label', 'labelPrefix', 'labelContains', 'identifier', 'ocr', 'point']) assert.ok(target.includes(`"${key}"`), `target anuncia ${key}`);
+    assert.deepEqual(schemaOf('ui_tree').properties?.['format']?.enum, ['compact', 'json']);
+    assert.deepEqual(Object.keys(schemaOf('ui_tree').properties ?? {}).sort(), ['app', 'format']);
+    for (const name of ['doctor', 'device_status', 'screenshot']) assert.deepEqual(schemaOf(name).properties, {}, name);
+  });
+
+  test('S1 item 11, P-3: ui_tree não oferece a folha authkit nem o SpringBoard e os recusa no Mac com E_FORBIDDEN_APP, sem falar com o runner', async () => {
+    const env = await setup();
+    const client = await connect(env);
+    const { tools } = await client.listTools();
+    const tree = tools.find((tool) => tool.name === 'ui_tree')!;
+    assert.doesNotMatch(`${tree.description}\n${JSON.stringify(tree.inputSchema)}`, /authkit|springboard|controlcenter/i);
+    assert.doesNotMatch(INSTRUCTIONS, /authkit|springboard|controlcenter/i);
+
+    for (const app of ['authkit', 'springboard', 'controlcenter', 'com.apple.AuthKitUIService', 'com.apple.springboard', 'COM.APPLE.AUTHKITUISERVICE']) {
+      for (const format of ['compact', 'json']) {
+        const error = errorOf(await call(client, 'ui_tree', { app, format }));
+        assert.equal(error.code, 'E_FORBIDDEN_APP', `${app} ${format}`);
+        assert.equal(error.data['app'], app);
+      }
+    }
+    assert.deepEqual(env.runner.calls, []);
   });
 
   test('device_status: devolve o device.state do runner (S1 item 4), pela conexão control', async () => {
@@ -756,20 +820,61 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
     for (const text of allResultText) assert.doesNotMatch(text, /CONTRARREGRA_TOKEN/);
   });
 
-  test('stdio: bin/contrarregra-mcp sobe mac/src/mcp/main.ts com o Node 22; lista as 5 ferramentas e as instruções, só protocolo na saída padrão', async () => {
-    const transport = new StdioClientTransport({ command: join(ROOT, 'bin', 'contrarregra-mcp'), cwd: ROOT, stderr: 'pipe' });
+  test('stdio: bin/contrarregra-mcp sobe mac/src/mcp/main.ts com o Node 22; a saída padrão crua só tem mensagens JSON-RPC 2.0 do protocolo (nenhuma linha a mais); lista as 5 ferramentas e as instruções', async () => {
+    const child = spawn(join(ROOT, 'bin', 'contrarregra-mcp'), [], { cwd: ROOT, stdio: ['pipe', 'pipe', 'pipe'] });
+    keepers.push(child);
+    let stdout = '';
     let stderr = '';
-    transport.stderr?.on('data', (chunk: Buffer) => (stderr += chunk.toString('utf8')));
-    const client = new Client({ name: 'contrarregra-mcp-stdio-test', version: '0.0.0' });
-    await client.connect(transport);
-    try {
-      const { tools } = await client.listTools();
-      assert.deepEqual(tools.map((tool) => tool.name).sort(), ['device_status', 'doctor', 'screenshot', 'tap', 'ui_tree']);
-      assert.ok(tools.every((tool) => tool._meta?.['anthropic/alwaysLoad'] === true));
-      assert.equal(client.getInstructions(), INSTRUCTIONS);
-    } finally {
-      await client.close();
-    }
+    child.stdout.setEncoding('utf8').on('data', (chunk: string) => (stdout += chunk));
+    child.stderr.setEncoding('utf8').on('data', (chunk: string) => (stderr += chunk));
+    const exited = new Promise<number | null>((resolve) => child.once('exit', (code) => resolve(code)));
+    const send = (message: unknown): void => void child.stdin.write(`${JSON.stringify(message)}\n`);
+    const answered = async (id: number): Promise<void> => {
+      const deadline = Date.now() + 20_000;
+      while (!stdout.split('\n').some((line) => line.includes(`"id":${id}`) && line.includes('"jsonrpc"'))) {
+        assert.ok(Date.now() < deadline, `sem resposta ao pedido ${id}; saída: ${stdout}; erro: ${stderr}`);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    };
+
+    send({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: { protocolVersion: LATEST_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'contrarregra-mcp-stdio-test', version: '0.0.0' } },
+    });
+    await answered(1);
+    send({ jsonrpc: '2.0', method: 'notifications/initialized' });
+    send({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
+    await answered(2);
+    child.stdin.end();
+    assert.equal(await exited, 0, 'o fim da entrada padrão encerra o servidor');
+
+    // Toda linha da saída padrão é uma mensagem JSON-RPC 2.0 do protocolo: as respostas aos pedidos 1 e 2 e,
+    // no máximo, notificações do MCP. Nenhum banner, nenhum JSON solto.
+    assert.ok(stdout.endsWith('\n'), 'a saída termina com fim de linha');
+    const messages = stdout
+      .slice(0, -1)
+      .split('\n')
+      .map((line) => {
+        let message: JSONRPCMessage;
+        try {
+          message = parseJSONRPCMessage(JSON.parse(line));
+        } catch (error) {
+          assert.fail(`linha fora do protocolo na saída padrão: ${JSON.stringify(line)} (${(error as Error).message})`);
+        }
+        assert.ok(isJSONRPCResultResponse(message) || (isJSONRPCNotification(message) && message.method.startsWith('notifications/')), `mensagem fora do esperado: ${line}`);
+        return message;
+      });
+    const responses = messages.filter(isJSONRPCResultResponse);
+    assert.deepEqual(responses.map((message) => message.id), [1, 2]);
+
+    const init = responses[0]!.result as { instructions?: string; serverInfo: { name: string } };
+    assert.equal(init.serverInfo.name, 'contrarregra');
+    assert.equal(init.instructions, INSTRUCTIONS);
+    const { tools } = responses[1]!.result as { tools: { name: string; _meta?: Record<string, unknown> }[] };
+    assert.deepEqual(tools.map((tool) => tool.name).sort(), ['device_status', 'doctor', 'screenshot', 'tap', 'ui_tree']);
+    assert.ok(tools.every((tool) => tool._meta?.['anthropic/alwaysLoad'] === true));
     assert.match(stderr, /contrarregra-mcp: Node v22\.\d+\.\d+/);
   });
 });
