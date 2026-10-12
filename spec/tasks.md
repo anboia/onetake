@@ -191,7 +191,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `mac/src/cli/**`, `mac/test/obs.setup.test.ts`. AC: AC-9.8, AC-9.10. Done: no OBS real, o perfil
   existe com os parâmetros de S9 e o `basic.ini` do "Untitled" está byte a byte igual. Deps: T-0.10,
   T-0.12. Implements: S9 item 1, P-6.
-- [ ] **T-0.14** Ajudante de OCR no Mac: `mac/tools/ocr.swift` (Vision e CoreText, frameworks da
+- [x] **T-0.14** Ajudante de OCR no Mac: `mac/tools/ocr.swift` (Vision e CoreText, frameworks da
   Apple, sem G2), rodado com `xcrun swift`; lê quadros PNG e devolve caixas em JSON; um modo
   `--render-text` gera a imagem de teste (o ffmpeg 8.1.1 fixado não tem `drawtext`). Files:
   `mac/tools/ocr.swift`, `mac/src/media/ocr.ts`, `mac/test/ocr.test.ts`. AC: —. Done: acha "Hagah
