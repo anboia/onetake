@@ -1,0 +1,1 @@
+{"type": "RpcError", "expect": {"path": "error.code", "rule": "value"}, "value": {"jsonrpc": "2.0", "id": 3, "error": {"code": -32099, "message": "?"}}}

@@ -1,0 +1,40 @@
+{
+  "schema": "contrarregra.choreography/1",
+  "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": ["example://"]},
+  "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+  "guide": {"voice": "Samantha", "targetWpm": 150},
+  "targets": {
+    "focusStage": {"label": "Focus", "type": "button"}
+  },
+  "prepare": [],
+  "scenes": [
+    {
+      "id": "s01",
+      "title": "Arrastos",
+      "line": ["Drag the stage down.", "Then drag the screen."],
+      "hold": {"padBeforeMs": 1000, "padAfterMs": 1500},
+      "steps": [
+        {"id": "s01.stage", "do": "drag", "from": {"label": "Focus", "type": "button"}, "to": {"label": "Focus", "type": "button", "offset": {"dx": 0, "dy": 200}}, "velocity": 1000,
+         "afterMs": 300, "timeoutMs": 3000, "onFail": "pause", "sim": "run"},
+        {"id": "s01.screen", "do": "drag", "from": {"nx": 0.5, "ny": 0.6}, "to": {"x": 195, "y": 300}, "durationMs": 500,
+         "afterMs": 300, "timeoutMs": 3000, "onFail": "pause", "sim": "run"}
+      ]
+    }
+  ],
+  "cleanup": [],
+  "compiled": {
+    "sha256": "783f4b7cda24d54958de9dc675b27e1648e8ab102ed9561962deb633fa97898a",
+    "compiledAt": "2026-10-12T14:30:00.000Z",
+    "guide": {"voice": "Samantha", "wpm": 150, "factor": 1},
+    "scenes": [
+      {
+        "id": "s01",
+        "sentences": [
+          {"text": "Drag the stage down.", "startMs": 1000, "durMs": 1480},
+          {"text": "Then drag the screen.", "startMs": 2880, "durMs": 1350}
+        ],
+        "holdMs": 5730
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+{"type": "Step", "expect": {"path": "target", "rule": "required", "code": "E_CHOREO_INVALID"}, "value": {"do": "tap", "caption": "Toca"}}

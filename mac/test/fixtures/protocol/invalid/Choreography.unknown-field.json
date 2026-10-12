@@ -1,0 +1,22 @@
+{
+  "type": "Choreography",
+  "expect": {"path": "scenes[1].steps[3].tagret", "rule": "unknown-field", "code": "E_CHOREO_INVALID"},
+  "value": {
+    "schema": "contrarregra.choreography/1",
+    "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": []},
+    "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+    "targets": {"miniPlay": {"label": "Play", "type": "button"}},
+    "prepare": [],
+    "cleanup": [],
+    "scenes": [
+      {"id": "s01", "title": "Abertura", "steps": [{"do": "home"}, {"do": "hold"}]},
+      {"id": "s02", "title": "Áudio e texto", "line": ["One.", "Two."], "steps": [
+        {"id": "s02.picker", "do": "tap", "target": {"labelPrefix": "Psalms", "type": "button"}},
+        {"id": "s02.wait", "do": "wait", "ms": 500},
+        {"id": "s02.find", "do": "scrollTo", "target": {"label": "23", "type": "button"}, "direction": "down", "maxSwipes": 6},
+        {"id": "s02.play", "do": "tap", "tagret": {"ref": "miniPlay"}, "cue": 1},
+        {"id": "s02.end", "do": "hold"}
+      ]}
+    ]
+  }
+}

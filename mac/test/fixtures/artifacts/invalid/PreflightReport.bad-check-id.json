@@ -1,0 +1,1 @@
+{"type": "PreflightReport", "expect": {"path": "checks[0].id", "rule": "format"}, "value": {"schema": "contrarregra.preflight/1", "at": "2026-10-16T14:29:10.000-03:00", "checks": [{"id": "PF-1", "title": "Node", "status": "pass", "detail": "v22.19.0"}], "ok": true}}

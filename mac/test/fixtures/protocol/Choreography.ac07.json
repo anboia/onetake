@@ -1,0 +1,21 @@
+{
+  "schema": "contrarregra.choreography/1",
+  "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": ["example://"]},
+  "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+  "targets": {
+    "focusStage": {"label": "Focus", "type": "button"}
+  },
+  "prepare": [],
+  "scenes": [
+    {
+      "id": "s01",
+      "title": "Arrastos",
+      "line": ["Drag the stage down.", "Then drag the screen."],
+      "steps": [
+        {"id": "s01.stage", "do": "drag", "from": {"ref": "focusStage"}, "to": {"ref": "focusStage", "offset": {"dx": 0, "dy": 200}}, "velocity": 1000},
+        {"id": "s01.screen", "do": "drag", "from": {"nx": 0.5, "ny": 0.6}, "to": {"x": 195, "y": 300}, "durationMs": 500}
+      ]
+    }
+  ],
+  "cleanup": []
+}

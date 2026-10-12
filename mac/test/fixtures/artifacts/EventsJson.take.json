@@ -1,0 +1,64 @@
+{
+  "schema": "contrarregra.events/1",
+  "take": {
+    "schema": "contrarregra.take/1",
+    "takeId": "20261016-143000-review",
+    "mode": "take",
+    "status": "finished",
+    "scenesStartedAt": "2026-10-16T14:31:12.408-03:00",
+    "scenesResult": "finished",
+    "choreography": {"path": "choreographies/example/review.choreo.yaml", "sha256": "a37ad12a59fb20729773dff9cbd607016b69db8b1e490fc656dda75c1e83a4ba"},
+    "app": {"bundleId": "com.example.target", "version": "1.0.0 (5)"},
+    "device": {"udid": "00008101-001E79203A68001E", "os": "26.3 (23D127)", "transport": "USB"},
+    "toolchain": {"xcode": "26.6 (17F113)", "ios": "26.3 (23D127)", "macos": "26.5.1", "obs": "31.1.2", "obsWebsocket": "5.6.2", "ffmpeg": "8.1.1", "node": "22.19.0"},
+    "startedAt": "2026-10-16T14:30:00.000-03:00",
+    "endedAt": "2026-10-16T14:33:41.250-03:00",
+    "interventions": 0,
+    "syncOk": true,
+    "cleanupPending": false,
+    "obsStats": {"renderSkipped": 0, "outputSkipped": 2},
+    "airplaneLeftOn": false
+  },
+  "clock": {
+    "schema": "contrarregra.sync/1",
+    "deviceToMac": {"aNs": "-4235101928374651", "bPpm": 12.375, "residualMs": 0.42, "samples": 400, "bursts": 2},
+    "macToRecording": {"t0MacNs": "5120308765432100", "t0StdErrMs": 1.8, "fps": 60, "markers": 8, "maxMarkerDevMs": 6.1},
+    "captureLatency": {"alphaMs": 41.5, "beta": 1.0002, "method": "fit", "eventsUsed": 9},
+    "error": {"method": "leave-one-out", "medianMs": 12.4, "maxMs": 38.9, "rawMedianMs": 15.1, "rawMaxMs": 52.3},
+    "ok": true
+  },
+  "trim": {"startR": 7.25, "endR": 45.125, "leadInS": 0.5},
+  "scenes": [
+    {"id": "s01", "title": "Destravar e arrastar", "startF": 0.5, "endF": 18.25, "guideS": 3.23, "holdS": 5.73, "checkpointsS": 4.21, "overrunMs": 0}
+  ],
+  "checkpoints": [
+    {"id": "s01.cp.unlock", "who": "human", "waitedMs": 4210, "tDevStartNs": "873475000120034", "tFinalS": 6.875}
+  ],
+  "events": [
+    {"seq": 1, "kind": "step.end", "sceneId": "prepare", "stepId": "prepare.home", "action": "home",
+     "tDevStartNs": "873450000000000", "tDispatchNs": "873450001200000", "tDevEndNs": "873450250000000", "tDevUptimeNs": "873388882215100", "tMacNs": "5120328765432100",
+     "status": "ok", "path": "public", "detail": {}},
+    {"seq": 2, "kind": "take.start", "tDevStartNs": "873460000000000", "tDevUptimeNs": "873398882215100", "tMacNs": "5120338765432100", "tRecS": 7.25},
+    {"seq": 3, "kind": "step.end", "sceneId": "s01", "stepId": "s01.stage", "action": "drag",
+     "target": {"label": "Focus", "type": "button"}, "caption": "Arrasta o palco",
+     "tDevStartNs": "873461230018345", "tDispatchNs": "873461241002110", "tDevEndNs": "873461262551907", "tDevUptimeNs": "873400112233445",
+     "tMacNs": "5120339876543210", "tPredRawS": 31.391, "tRecS": 31.452, "tFinalS": 24.202, "tVideoObservedS": 24.217,
+     "detectScore": 21.8, "status": "ok", "lateMs": 3, "path": "private", "detail": {}},
+    {"seq": 4, "kind": "step.end", "sceneId": "s01", "stepId": "s01.screen", "action": "drag", "caption": "Arrasta a tela",
+     "tDevStartNs": "873462100000000", "tDispatchNs": "873462101500000", "tDevEndNs": "873462605000000", "tDevUptimeNs": "873400982215100",
+     "tMacNs": "5120340746537100", "tPredRawS": 32.261, "tRecS": 32.322, "tFinalS": 25.072, "tVideoObservedS": null,
+     "status": "ok", "lateMs": 1, "path": "private", "detail": {}},
+    {"seq": 5, "kind": "checkpoint.wait", "sceneId": "s01", "stepId": "s01.cp.unlock", "id": "s01.cp.unlock", "who": "human",
+     "ask": "Destrave com o Face ID e arraste para cima.", "timeoutMs": 90000, "tDevStartNs": "873470790000000", "tDevUptimeNs": "873409672215100"},
+    {"seq": 6, "kind": "checkpoint.alert", "id": "s01.cp.unlock", "at": "2026-10-16T14:31:40.001-03:00", "tMacNs": "5120349430000000"},
+    {"seq": 7, "kind": "checkpoint.resolved", "sceneId": "s01", "stepId": "s01.cp.unlock", "id": "s01.cp.unlock", "waitedMs": 4210,
+     "tDevStartNs": "873475000120034", "tDevUptimeNs": "873413882335134", "tFinalS": 6.875},
+    {"seq": 8, "kind": "device.state", "tDevStartNs": "873475100000000", "tDevUptimeNs": "873413982215100",
+     "locked": false, "network": "online", "foregroundApp": "com.example.target"},
+    {"seq": 9, "kind": "scene.end", "sceneId": "s01", "overrunMs": 0, "tDevStartNs": "873479000000000", "tDevUptimeNs": "873417882215100", "tFinalS": 18.25},
+    {"seq": 10, "kind": "take.end", "tDevStartNs": "873480000000000", "tDevUptimeNs": "873418882215100", "tMacNs": "5120358765432100"},
+    {"seq": 11, "kind": "step.end", "sceneId": "cleanup", "stepId": "cleanup.home", "action": "home", "status": "ok",
+     "tDevStartNs": "873490000000000", "tDispatchNs": "873490001200000", "tDevEndNs": "873490250000000", "tDevUptimeNs": "873428882215100", "tMacNs": "5120368765432100",
+     "path": "public", "detail": {"note": "limpeza"}}
+  ]
+}

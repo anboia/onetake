@@ -1,0 +1,17 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "runnerVersion": "0.0.0",
+    "capabilities": {
+      "PX-1": {"present": true, "allowed": true},
+      "PX-2": {"present": true, "allowed": true},
+      "PX-3": {"present": true, "allowed": true},
+      "PX-4": {"present": true, "allowed": false},
+      "PX-5": {"present": true, "allowed": true},
+      "PX-6": {"present": false, "allowed": false}
+    },
+    "device": {"model": "iPhone13,2", "os": "26.3 (23D127)", "screenPt": {"w": 390, "h": 844}, "scale": 3, "language": "en", "textSize": "large", "appearance": "light"},
+    "clock": {"nowRawNs": "873460118230045", "nowUptimeNs": "873398999411879"}
+  }
+}

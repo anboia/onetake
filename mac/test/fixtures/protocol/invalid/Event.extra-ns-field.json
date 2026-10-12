@@ -1,0 +1,1 @@
+{"type": "Event", "expect": {"path": "tObsNs", "rule": "S0.7/int64-string"}, "value": {"seq": 2, "kind": "obs.state", "tObsNs": "12.5", "tMacNs": "5120339876543210"}}

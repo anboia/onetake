@@ -1,0 +1,1 @@
+{"type": "Target", "expect": {"path": "", "rule": "S0.2/one-primary-selector", "code": "E_CHOREO_INVALID"}, "value": {"app": "springboard", "index": 0}}

@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "PX-6": {"allowed": false, "present": false},
+    "PX-5": {"allowed": false, "present": true},
+    "PX-4": {"allowed": false, "present": true},
+    "PX-3": {"allowed": false, "present": true},
+    "PX-2": {"allowed": false, "present": true},
+    "PX-1": {"allowed": false, "present": true}
+  }
+}

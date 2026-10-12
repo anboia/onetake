@@ -1,0 +1,8 @@
+{"type": "SyncReport", "expect": {"path": "ok", "rule": "S7/error-null-not-ok"}, "value": {
+  "schema": "contrarregra.sync/1",
+  "deviceToMac": {"aNs": "-4235101928374651", "bPpm": 11.5, "residualMs": 0.51, "samples": 128, "bursts": 2},
+  "macToRecording": {"t0MacNs": "5120308765432100", "t0StdErrMs": 2.1, "fps": 60, "markers": 8, "maxMarkerDevMs": 7.4},
+  "captureLatency": {"alphaMs": 0, "beta": 0, "method": "none", "eventsUsed": 0},
+  "error": null,
+  "ok": true
+}}

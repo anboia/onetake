@@ -1,0 +1,22 @@
+{
+  "type": "CompiledChoreography",
+  "expect": {"path": "scenes[0].steps[0].afterMs", "rule": "S0.4/compiled-defaults", "code": "E_CHOREO_INVALID"},
+  "value": {
+    "schema": "contrarregra.choreography/1",
+    "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": []},
+    "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+    "guide": {"voice": "Samantha", "targetWpm": 150},
+    "targets": {},
+    "prepare": [],
+    "scenes": [{"id": "s01", "title": "Toque", "hold": {"padBeforeMs": 1000, "padAfterMs": 1500}, "steps": [
+      {"id": "s01.tap", "do": "tap", "target": {"label": "Play", "type": "button"}, "timeoutMs": 3000, "onFail": "pause", "sim": "run"}
+    ]}],
+    "cleanup": [],
+    "compiled": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "compiledAt": "2026-10-12T14:30:00.000Z",
+      "guide": {"voice": "Samantha", "wpm": 150, "factor": 1},
+      "scenes": [{"id": "s01", "sentences": [], "holdMs": 2500}]
+    }
+  }
+}

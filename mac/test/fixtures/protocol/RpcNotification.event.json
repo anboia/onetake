@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "method": "event",
+  "params": {
+    "seq": 58,
+    "kind": "checkpoint.resolved",
+    "sceneId": "s07",
+    "stepId": "s07.cp.signup",
+    "id": "s07.cp.signup",
+    "waitedMs": 4210,
+    "tDevStartNs": "873479210334512",
+    "tDevUptimeNs": "873418092549612"
+  }
+}

@@ -1,0 +1,1 @@
+{"type": "Point", "expect": {"path": "nyy", "rule": "unknown-field", "code": "E_CHOREO_INVALID"}, "value": {"nx": 0.5, "nyy": 0.6}}

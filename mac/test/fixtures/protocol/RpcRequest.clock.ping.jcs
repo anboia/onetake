@@ -1,0 +1,1 @@
+{"id":3,"jsonrpc":"2.0","method":"clock.ping","params":{"pad":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","seq":17}}

@@ -1,0 +1,6 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "session.hello",
+  "params": {"token": "8f3c2a9e5b7d4f10a6c1e2d3b4a59687", "role": "control", "client": "contrarregra-mac/0.0.0"}
+}

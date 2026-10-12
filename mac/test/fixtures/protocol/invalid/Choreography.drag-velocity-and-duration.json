@@ -1,0 +1,17 @@
+{
+  "type": "Choreography",
+  "expect": {"path": "scenes[0].steps[0].durationMs", "rule": "S0.4/velocity-xor-durationMs", "code": "E_CHOREO_INVALID"},
+  "value": {
+    "schema": "contrarregra.choreography/1",
+    "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": []},
+    "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+    "targets": {"miniPlay": {"label": "Play", "type": "button"}},
+    "prepare": [],
+    "cleanup": [],
+    "scenes": [
+      {"id": "s01", "title": "Arrasto", "steps": [
+        {"id": "s01.drag", "do": "drag", "from": {"nx": 0.5, "ny": 0.6}, "to": {"x": 195, "y": 300}, "velocity": 1000, "durationMs": 500}
+      ]}
+    ]
+  }
+}

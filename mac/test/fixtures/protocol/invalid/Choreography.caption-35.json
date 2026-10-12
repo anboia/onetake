@@ -1,0 +1,15 @@
+{
+  "type": "Choreography",
+  "expect": {"path": "scenes[0].steps[0].caption", "rule": "S0.4/caption-max-34", "code": "E_CHOREO_INVALID"},
+  "value": {
+    "schema": "contrarregra.choreography/1",
+    "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": []},
+    "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+    "targets": {"miniPlay": {"label": "Play", "type": "button"}},
+    "prepare": [],
+    "cleanup": [],
+    "scenes": [{"id": "s01", "title": "A", "steps": [
+      {"do": "tap", "target": {"ref": "miniPlay"}, "caption": "Toca play no mini-player do leitor."}
+    ]}]
+  }
+}

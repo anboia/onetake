@@ -93,7 +93,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   fixado por `minimumXcodeGenVersion`); dev: `typescript`, `@types/node`, `@modelcontextprotocol/client`.
   Files: `package.json`, `package-lock.json`. AC: —. Done: G2 emitido e respondido; lockfile gerado
   só com o aprovado; `npm run typecheck` verde. Deps: T-0.1. Implements: P-2, A1.
-- [ ] **T-0.3** Esquemas de S0 em zod (config, Point, Target com a regra de seletor primário,
+- [x] **T-0.3** Esquemas de S0 em zod (config, Point, Target com a regra de seletor primário,
   Condition, Choreography fonte e compilada, envelope e métodos de base do RPC, Event, `events.json`,
   TakeManifest, relatórios), serialização JCS (RFC 8785), fixtures compartilhadas em
   `mac/test/fixtures/protocol/` e o servidor WebSocket de teste escrito à mão (sem dependência).

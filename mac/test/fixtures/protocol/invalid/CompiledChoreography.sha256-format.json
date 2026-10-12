@@ -1,0 +1,19 @@
+{
+  "type": "CompiledChoreography",
+  "expect": {"path": "compiled.sha256", "rule": "format", "code": "E_CHOREO_INVALID"},
+  "value": {
+    "schema": "contrarregra.choreography/1",
+    "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": []},
+    "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+    "targets": {},
+    "prepare": [],
+    "scenes": [],
+    "cleanup": [],
+    "compiled": {
+      "sha256": "A37AD12A59FB20729773DFF9CBD607016B69DB8B1E490FC656DDA75C1E83A4BA",
+      "compiledAt": "2026-10-12T14:30:00.000Z",
+      "guide": {"voice": "Samantha", "wpm": 150, "factor": 1},
+      "scenes": []
+    }
+  }
+}

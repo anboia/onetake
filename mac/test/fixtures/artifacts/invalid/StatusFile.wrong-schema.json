@@ -1,0 +1,1 @@
+{"type": "StatusFile", "expect": {"path": "schema", "rule": "value"}, "value": {"schema": "contrarregra.status/2", "state": "recording"}}

@@ -1,0 +1,13 @@
+{
+  "type": "Choreography",
+  "expect": {"path": "scenes[1].id", "rule": "S0.4/scene-id-unique", "code": "E_CHOREO_INVALID"},
+  "value": {
+    "schema": "contrarregra.choreography/1",
+    "app": {"bundleId": "com.example.target", "iconLabel": "Example", "expectVersion": "1.0.0 (5)", "urlPrefixes": []},
+    "device": {"language": "en", "screenPt": {"w": 390, "h": 844}, "textSize": "large", "appearance": "light"},
+    "targets": {"miniPlay": {"label": "Play", "type": "button"}},
+    "prepare": [],
+    "cleanup": [],
+    "scenes": [{"id": "s01", "title": "A", "steps": []}, {"id": "s01", "title": "B", "steps": []}]
+  }
+}

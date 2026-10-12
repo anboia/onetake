@@ -1,0 +1,16 @@
+{
+  "id": "s09.cp.airplane",
+  "do": "checkpoint",
+  "who": "runner",
+  "ask": "Liga o modo avião pela Central de Controle.",
+  "steps": [
+    {"do": "controlCenter", "action": "open", "sim": "skip"},
+    {"do": "tap", "target": {"app": "controlcenter", "identifier": "airplane-mode-button"}, "afterMs": 300},
+    {"do": "wait", "ms": 2000},
+    {"do": "controlCenter", "action": "close"}
+  ],
+  "until": {"network": "offline"},
+  "timeoutMs": 15000,
+  "onTimeout": "abort",
+  "caption": "Modo avião ligado"
+}

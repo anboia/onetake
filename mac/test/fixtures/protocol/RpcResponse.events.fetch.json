@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "events": [
+      {"seq": 41, "kind": "step.end", "sceneId": "s02", "stepId": "s02.play", "action": "tap",
+       "target": {"label": "Play"}, "caption": "Toca play no mini-player",
+       "tDevStartNs": "873461230018345", "tDispatchNs": "873461241002110", "tDevEndNs": "873461262551907", "tDevUptimeNs": "873400112233445",
+       "status": "ok", "lateMs": 3, "path": "private", "detail": {}},
+      {"seq": 42, "kind": "device.state", "tDevStartNs": "873461900000000", "tDevUptimeNs": "873400781214554",
+       "locked": false, "network": "online", "foregroundApp": "com.example.target", "detail": {"cause": "app-switch"}}
+    ],
+    "lastSeq": 42
+  }
+}

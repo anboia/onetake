@@ -1,0 +1,6 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "clock.ping",
+  "params": {"seq": 17, "pad": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
+}

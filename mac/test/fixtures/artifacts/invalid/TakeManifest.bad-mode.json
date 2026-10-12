@@ -1,0 +1,19 @@
+{"type": "TakeManifest", "expect": {"path": "mode", "rule": "value"}, "value": {
+    "schema": "contrarregra.take/1",
+    "takeId": "20261016-143000-review",
+    "mode": "live",
+    "status": "finished",
+    "scenesStartedAt": "2026-10-16T14:31:12.408-03:00",
+    "scenesResult": "finished",
+    "choreography": {"path": "choreographies/example/review.choreo.yaml", "sha256": "a37ad12a59fb20729773dff9cbd607016b69db8b1e490fc656dda75c1e83a4ba"},
+    "app": {"bundleId": "com.example.target", "version": "1.0.0 (5)"},
+    "device": {"udid": "00008101-001E79203A68001E", "os": "26.3 (23D127)", "transport": "USB"},
+    "toolchain": {"xcode": "26.6 (17F113)", "ios": "26.3 (23D127)", "macos": "26.5.1", "obs": "31.1.2", "obsWebsocket": "5.6.2", "ffmpeg": "8.1.1", "node": "22.19.0"},
+    "startedAt": "2026-10-16T14:30:00.000-03:00",
+    "endedAt": "2026-10-16T14:33:41.250-03:00",
+    "interventions": 0,
+    "syncOk": true,
+    "cleanupPending": false,
+    "obsStats": {"renderSkipped": 0, "outputSkipped": 2},
+    "airplaneLeftOn": false
+  }}

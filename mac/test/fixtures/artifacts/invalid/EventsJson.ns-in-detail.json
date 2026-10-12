@@ -1,0 +1,34 @@
+{"type": "EventsJson", "expect": {"path": "events[0].detail.waitNs", "rule": "S0.7/int64-string"}, "value": {
+  "schema": "contrarregra.events/1",
+  "take": {
+    "schema": "contrarregra.take/1",
+    "takeId": "20261016-143000-review",
+    "mode": "take",
+    "status": "finished",
+    "scenesStartedAt": "2026-10-16T14:31:12.408-03:00",
+    "scenesResult": "finished",
+    "choreography": {"path": "choreographies/example/review.choreo.yaml", "sha256": "a37ad12a59fb20729773dff9cbd607016b69db8b1e490fc656dda75c1e83a4ba"},
+    "app": {"bundleId": "com.example.target", "version": "1.0.0 (5)"},
+    "device": {"udid": "00008101-001E79203A68001E", "os": "26.3 (23D127)", "transport": "USB"},
+    "toolchain": {"xcode": "26.6 (17F113)", "ios": "26.3 (23D127)", "macos": "26.5.1", "obs": "31.1.2", "obsWebsocket": "5.6.2", "ffmpeg": "8.1.1", "node": "22.19.0"},
+    "startedAt": "2026-10-16T14:30:00.000-03:00",
+    "endedAt": "2026-10-16T14:33:41.250-03:00",
+    "interventions": 0,
+    "syncOk": true,
+    "cleanupPending": false,
+    "obsStats": {"renderSkipped": 0, "outputSkipped": 2},
+    "airplaneLeftOn": false
+  },
+  "clock": {
+    "schema": "contrarregra.sync/1",
+    "deviceToMac": {"aNs": "-4235101928374651", "bPpm": 12.375, "residualMs": 0.42, "samples": 400, "bursts": 2},
+    "macToRecording": {"t0MacNs": "5120308765432100", "t0StdErrMs": 1.8, "fps": 60, "markers": 8, "maxMarkerDevMs": 6.1},
+    "captureLatency": {"alphaMs": 41.5, "beta": 1.0002, "method": "fit", "eventsUsed": 9},
+    "error": {"method": "leave-one-out", "medianMs": 12.4, "maxMs": 38.9, "rawMedianMs": 15.1, "rawMaxMs": 52.3},
+    "ok": true
+  },
+  "trim": {"startR": 7.25, "endR": 45.125, "leadInS": 0.5},
+  "scenes": [],
+  "checkpoints": [],
+  "events": [{"seq": 1, "kind": "take.start", "tMacNs": "5120338765432100", "detail": {"waitNs": 5}}]
+}}

@@ -1,0 +1,1 @@
+{"type": "Event", "expect": {"path": "sceneId", "rule": "format"}, "value": {"seq": 3, "kind": "scene.start", "sceneId": "scene2"}}

@@ -1,0 +1,1 @@
+{"below":{"labelPrefix":"Psalms","type":"button"},"fallback":[{"point":{"x":24,"y":64}},{"identifier":"nav-back"}],"index":0,"label":"Back","offset":{"dx":0,"dy":-4.5},"type":"button","within":{"type":"navigationBar"}}

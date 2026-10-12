@@ -1,0 +1,6 @@
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "method": "events.fetch",
+  "params": {"takeId": "20261016-143000-review", "sinceSeq": 40}
+}

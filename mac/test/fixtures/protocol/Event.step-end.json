@@ -1,0 +1,5 @@
+{"seq": 41, "kind": "step.end", "sceneId": "s02", "stepId": "s02.play", "action": "tap",
+ "target": {"label": "Play"}, "caption": "Toca play no mini-player",
+ "tDevStartNs": "873461230018345", "tDispatchNs": "873461241002110", "tDevEndNs": "873461262551907", "tDevUptimeNs": "873400112233445",
+ "tMacNs": "5120339876543210", "tPredRawS": 31.391, "tRecS": 31.452, "tFinalS": 24.452, "tVideoObservedS": 24.467,
+ "detectScore": 21.8, "status": "ok", "lateMs": 3, "path": "private", "detail": {}}

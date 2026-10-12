@@ -1,0 +1,1 @@
+{"type": "RpcNotification", "method": "event", "expect": {"path": "params.tMacNs", "rule": "S0.7/int64-string"}, "value": {"jsonrpc": "2.0", "method": "event", "params": {"seq": 9, "kind": "step.start", "tMacNs": 5120339876543210}}}

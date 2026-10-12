@@ -1,0 +1,4 @@
+{
+  "app": "springboard",
+  "ocr": {"text": "Psalms 23", "within": {"type": "scrollView"}, "region": {"x": 0, "y": 120, "w": 390, "h": 600.5}, "occurrence": 1}
+}

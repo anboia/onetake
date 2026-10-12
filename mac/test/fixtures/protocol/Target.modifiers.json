@@ -1,0 +1,9 @@
+{
+  "label": "Back",
+  "type": "button",
+  "within": {"type": "navigationBar"},
+  "below": {"labelPrefix": "Psalms", "type": "button"},
+  "index": 0,
+  "offset": {"dx": 0, "dy": -4.5},
+  "fallback": [{"point": {"x": 24, "y": 64}}, {"identifier": "nav-back"}]
+}

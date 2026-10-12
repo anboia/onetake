@@ -1,0 +1,1 @@
+{"type": "RpcRequest", "method": "health", "expect": {"path": "jsonrpc", "rule": "required"}, "value": {"id": 1, "method": "health", "params": {}}}

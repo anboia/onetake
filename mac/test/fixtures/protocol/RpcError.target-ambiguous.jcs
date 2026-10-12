@@ -1,0 +1,1 @@
+{"error":{"code":-32011,"data":{"candidates":[{"frame":{"h":44,"w":44,"x":24,"y":310},"ref":"@e40"},{"frame":{"h":44,"w":44,"x":24,"y":702},"ref":"@e41"}]},"message":"E_TARGET_AMBIGUOUS: 2 candidatos para {label: \"23\"}"},"id":13,"jsonrpc":"2.0"}

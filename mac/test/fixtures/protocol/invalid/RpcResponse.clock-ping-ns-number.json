@@ -1,0 +1,1 @@
+{"type": "RpcResponse", "method": "clock.ping", "expect": {"path": "result.t2RawNs", "rule": "S0.7/int64-string"}, "value": {"jsonrpc": "2.0", "id": 3, "result": {"seq": 1, "t2RawNs": 873460120001234, "t3RawNs": "873460120004321", "t2UptimeNs": "873399001182068"}}}

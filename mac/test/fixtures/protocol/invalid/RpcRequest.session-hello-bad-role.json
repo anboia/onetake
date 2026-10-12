@@ -1,0 +1,1 @@
+{"type": "RpcRequest", "method": "session.hello", "expect": {"path": "params.role", "rule": "value"}, "value": {"jsonrpc": "2.0", "id": 1, "method": "session.hello", "params": {"token": "t", "role": "admin", "client": "x"}}}

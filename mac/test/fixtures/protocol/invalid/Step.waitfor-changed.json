@@ -1,0 +1,1 @@
+{"type": "Step", "expect": {"path": "condition.state", "rule": "S0.3/changed-only-in-expect", "code": "E_CHOREO_INVALID"}, "value": {"id": "s07.wait", "do": "waitFor", "condition": {"element": {"labelPrefix": "Synced"}, "state": "changed"}, "timeoutMs": 10000}}

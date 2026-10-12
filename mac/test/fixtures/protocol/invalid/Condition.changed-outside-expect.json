@@ -1,0 +1,1 @@
+{"type": "Condition", "expect": {"path": "any[0].state", "rule": "S0.3/changed-only-in-expect", "code": "E_CHOREO_INVALID"}, "value": {"any": [{"element": {"labelPrefix": "Synced"}, "state": "changed"}, {"locked": true}]}}

@@ -1,0 +1,10 @@
+{
+  "schema": "contrarregra.preflight/1",
+  "at": "2026-10-16T14:29:10.000-03:00",
+  "checks": [
+    {"id": "PF-01", "title": "Node 22.x ≥ 22.18", "status": "pass", "detail": "v22.19.0"},
+    {"id": "PF-11", "title": "Confirmações do dono", "status": "human", "detail": "aguardando o dono", "fix": "confirme no terminal"},
+    {"id": "PF-12", "title": "Espaço em disco", "status": "warn", "detail": {"freeGiB": 8.7, "minFreeGiB": 4}}
+  ],
+  "ok": true
+}

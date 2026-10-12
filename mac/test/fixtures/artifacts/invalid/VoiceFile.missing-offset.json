@@ -1,0 +1,1 @@
+{"type": "VoiceFile", "expect": {"path": "offsetMs", "rule": "required"}, "value": {"schema": "contrarregra.voice/1", "calibrationMs": 48}}

@@ -1,0 +1,1 @@
+{"type": "Point", "expect": {"path": "nx", "rule": "range", "code": "E_CHOREO_INVALID"}, "value": {"nx": 1.2, "ny": 0.5}}

@@ -1,0 +1,1 @@
+{"type": "Condition", "expect": {"path": "state", "rule": "value", "code": "E_CHOREO_INVALID"}, "value": {"element": {"label": "Synced"}, "state": "chnged"}}

@@ -1,0 +1,19 @@
+{
+  "device": {"udid": "00008101-001E79203A68001E", "coreDeviceId": "DC77A78E-5E8D-5825-B2EE-C297FBC14ABD", "name": "VIVO_00G7"},
+  "signing": {"team": "984PNJZ8B9", "identity": "Apple Development: Andre Saboia (6NKUX5CX7G)", "ascKeyPath": "~/.appstoreconnect/private_keys/AuthKey_EXAMPLE.p8"},
+  "bundle": {"host": "app.kifactory.contrarregra", "runnerTest": "app.kifactory.contrarregra.runner", "displayNames": ["Contrarregra", "ContrarregraRunner-Runner"]},
+  "runner": {"port": 8700, "privateAllowed": ["PX-1", "PX-2", "PX-3", "PX-5"]},
+  "usbmux": {"socketPath": "/var/run/usbmuxd"},
+  "app": {"explore": "com.example.target"},
+  "apps": {"allowed": ["com.apple.Preferences"]},
+  "urls": {"allowedPrefixes": ["example://"]},
+  "paths": {"takes": "~/Movies/contrarregra", "cache": "~/Library/Caches/contrarregra", "ffmpeg": "/opt/homebrew/opt/ffmpeg/bin/ffmpeg", "ffprobe": "/opt/homebrew/opt/ffmpeg/bin/ffprobe"},
+  "obs": {"url": "ws://127.0.0.1:4455", "profile": "Contrarregra", "collection": "Contrarregra", "scene": "Contrarregra", "source": "iPhone", "flashSource": "Sync Flash"},
+  "secrets": {"obsPassword": "OBS_WEBSOCKET_PASSWORD"},
+  "alerts": {"sayDevice": "MacBook Air Speakers", "voice": "Luciana"},
+  "guide": {"voice": "Samantha", "targetWpm": 150, "sentenceGapMs": 400, "padBeforeMs": 1000, "padAfterMs": 1500},
+  "disk": {"minFreeGiB": 4, "criticalGiB": 2},
+  "record": {"fps": 60, "bitrateKbps": 16000},
+  "sync": {"captureLatencyMs": 41.5},
+  "toolchain": {"validated": {"xcode": "26.6 (17F113)", "ios": "26.3 (23D127)", "macos": "26.5.x", "obs": "31.1.2", "obsWebsocket": "5.6.2", "ffmpeg": "8.1.1", "node": "22.x >=22.18"}}
+}

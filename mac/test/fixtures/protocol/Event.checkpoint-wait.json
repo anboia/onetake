@@ -1,0 +1,13 @@
+{
+  "seq": 57,
+  "kind": "checkpoint.wait",
+  "sceneId": "s07",
+  "stepId": "s07.cp.signup",
+  "id": "s07.cp.signup",
+  "who": "human",
+  "ask": "Face ID do cadastro: olhe para o iPhone.",
+  "timeoutMs": 90000,
+  "tDevStartNs": "873475000120034",
+  "tDevUptimeNs": "873413882335134",
+  "tMacNs": "5120353646440001"
+}

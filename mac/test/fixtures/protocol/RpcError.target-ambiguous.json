@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": 13,
+  "error": {
+    "code": -32011,
+    "message": "E_TARGET_AMBIGUOUS: 2 candidatos para {label: \"23\"}",
+    "data": {
+      "candidates": [
+        {"ref": "@e40", "frame": {"x": 24, "y": 310, "w": 44, "h": 44}},
+        {"ref": "@e41", "frame": {"x": 24, "y": 702, "w": 44, "h": 44}}
+      ]
+    }
+  }
+}

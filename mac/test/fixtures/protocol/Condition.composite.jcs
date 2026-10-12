@@ -1,0 +1,1 @@
+{"all":[{"locked":false},{"element":{"label":"Journal","type":"button","within":{"type":"tabBar"}},"state":"hittable"},{"any":[{"text":{"ocr":{"text":"Synced"},"state":"visible"}},{"element":{"identifier":"sync-switch"},"equals":"1","state":"value"}]},{"not":{"appState":{"app":"target","state":"notRunning"}}},{"network":"online"},{"airplane":"off"}]}

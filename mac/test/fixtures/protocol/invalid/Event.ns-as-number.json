@@ -1,0 +1,1 @@
+{"type": "Event", "expect": {"path": "tDevStartNs", "rule": "S0.7/int64-string"}, "value": {"seq": 1, "kind": "step.start", "tDevStartNs": 873461230018345}}

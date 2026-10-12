@@ -1,0 +1,8 @@
+{
+    "schema": "contrarregra.sync/1",
+    "deviceToMac": {"aNs": "-4235101928374651", "bPpm": 12.375, "residualMs": 0.42, "samples": 400, "bursts": 2},
+    "macToRecording": {"t0MacNs": "5120308765432100", "t0StdErrMs": 1.8, "fps": 60, "markers": 8, "maxMarkerDevMs": 6.1},
+    "captureLatency": {"alphaMs": 41.5, "beta": 1.0002, "method": "fit", "eventsUsed": 9},
+    "error": {"method": "leave-one-out", "medianMs": 12.4, "maxMs": 38.9, "rawMedianMs": 15.1, "rawMaxMs": 52.3},
+    "ok": true
+  }

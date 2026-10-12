@@ -1,0 +1,1 @@
+{"type": "Target", "expect": {"path": "type", "rule": "value", "code": "E_CHOREO_INVALID"}, "value": {"label": "Play", "type": "buton"}}

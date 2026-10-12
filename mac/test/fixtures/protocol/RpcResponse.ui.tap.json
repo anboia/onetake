@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "result": {
+    "point": {"x": 195, "y": 422.5},
+    "nodeRef": "@e12",
+    "tDevStartNs": "873461230018345",
+    "tDispatchNs": "873461241002110",
+    "tDevEndNs": "873461262551907",
+    "path": "public"
+  }
+}
