@@ -1,7 +1,7 @@
 // Ajudante de OCR do Mac (T-0.14; architecture.md A1, A2 `media`). O Node não chama o Vision: este
 // módulo roda `mac/tools/ocr.swift` com `xcrun swift` e lê o JSON que ele devolve. `media` é o único
 // módulo que chama o ajudante e só importa `core` (A2). Usado nas checagens de quadros de S7/S13
-// (ex.: AC-13.5 acha "Hagah Bible"; AC-13.7 quer 0 ocorrências de `bundle.displayNames`).
+// (ex.: AC-13.5 acha o nome do app alvo na tela; AC-13.7 quer 0 ocorrências de `bundle.displayNames`).
 
 import { execFile } from 'node:child_process';
 import { resolve } from 'node:path';
