@@ -177,7 +177,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   AC-1.2, AC-1.12, AC-1.13, AC-2.3 (parte: `runner up`/`runner status` sem cabo), AC-2.5, AC-2.7,
   AC-2.9. Done: a sonda passa; `runner up` → `status: up` e as ACs passam; `runner down` apaga o
   `.xctestrun`. Deps: T-0.8, T-0.10. Implements: S2.
-- [ ] **T-0.12** Mac: cliente obs-websocket próprio (Hello/Identify, autenticação, prazo por pedido,
+- [x] **T-0.12** Mac: cliente obs-websocket próprio (Hello/Identify, autenticação, prazo por pedido,
   rejeitar pendentes ao fechar, guarda do perfil antes de escrever, `GetVersion`, `GetRecordStatus`,
   `StartRecord`/`StopRecord`, `CreateRecordChapter`, `GetStats`, `GetOutputStatus`,
   `GetInputPropertiesListPropertyItems`, lote `SerialFrame`) e `core/secret.ts` (Chaveiro, tipo
