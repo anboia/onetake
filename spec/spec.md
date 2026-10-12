@@ -324,13 +324,16 @@ por amostragem do centro de cada célula.
    5 s, `screen.shot` 3 s, `wait.for` = `timeoutMs` + 1 s); o estouro responde `E_TIMEOUT` sem travar
    a fila de controle.
 4. **Operações** (métodos JSON-RPC; todo tempo em D; respostas de ação conforme S0.5):
-   - `screen.shot {format: jpeg|png, scale: points|native, quality?}` → imagem base64 + tamanho em
-     px e escala. Usa `XCUIScreen.main.screenshot()` (público; a tela inteira, só com o app à frente
+   - `screen.shot {format: jpeg|png, scale: points|native, quality?}` → `{image, format, widthPx,
+     heightPx, scale}`: `image` = os bytes da imagem em base64; `widthPx`/`heightPx` = tamanho da
+     imagem em px; `scale` = px por ponto da imagem (1 em `points`; a escala da tela em `native`, 3 no
+     iPhone 12). Usa `XCUIScreen.main.screenshot()` (público; a tela inteira, só com o app à frente
      dentro da lista do item 11) e recodifica em JPEG; padrão JPEG em pontos (390×844 no iPhone 12).
      Plano B se o AC-1.4 falhar: PX-6 (⏳ Q-5f).
    - `ui.tree {app?, visibleOnly?: true, maxDepth?, format: compact|json}` → `{treeVersion,
      nodes}` (S0.6). `app` padrão = o app em primeiro plano.
-   - `ui.find {target}` → candidatos com `ref`, `frame`, `visible`, `hittable`.
+   - `ui.find {target}` → `{candidates: [{ref?, frame, visible, hittable, value?}]}` (`ref` só
+     quando o candidato é um nó da árvore; `value` como em S0.6, nunca na folha `authkit`).
    - `ui.tap`, `ui.doubleTap`, `ui.longPress {target, durationMs}`,
      `ui.drag {from, to, via?, pressMs, velocity|durationMs, holdMs}` (velocidade em pt/s; o caminho
      público converte para `XCUIGestureVelocity` multiplicando pela escala da tela; `via` só com
@@ -338,7 +341,7 @@ por amostragem do centro de cada célula.
    - `ui.type {target?, text}` — só texto **não secreto**: recusa com `E_SECURE_FIELD` se o campo é
      seguro, se o texto parece credencial (contém e-mail/Apple ID, regex de e-mail) ou se o app em
      primeiro plano é uma tela de autenticação do sistema (`authkit`, código do SpringBoard).
-   - `ui.ocr {region?, text?}` → caixas `{text, frame, confidence}` em pontos (Vision, nível
+   - `ui.ocr {region?, text?}` → `{boxes: [{text, frame, confidence}]}` em pontos (Vision, nível
      acurado, caixa por palavra).
    - `device.press {button: home|volumeUp|volumeDown}`, `device.home`, `device.lock`, `device.wake`,
      `device.controlCenter {open|close}`, `device.state` → `{locked, network, foregroundApp,
