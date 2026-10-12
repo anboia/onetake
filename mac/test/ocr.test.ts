@@ -1,7 +1,9 @@
 // Testes da T-0.14: ajudante de OCR do Mac (architecture.md A1, A2 `media`; a forma da checagem de
 // AC-13.7). A imagem de teste é gerada pelo `--render-text` num diretório temporário e apagada no
 // fim — nunca no repositório (HC-7, P-3). Só biblioteca padrão do Node 22; o ajudante roda com
-// `xcrun swift` (a primeira chamada compila e pode levar alguns segundos).
+// `xcrun swift`, que compila o script a cada chamada: com o cache de módulos frio e a CPU disputada
+// pela suíte em paralelo a primeira pode passar de 60 s, por isso toda chamada usa o prazo
+// `BASE_TIMEOUT_MS`.
 
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -13,6 +15,7 @@ import { join, sep } from 'node:path';
 
 import { DEFAULTS_PATH } from '../src/core/config.ts';
 import {
+  BASE_TIMEOUT_MS,
   findText,
   MAX_FONT_SIZE,
   OCR_TOOL_PATH,
@@ -142,7 +145,7 @@ describe(`--font-size / fontSize: finito, > 0 e ≤ ${MAX_FONT_SIZE} px; fora di
       const result = spawnSync(
         XCRUN_PATH,
         ['swift', OCR_TOOL_PATH, '--render-text', 'x', '--out', out, '--font-size', raw],
-        { encoding: 'utf8', timeout: 120_000 },
+        { encoding: 'utf8', timeout: BASE_TIMEOUT_MS },
       );
       assert.equal(result.signal, null, `${raw}: morto por ${result.signal}`);
       assert.equal(result.status, 2, `${raw}: status ${result.status}; stderr: ${result.stderr}`);

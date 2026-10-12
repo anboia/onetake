@@ -15,6 +15,13 @@ export const OCR_TOOL_PATH = fileURLToPath(new URL('../../tools/ocr.swift', impo
  * quadros de 1080p/1170×2532; acima disso a tela de desenho cresce sem utilidade até esgotar memória.
  */
 export const MAX_FONT_SIZE = 512;
+/**
+ * Prazo-base de cada chamada do ajudante, em ms. O `xcrun swift` compila o script a cada chamada:
+ * 1–2 s com o cache de módulos quente, mas com o cache frio (primeira chamada depois de limpá-lo ou
+ * de trocar o Xcode) e a CPU disputada (suíte de testes em paralelo, OBS gravando) pode passar de
+ * 60 s. O prazo só existe contra travamento, por isso é folgado.
+ */
+export const BASE_TIMEOUT_MS = 300_000;
 
 /** Retângulo em pixels da imagem, origem no canto superior esquerdo. */
 export interface Rect {
@@ -55,18 +62,17 @@ export interface RenderedText {
 export interface OcrOptions {
   /** Uma caixa por palavra em vez de uma por linha. */
   words?: boolean;
-  /** Prazo do processo; padrão: 60 s (compilação do script) + 2 s por imagem. */
+  /** Prazo do processo; padrão: `BASE_TIMEOUT_MS` (5 min; compilação do script) + 2 s por imagem. */
   timeoutMs?: number;
 }
 
 export interface RenderTextOptions {
   /** Tamanho da fonte do sistema em pixels: finito, > 0 e ≤ `MAX_FONT_SIZE`; padrão 64. */
   fontSize?: number;
-  /** Prazo do processo; padrão 60 s. */
+  /** Prazo do processo; padrão `BASE_TIMEOUT_MS` (5 min; compilação do script). */
   timeoutMs?: number;
 }
 
-const BASE_TIMEOUT_MS = 60_000;
 const PER_IMAGE_TIMEOUT_MS = 2_000;
 const MAX_OUTPUT_BYTES = 256 * 1024 * 1024;
 
