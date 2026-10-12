@@ -289,7 +289,7 @@ Regras comuns:
   AC-9.6. Done: **sucesso** = os 3 títulos idênticos no `ffprobe -show_chapters` (mais no máximo o
   capítulo automático em 0, AC-9.2) e 0 falsos prontos (AC-9.6). **Plano B** = QuickTime manual com
   capítulos do FFMETADATA. Deps: T-0.20. Implements: S9 item 5, ADR-4, ⏳ Q-8.
-- [ ] **T-0.22** Núcleo de relógio e alinhamento para o SP-6 (sem aparelho): NTP com ajuste
+- [x] **T-0.22** Núcleo de relógio e alinhamento para o SP-6 (sem aparelho): NTP com ajuste
   Theil-Sen (S7 item 2), T0 pelas marcas (item 3), detecção por região e ajuste V = α + (1+β)·P com
   o erro deixando um de fora (itens 4–6), decodificador do código de S0.10, e o invólucro do
   ffmpeg/ffprobe fixados (`paths.*`) com extração de quadros. Files: `mac/src/{clock,align}/**`,
