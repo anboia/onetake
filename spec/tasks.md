@@ -161,7 +161,9 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   [--configuration Spike]|up [--spike]|down|status|sever` (`.xctestrun` da sessão 0600 com as
   variáveis de S1, sessões velhas apagadas, `xcodebuild` destacado com saída em arquivo,
   `caffeinate`), testados contra o usbmuxd falso, o servidor WebSocket de teste e um `xcodebuild`
-  falso. Files: `mac/src/{device,runner,commands,cli}/**`, `mac/test/runner.test.ts`. AC: —. Done:
+  falso. Files: `mac/src/{device,runner,commands,cli}/**`, `mac/test/runner.test.ts`,
+  `mac/test/helpers/usbmuxd.ts` e `mac/test/usbmux.test.ts` (só para extrair o usbmuxd falso que a T-0.9 deixou
+  nele e importá-lo do helper). AC: —. Done:
   testes verdes: o `.xctestrun` da sessão tem permissão 0600, as variáveis de S1 e as capturas do
   XCTest desligadas (`SystemAttachmentLifetime`/`UserAttachmentLifetime = keepNever`,
   `PreferredScreenCaptureFormat = screenshots`; `-collect-test-diagnostics never` no `xcodebuild`,
