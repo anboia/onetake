@@ -3,6 +3,8 @@
 // não importam nada abaixo de `commands` (architecture.md A2).
 
 import { loadConfig, type Config, type LoadConfigOptions } from '../core/config.ts';
+import { isContrarregraError } from '../core/errors.ts';
+import { RpcProtocolError } from '../runner/rpc.ts';
 import type { RunnerTools } from '../runner/xcodebuild.ts';
 
 export { ContrarregraError, isContrarregraError } from '../core/errors.ts';
@@ -28,4 +30,20 @@ export function loadContext(options: ContextOptions = {}): CommandContext {
   if (options.tools !== undefined) context.tools = options.tools;
   if (options.onProgress !== undefined) context.onProgress = options.onProgress;
   return context;
+}
+
+/** O erro como CLI (`--json`) e MCP o devolvem: código de S0.5 (ou `null` fora da tabela), mensagem e `data`. */
+export interface ErrorObject {
+  code: string | null;
+  message: string;
+  data: Record<string, unknown>;
+}
+
+/** `{error: {code, message, data}}`. O `data` é o do erro (nunca leva segredo: ninguém põe o token nele). */
+export function errorObject(error: unknown): { error: ErrorObject } {
+  if (isContrarregraError(error)) return { error: { code: error.code, message: error.message, data: { ...(error.data ?? {}) } } };
+  if (error instanceof RpcProtocolError) {
+    return { error: { code: null, message: error.message, data: { method: error.method, jsonRpcCode: error.code } } };
+  }
+  return { error: { code: null, message: error instanceof Error ? error.message : String(error), data: {} } };
 }

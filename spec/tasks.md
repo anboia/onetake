@@ -199,7 +199,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `mac/tools/ocr.swift`, `mac/src/media/ocr.ts`, `mac/test/ocr.test.ts`. AC: —. Done: acha "Hagah
   Bible" numa imagem de teste gerada pelo `--render-text` num diretório temporário (nunca no
   repositório). Deps: T-0.1. Implements: A1, A2 (`media`), AC-13.7. [P]
-- [ ] **T-0.15** Servidor MCP mínimo + `.mcp.json`: `doctor`, `device_status`, `screenshot` (JPEG
+- [x] **T-0.15** Servidor MCP mínimo + `.mcp.json`: `doctor`, `device_status`, `screenshot` (JPEG
   390×844 + caminho do PNG), `ui_tree`, `tap`, com `alwaysLoad` nos ★ e instruções do servidor. Files:
   `.mcp.json`, `mac/src/mcp/**`, `mac/src/commands/**`, `mac/test/mcp.test.ts`. AC: AC-8.1 (parcial:
   os 5 ★ presentes têm `alwaysLoad`; `take_wait` entra na Fase 1). Done: um cliente MCP de teste
