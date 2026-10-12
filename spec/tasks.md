@@ -157,7 +157,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `mac/src/usbmux/**`, `mac/test/usbmux.test.ts`. AC: —. Done: testes verdes: entrada `Network`
   recusada (E-2.2), serial com e sem hífen, `Connect` recusado → `E_RUNNER_DOWN` (E-2.3), aparelho
   ausente → `E_NO_USB` em ≤ 1 s (E-2.1). Deps: T-0.1, T-0.3. Implements: S2 item 2. [P]
-- [ ] **T-0.10** Mac: cliente JSON-RPC sobre o WebSocket do Node e `contrarregra runner build
+- [x] **T-0.10** Mac: cliente JSON-RPC sobre o WebSocket do Node e `contrarregra runner build
   [--configuration Spike]|up [--spike]|down|status|sever` (`.xctestrun` da sessão 0600 com as
   variáveis de S1, sessões velhas apagadas, `xcodebuild` destacado com saída em arquivo,
   `caffeinate`), testados contra o usbmuxd falso, o servidor WebSocket de teste e um `xcodebuild`
