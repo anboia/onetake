@@ -116,7 +116,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `.xctrunner` com `TeamIdentifier=984PNJZ8B9` e `Authority=Apple Development: Andre Saboia
   (6NKUX5CX7G)`; `security find-identity -v -p codesigning` igual antes e depois; `swift test`
   verde. Deps: T-0.2, T-0.3. Implements: S1 item 1, S0.10, A2, A5, P-3, ✅ Q-3.
-- [ ] **T-0.5** Núcleo do runner: no Kit, roteador, autenticação por token, controlador único e
+- [x] **T-0.5** Núcleo do runner: no Kit, roteador, autenticação por token, controlador único e
   agenda das duas filas (testáveis com `swift test`); no runner, `testServe` (faz `press(.home)` e
   só então abre o servidor), `NWListener` WebSocket no loopback na porta da configuração (no build
   `Spike`, `CONTRARREGRA_BIND=loopback|endpoint`), `session.hello`, `health`, `clock.ping` na
