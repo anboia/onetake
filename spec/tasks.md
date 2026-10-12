@@ -127,7 +127,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   passam na T-0.11). Done: `xcodebuild build-for-testing` exit 0; `swift test` cobre roteador,
   autenticação, controlador único e a agenda das filas com um cliente em processo. Deps: T-0.4.
   Implements: S1 itens 2, 3, 9; S2 item 3.
-- [ ] **T-0.6** Superfície do runner para os spikes (1/3) — **leitura e lista permitida**:
+- [x] **T-0.6** Superfície do runner para os spikes (1/3) — **leitura e lista permitida**:
   `screen.shot`, `ui.tree`, `ui.find` (resolução de `Target` de S0.2, inclusive `within`, `below`,
   `above`, `index` e `fallback`), `ui.ocr` (Vision) e o seletor `ocr`; a lista permitida de S1 item 11
   (com `app.explore`, ações × leituras, regras do SpringBoard, da tela travada e da folha `authkit`),

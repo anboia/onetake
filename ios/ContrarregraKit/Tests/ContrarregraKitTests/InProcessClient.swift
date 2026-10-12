@@ -145,10 +145,9 @@ struct RunnerHarness {
     }
 
     init(present: Set<PrivateApiId> = [.px1, .px2, .px3, .px4, .px5], allowed: Set<PrivateApiId> = [],
-         extraRoutes: (inout RpcRouter) -> Void = { _ in }) {
+         state: RunnerState = RunnerState(), extraRoutes: (inout RpcRouter) -> Void = { _ in }) {
         let laneQueue = DispatchQueue(label: "test.xctest-lane")
         let lane = XCTestLane(queue: laneQueue)
-        let state = RunnerState()
         let capabilities = RunnerCapabilities(present: present, allowed: allowed)
         let shutdowns = Counter()
         var router = RpcRouter()

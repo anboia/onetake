@@ -70,7 +70,7 @@ final class RunnerTests: XCTestCase {
                 loop.stop()
             })
         var router = RpcRouter()
-        BaseMethods.register(into: &router, context)
+        RunnerMethods.register(into: &router, context, environment: environment)
         let core = RunnerServerCore(token: environment.token, router: router, lane: lane,
                                     hello: { BaseMethods.helloResult(context) },
                                     log: { level, message in RunnerLog.write(RunnerLog.Level(rawValue: level) ?? .info, message) })

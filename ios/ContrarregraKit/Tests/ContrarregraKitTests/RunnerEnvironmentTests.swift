@@ -67,6 +67,25 @@ final class RunnerEnvironmentTests: XCTestCase {
         }
     }
 
+    /// T-0.6: a lista permitida vem de `CONTRARREGRA_ALLOWED` (vírgula e/ou espaço, como o PRIVATE) e
+    /// `CONTRARREGRA_EXPLORE`.
+    func testReadsAllowedListAndExploreApp() throws {
+        let env = try RunnerEnvironment.read([
+            "CONTRARREGRA_TOKEN": token,
+            "CONTRARREGRA_ALLOWED": "com.example.notes, example://  https://example.com/,,com.example.maps",
+            "CONTRARREGRA_EXPLORE": " com.example.target ",
+        ], allowBindOverride: false)
+        XCTAssertEqual(env.allowed, ["com.example.notes", "example://", "https://example.com/", "com.example.maps"])
+        XCTAssertEqual(env.explore, "com.example.target")
+        XCTAssertTrue(env.description.contains("explore=com.example.target"), env.description)
+
+        let empty = try RunnerEnvironment.read(["CONTRARREGRA_TOKEN": token, "CONTRARREGRA_ALLOWED": " ", "CONTRARREGRA_EXPLORE": ""],
+                                               allowBindOverride: false)
+        XCTAssertEqual(empty.allowed, [])
+        XCTAssertNil(empty.explore)
+        XCTAssertNil(try RunnerEnvironment.read(["CONTRARREGRA_TOKEN": token], allowBindOverride: false).explore)
+    }
+
     func testDescriptionAndErrorsNeverCarryTheToken() throws {
         let env = try RunnerEnvironment.read(["CONTRARREGRA_TOKEN": token, "CONTRARREGRA_PRIVATE": "PX-3,PX-1"],
                                              allowBindOverride: false)

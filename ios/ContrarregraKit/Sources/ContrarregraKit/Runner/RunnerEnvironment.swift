@@ -2,9 +2,9 @@ import Foundation
 
 /// Variáveis de ambiente do runner (S1 "API / Interface"; vêm do `.xctestrun` da sessão, S2 item 1).
 ///
-/// Lidas aqui: `CONTRARREGRA_PORT`, `CONTRARREGRA_TOKEN`, `CONTRARREGRA_SESSION`, `CONTRARREGRA_PRIVATE` e,
-/// só no build `Spike`, `CONTRARREGRA_BIND`. `CONTRARREGRA_ALLOWED` e `CONTRARREGRA_EXPLORE` são da lista
-/// permitida (S1 item 11) e entram com ela.
+/// Lidas aqui: `CONTRARREGRA_PORT`, `CONTRARREGRA_TOKEN`, `CONTRARREGRA_SESSION`, `CONTRARREGRA_PRIVATE`,
+/// `CONTRARREGRA_ALLOWED` e `CONTRARREGRA_EXPLORE` (da lista permitida, S1 item 11; `AllowList` as interpreta)
+/// e, só no build `Spike`, `CONTRARREGRA_BIND`.
 ///
 /// O token nunca aparece em `description` nem em mensagem de erro (P-3, AC-2.9).
 public struct RunnerEnvironment: Sendable, Equatable, CustomStringConvertible {
@@ -44,10 +44,14 @@ public struct RunnerEnvironment: Sendable, Equatable, CustomStringConvertible {
     public var bind: BindMode
     /// `CONTRARREGRA_BIND` veio, mas o build não é `Spike`: ignorada (o runner registra).
     public var bindIgnored: Bool
+    /// `CONTRARREGRA_ALLOWED`: `apps.allowed` e `urls.allowedPrefixes` juntos, na ordem em que vieram.
+    public var allowed: [String]
+    /// `CONTRARREGRA_EXPLORE`: o `app.explore` (app alvo sem coreografia carregada).
+    public var explore: String?
 
     public init(port: UInt16 = RunnerEnvironment.defaultPort, token: String, session: String? = nil,
                 privateAllowed: Set<PrivateApiId> = [], unknownPrivate: [String] = [], bind: BindMode = .loopback,
-                bindIgnored: Bool = false) {
+                bindIgnored: Bool = false, allowed: [String] = [], explore: String? = nil) {
         self.port = port
         self.token = token
         self.session = session
@@ -55,6 +59,8 @@ public struct RunnerEnvironment: Sendable, Equatable, CustomStringConvertible {
         self.unknownPrivate = unknownPrivate
         self.bind = bind
         self.bindIgnored = bindIgnored
+        self.allowed = allowed
+        self.explore = explore
     }
 
     /// Lê o ambiente do processo. `allowBindOverride` = build `Spike` (só nele `CONTRARREGRA_BIND` vale).
@@ -63,6 +69,9 @@ public struct RunnerEnvironment: Sendable, Equatable, CustomStringConvertible {
     /// - `CONTRARREGRA_PORT`: inteiro 1…65535; ausente = 8700 (S0.1).
     /// - `CONTRARREGRA_PRIVATE`: ids PX-n separados por vírgula e/ou espaço (ex.: `PX-1,PX-2,PX-3,PX-5`);
     ///   ausente ou vazio = nenhum (só caminhos públicos).
+    /// - `CONTRARREGRA_ALLOWED`: bundle ids e prefixos de link separados por vírgula e/ou espaço; ausente ou
+    ///   vazio = nenhum.
+    /// - `CONTRARREGRA_EXPLORE`: um bundle id; ausente ou vazio = nenhum.
     /// - `CONTRARREGRA_BIND`: `loopback` (padrão) ou `endpoint`.
     public static func read(_ environment: [String: String], allowBindOverride: Bool) throws(Failure) -> RunnerEnvironment {
         guard let token = environment["CONTRARREGRA_TOKEN"], !token.isEmpty else { throw .missingToken }
@@ -99,13 +108,21 @@ public struct RunnerEnvironment: Sendable, Equatable, CustomStringConvertible {
             }
         }
 
+        let allowedItems = (environment["CONTRARREGRA_ALLOWED"] ?? "")
+            .split(whereSeparator: { $0 == "," || $0.isWhitespace }).map(String.init)
+        let explore = environment["CONTRARREGRA_EXPLORE"]
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .flatMap { $0.isEmpty ? nil : $0 }
+
         return RunnerEnvironment(port: port, token: token, session: session, privateAllowed: allowed,
-                                 unknownPrivate: unknown, bind: bind, bindIgnored: bindIgnored)
+                                 unknownPrivate: unknown, bind: bind, bindIgnored: bindIgnored, allowed: allowedItems,
+                                 explore: explore)
     }
 
     /// Resumo para registro, sem o token.
     public var description: String {
         let ids = privateAllowed.map(\.rawValue).sorted().joined(separator: ",")
-        return "port=\(port) bind=\(bind.rawValue) session=\(session ?? "-") private=[\(ids)] token=<\(token.utf8.count) bytes>"
+        return "port=\(port) bind=\(bind.rawValue) session=\(session ?? "-") private=[\(ids)] "
+            + "explore=\(explore ?? "-") allowed=[\(allowed.joined(separator: ","))] token=<\(token.utf8.count) bytes>"
     }
 }
