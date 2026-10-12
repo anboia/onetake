@@ -151,7 +151,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `ios/ContrarregraRunner/PrivateXCT/Lock.swift`, `ios/ContrarregraKit/**`. AC: — (medidas nos
   spikes). Done: `xcodebuild build-for-testing` exit 0; testes unitários da avaliação de condições e
   dos prefixos de link. Deps: T-0.7. Implements: S0.3, S1 itens 4, 7, 8, 10.
-- [ ] **T-0.9** Mac: cliente usbmuxd (`ListDevices`, `Listen`, `Connect`, só `USB`, serial
+- [x] **T-0.9** Mac: cliente usbmuxd (`ListDevices`, `Listen`, `Connect`, só `USB`, serial
   normalizado; fixtures com e sem hífen) e repassador em `127.0.0.1:<efêmera>`, testados com um
   usbmuxd falso (socket Unix num diretório temporário, via `usbmux.socketPath`). Files:
   `mac/src/usbmux/**`, `mac/test/usbmux.test.ts`. AC: —. Done: testes verdes: entrada `Network`
