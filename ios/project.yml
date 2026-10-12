@@ -1,0 +1,107 @@
+# Projeto iOS do Contrarregra (XcodeGen 2.45.4; architecture.md A1, A2, A5). O .xcodeproj gerado fica fora
+# do git: `xcodegen generate --spec ios/project.yml`.
+#
+# - ContrarregraHost: app hospedeiro mínimo, só a tela do relógio de calibração (S0.10, S1 item 1).
+# - ContrarregraRunner: bundle de UI test (XCUITest) que o Xcode instala como
+#   app.kifactory.contrarregra.runner.xctrunner (S1 item 1).
+# - ContrarregraKit: pacote Swift local (modelos de S0, JSON-RPC, JCS, código do relógio).
+#
+# Assinatura (P-3): time fixo escrito aqui, assinatura automática pela conta já logada no Xcode
+# (`-allowProvisioningUpdates`); a identidade é a "Apple Development" desse time, conferida no
+# `codesign -dvv` depois do build (AC-1.14). Nenhum alvo tem o bundle id do app alvo (P-4).
+#
+# Configuração Spike: compila ios/ContrarregraRunner/Spikes/ e liga a condição SPIKE (os métodos
+# `spike.*` só existem nela); em Debug e Release a pasta Spikes/ fica fora do build.
+
+name: Contrarregra
+minimumXcodeGenVersion: 2.45.4
+
+options:
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+configs:
+  Debug: debug
+  Release: release
+  Spike: debug
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: 984PNJZ8B9
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: Apple Development
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: 0.0.0
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+  configs:
+    Spike:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG SPIKE
+
+packages:
+  ContrarregraKit:
+    path: ContrarregraKit
+
+targets:
+  ContrarregraHost:
+    type: application
+    platform: iOS
+    sources:
+      - path: ContrarregraHost
+    dependencies:
+      - package: ContrarregraKit
+    settings:
+      base:
+        PRODUCT_NAME: ContrarregraHost
+        PRODUCT_BUNDLE_IDENTIFIER: app.kifactory.contrarregra
+        TARGETED_DEVICE_FAMILY: "1"  # só iPhone; no alvo porque o preset de iOS do XcodeGen põe "1,2" aqui
+        CODE_SIGN_IDENTITY: Apple Development
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Contrarregra
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIStatusBarHidden: YES
+        # todas no Info.plist (exigência do iOS 26 sem UIRequiresFullScreen); a tela trava em retrato
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: >-
+          UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown
+          UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
+
+  ContrarregraRunner:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: ContrarregraRunner
+    dependencies:
+      - target: ContrarregraHost
+      - package: ContrarregraKit
+    settings:
+      base:
+        PRODUCT_NAME: ContrarregraRunner
+        PRODUCT_BUNDLE_IDENTIFIER: app.kifactory.contrarregra.runner
+        TARGETED_DEVICE_FAMILY: "1"  # só iPhone (idem)
+        GENERATE_INFOPLIST_FILE: YES
+        EXCLUDED_SOURCE_FILE_NAMES: "*/ContrarregraRunner/Spikes/*"
+      configs:
+        Spike:
+          EXCLUDED_SOURCE_FILE_NAMES: ""
+
+schemes:
+  ContrarregraRunner:
+    build:
+      targets:
+        ContrarregraHost: all
+        ContrarregraRunner: [test]
+    test:
+      config: Debug
+      gatherCoverageData: false
+      captureScreenshotsAutomatically: false
+      deleteScreenshotsWhenEachTestSucceeds: true
+      targets:
+        - name: ContrarregraRunner
+          parallelizable: false
+    run:
+      config: Debug
+    archive:
+      config: Release

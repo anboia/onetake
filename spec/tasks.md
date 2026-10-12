@@ -101,7 +101,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `mac/test/helpers/ws-server.ts`. AC: AC-0.1, AC-0.3, AC-0.4, AC-0.6 (lado TypeScript), AC-0.7. Done:
   testes verdes com casos válidos e inválidos de cada tipo; o servidor de teste aceita e fecha
   conexões. Deps: T-0.2. Implements: S0.
-- [ ] **T-0.4** Projeto iOS: `ios/project.yml` (XcodeGen; `DEVELOPMENT_TEAM 984PNJZ8B9`; assinatura
+- [x] **T-0.4** Projeto iOS: `ios/project.yml` (XcodeGen; `DEVELOPMENT_TEAM 984PNJZ8B9`; assinatura
   automática; alvos `ContrarregraHost` e `ContrarregraRunner`; configuração `Spike` que compila
   `ios/ContrarregraRunner/Spikes/` e os métodos `spike.*` só nela), pacote `ios/ContrarregraKit`
   (modelos de S0, codec JSON-RPC, JCS, código do relógio de S0.10, testes `swift test` lendo
