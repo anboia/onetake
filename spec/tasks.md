@@ -143,7 +143,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   (medidas nos spikes). Done: `xcodebuild build-for-testing` exit 0; testes unitários das recusas de
   `ui.type` (campo seguro, texto com cara de credencial, tela de autenticação) e da validação de
   `ui.drag`. Deps: T-0.6. Implements: S1 itens 4 (ações), 5.
-- [ ] **T-0.8** Superfície do runner para os spikes (3/3) — **aparelho, apps e espera**:
+- [x] **T-0.8** Superfície do runner para os spikes (3/3) — **aparelho, apps e espera**:
   `device.state` (bloqueio, rede, app em primeiro plano, geometria, texto, aparência),
   `device.home`, `device.press {home}`, `device.wake`, `device.controlCenter`, `device.lock` (PX-1,
   em `PrivateXCT`), `app.activate|terminate|state|openURL`, `wait.for` (avaliação das condições de

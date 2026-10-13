@@ -109,6 +109,11 @@ public final class TargetResolver {
     private let selectorCheck: SelectorCheck
     private var trees: [AppScope: ScopedTree] = [:]
 
+    /// Ambiguidades (`E_TARGET_AMBIGUOUS` de uma âncora, em qualquer profundidade) vistas por este resolvedor, inclusive
+    /// as que um "não achado" de outra alternativa mascarou no erro final. As ações não mudam; as condições de S0.3 usam
+    /// isto para nunca concluir "não resolve" de uma resolução incerta (revisão da T-0.8, achado 3).
+    public private(set) var ambiguitiesSeen = 0
+
     /// - Parameter selectors: confere o seletor de cada alternativa e âncora com o app dela (a lista permitida
     ///   recusa, por exemplo, `labelContains` na folha `authkit`).
     public init(screen: Size, appScope: @escaping AppNamer, tree: @escaping TreeSource, text: @escaping TextSource,
@@ -168,6 +173,7 @@ public final class TargetResolver {
                 }
             } catch {
                 guard Self.isUnresolved(error) else { throw error }
+                if error.code == RunnerErrorCode.targetAmbiguous.code { ambiguitiesSeen += 1 }
                 if firstError == nil { firstError = error }
             }
         }
