@@ -136,7 +136,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   spikes). Done: `xcodebuild build-for-testing` exit 0; testes unitários (sem tela) da resolução de
   alvos sobre árvores de fixture e da lista permitida. Deps: T-0.5. Implements: S0.2, S0.6, S1 itens
   4 (leitura), 6, 11.
-- [ ] **T-0.7** Superfície do runner para os spikes (2/3) — **ações**: `ui.tap`, `ui.doubleTap`,
+- [x] **T-0.7** Superfície do runner para os spikes (2/3) — **ações**: `ui.tap`, `ui.doubleTap`,
   `ui.longPress`, `ui.drag`, `ui.scrollTo`, `ui.type` (com as recusas de credencial), pelo caminho
   público; os privados (PX-2, PX-3) ficam para o SP-3, atrás de `CONTRARREGRA_PRIVATE` e só em
   `PrivateXCT`. Files: `ios/ContrarregraRunner/{Driver,Server}/**`, `ios/ContrarregraKit/**`. AC: —

@@ -502,7 +502,7 @@ public struct AllowList: Sendable, Equatable {
     /// Ação sobre um elemento resolvido (`node` = o nó da árvore, quando o alvo veio dela; `point` = onde o toque
     /// cai, centro + `offset`):
     /// - app operável: só quando é ele o que está à frente (provado); `type` com a folha, o SpringBoard ou uma
-    ///   camada à frente é `E_SECURE_FIELD` (S1 item 4; as demais recusas de `ui.type` são da T-0.7); o
+    ///   camada à frente é `E_SECURE_FIELD` (`checkTypingFront`; as demais recusas de `ui.type` estão em `TypeGuard`); o
     ///   deslocamento é livre (o app inteiro é permitido);
     /// - SpringBoard: só tocar o ícone do app alvo (rótulo exato) na tela de início limpa e o interruptor do modo
     ///   avião com a Central de Controle aberta; na tela travada, nada (o arrasto de destravar é `checkUnlockDrag`);
@@ -512,25 +512,20 @@ public struct AllowList: Sendable, Equatable {
     /// - em todo lugar (menos `type`, que não tem ponto): `point` dentro da tela (`display`, em pontos), um nó sem
     ///   frame não é alvo, e o começo de arrasto, rolagem e toque longo fica fora das faixas de gesto do sistema
     ///   (`GestureBands`; `checkActionPoint`, que a T-0.7 usa também para `to` e o caminho do arrasto).
+    ///
+    /// `gestureStart` (padrão: `action.startsGesture`) diz se `point` é o começo do gesto; `false` confere um ponto
+    /// do meio ou do fim (`to` e `via` de `ui.drag`, o fim de cada passe de `ui.scrollTo`) sem as faixas de gesto.
     public func checkElementAction(_ action: ElementAction, app: AppScope, node: TreeNode?, point: AbsolutePoint?,
-                                   display: Size, screen: ScreenState) throws(RpcErrorObject) {
+                                   display: Size, screen: ScreenState, gestureStart: Bool? = nil) throws(RpcErrorObject) {
         let front = front(screen)
         if action == .type {
-            switch front {
-            case .authkit, .homeScreen, .controlCenter, .lockScreen, .layer:
-                throw RpcErrorObject(.secureField,
-                                     "E_SECURE_FIELD: digitar com \(front) à frente é sempre recusado (tela de autenticação do sistema; P-3)")
-            case .outside:
-                throw Self.forbidden("ui.type recusado com \(front) à frente")
-            case .operable:
-                break
-            }
+            _ = try checkTypingFront(screen)
         } else {
             guard let point else { throw Self.forbidden("ação sem ponto na tela") }
             if let node, !(node.frame.area > 0) {
                 throw Self.forbidden("\(node.ref) não tem frame na tela; não é alvo de ação")
             }
-            try Self.checkActionPoint(point, gestureStart: action.startsGesture, display: display)
+            try Self.checkActionPoint(point, gestureStart: gestureStart ?? action.startsGesture, display: display)
         }
         switch app {
         case .app(let id):
@@ -555,6 +550,31 @@ public struct AllowList: Sendable, Equatable {
                 throw Self.forbidden("na folha do Sign in with Apple só se tocam botões (S1 item 11)")
             }
             try Self.checkInside(point, node)
+        }
+    }
+
+    /// Um ponto do meio ou do fim de um gesto sobre um alvo resolvido (`to` e `via` de `ui.drag`): as regras de
+    /// `checkAction`, sem as faixas de gesto do começo.
+    public func checkActionPath(_ action: ElementAction, resolved: ResolvedTarget, display: Size,
+                                screen: ScreenState) throws(RpcErrorObject) {
+        try checkElementAction(action, app: resolved.candidate.app, node: resolved.candidate.node, point: resolved.point,
+                               display: display, screen: screen, gestureStart: false)
+    }
+
+    /// Digitar (`ui.type`; S1 item 4, P-3): só com um app operável à frente, e devolve o bundle id dele. Com a
+    /// folha `authkit`, o SpringBoard (tela de início, Central de Controle, tela travada com o teclado do código) ou
+    /// uma camada à frente é tela de autenticação do sistema: `E_SECURE_FIELD`, sempre. Com algo fora da lista ou
+    /// não provado à frente, `E_FORBIDDEN_APP`.
+    public func checkTypingFront(_ screen: ScreenState) throws(RpcErrorObject) -> String {
+        let front = front(screen)
+        switch front {
+        case .authkit, .homeScreen, .controlCenter, .lockScreen, .layer:
+            throw RpcErrorObject(.secureField,
+                                 "E_SECURE_FIELD: digitar com \(front) à frente é sempre recusado (tela de autenticação do sistema; P-3)")
+        case .outside:
+            throw Self.forbidden("ui.type recusado com \(front) à frente")
+        case .operable(let id):
+            return id
         }
     }
 

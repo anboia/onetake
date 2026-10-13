@@ -262,13 +262,30 @@ public final class ReadSession {
         return ScopedTree(app: app, version: snapshot.version, tree: IndexedTree(snapshot.root), reachable: nil)
     }
 
-    /// Resolve um alvo para uma ação (T-0.7): resolve, **relê a tela logo antes de agir** e confere a ação com o
-    /// ponto final (centro + `offset`) — dentro da tela, fora das faixas de gesto quando é começo de gesto e, no
-    /// SpringBoard e na folha, dentro do nó permitido.
+    /// Resolve um alvo para uma ação (T-0.7): resolve, confere que é tocável (`checkHittable`), **relê a tela logo
+    /// antes de agir** e confere a ação com o ponto final (centro + `offset`) — dentro da tela, fora das faixas de
+    /// gesto quando é começo de gesto e, no SpringBoard e na folha, dentro do nó permitido.
     public func resolveForAction(_ target: Target, _ action: ElementAction) throws(RpcErrorObject) -> ResolvedTarget {
-        let resolved = try resolver().resolve(target)
+        try checkForAction(resolver().resolve(target), action)
+    }
+
+    /// As conferências de `resolveForAction` sobre um alvo já resolvido (por um resolvedor reaproveitado).
+    public func checkForAction(_ resolved: ResolvedTarget, _ action: ElementAction) throws(RpcErrorObject) -> ResolvedTarget {
+        try Self.checkHittable(resolved, display: context.screenSize)
         try allowList.checkAction(action, resolved: resolved, display: context.screenSize, screen: readScreen())
         return resolved
+    }
+
+    /// Um alvo que resolveu para um elemento (ou ponto) fora da tela — o centro do frame fora dela, ou frame sem
+    /// área — é `E_TARGET_NOT_HITTABLE` (S0.5: "existe, mas fora da tela ou coberto"). Um `offset` que leve o toque de
+    /// um elemento na tela para fora dela continua `E_FORBIDDEN_APP` (`AllowList.checkActionPoint`).
+    public static func checkHittable(_ resolved: ResolvedTarget, display: Size) throws(RpcErrorObject) {
+        guard resolved.candidate.isHittable(on: display) else {
+            let frame = resolved.candidate.frame
+            throw RpcErrorObject(.targetNotHittable,
+                                 "E_TARGET_NOT_HITTABLE: o alvo resolveu, mas está fora da tela (frame \(TreeFormat.number(frame.x)),"
+                                 + "\(TreeFormat.number(frame.y)) \(TreeFormat.number(frame.w))x\(TreeFormat.number(frame.h)))")
+        }
     }
 
     /// Snapshot registrado (refs e `treeVersion`) de um app operável: para `ui.tree` (já conferido) e

@@ -5,7 +5,8 @@ import Foundation
 // quando a árvore muda.
 
 /// Um nó do snapshot, sem `ref`: o que o `XCUIElementSnapshot` dá (tipo, rótulo, identificador, valor, frame em
-/// pontos, habilitado, selecionado, filhos).
+/// pontos, habilitado, selecionado, com foco, filhos). `focused` (o `hasFocus` público) só serve às recusas de
+/// `ui.type` (`TypeGuard`); não entra no `TreeNode` nem nos refs.
 public struct RawNode: Sendable, Equatable {
     public var type: ElementType
     public var label: String?
@@ -14,10 +15,11 @@ public struct RawNode: Sendable, Equatable {
     public var frame: Rect
     public var enabled: Bool
     public var selected: Bool
+    public var focused: Bool
     public var children: [RawNode]
 
     public init(type: ElementType, label: String? = nil, identifier: String? = nil, value: String? = nil,
-                frame: Rect, enabled: Bool = true, selected: Bool = false, children: [RawNode] = []) {
+                frame: Rect, enabled: Bool = true, selected: Bool = false, focused: Bool = false, children: [RawNode] = []) {
         self.type = type
         self.label = label
         self.identifier = identifier
@@ -25,6 +27,7 @@ public struct RawNode: Sendable, Equatable {
         self.frame = frame
         self.enabled = enabled
         self.selected = selected
+        self.focused = focused
         self.children = children
     }
 }

@@ -170,7 +170,7 @@ final class XCUIBridge {
         RawNode(type: ElementType(xcuiRawValue: snapshot.elementType.rawValue),
                 label: nonEmpty(snapshot.label), identifier: nonEmpty(snapshot.identifier), value: text(snapshot.value),
                 frame: rect(snapshot.frame), enabled: snapshot.isEnabled, selected: snapshot.isSelected,
-                children: snapshot.children.map(raw))
+                focused: snapshot.hasFocus, children: snapshot.children.map(raw))
     }
 
     static func nonEmpty(_ text: String) -> String? { text.isEmpty ? nil : text }
