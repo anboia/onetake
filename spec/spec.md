@@ -518,7 +518,12 @@ por amostragem do centro de cada célula.
 **Behavior**
 
 1. **Subir o runner** ✅: `contrarregra runner build` gera o projeto (XcodeGen) e roda
-   `xcodebuild build-for-testing` com o time `984PNJZ8B9` e assinatura automática;
+   `xcodebuild build-for-testing` com o time `984PNJZ8B9` e assinatura automática; em seguida
+   acrescenta `UILaunchScreen` ao `Info.plist` do `ContrarregraRunner-Runner.app` (o modelo do XCTRunner
+   do Xcode 26.6 não tem a chave e o runner rodaria em modo de compatibilidade, 320×480 pt) e reassina
+   só esse `.app` com a mesma identidade e os mesmos entitlements que o Xcode usou, conferindo
+   `codesign --verify --deep --strict`, `TeamIdentifier = 984PNJZ8B9` e que nenhuma identidade nova
+   apareceu no chaveiro (senão o build falha);
    `contrarregra runner up` apaga `.xctestrun` de sessões velhas, escreve um da sessão (cópia do
    gerado, com as variáveis de S1 — `CONTRARREGRA_PORT`, `CONTRARREGRA_TOKEN`, `CONTRARREGRA_SESSION`,
    `CONTRARREGRA_PRIVATE`, `CONTRARREGRA_ALLOWED`, `CONTRARREGRA_EXPLORE` e, com `--spike`,

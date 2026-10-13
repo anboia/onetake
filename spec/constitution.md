@@ -45,7 +45,8 @@
 
 - **Time fixo `984PNJZ8B9`** e certificado `Apple Development: Andre Saboia (6NKUX5CX7G)`, escritos
   explicitamente em todo build (`DEVELOPMENT_TEAM`), assinatura automática pela conta já logada no
-  Xcode (`-allowProvisioningUpdates`). **Nunca** usar os certificados de outros times que existem no
+  Xcode (`-allowProvisioningUpdates`); única reassinatura permitida: a do `ContrarregraRunner-Runner.app`
+  no `runner build`, com a mesma identidade (S2 item 1). **Nunca** usar os certificados de outros times que existem no
   chaveiro (`59CB45686C`, `V4397KJVXZ`, a "Apple Distribution" de outra empresa). Se uma assinatura
   criar uma identidade nova no chaveiro, parar (G5).
 - A chave `.p8` em `~/.appstoreconnect/private_keys/` só pode ser **citada pelo caminho**, como
