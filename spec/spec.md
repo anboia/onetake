@@ -1189,7 +1189,11 @@ scenes:
    H.264 por hardware, ABR `record.bitrateKbps` (⚠️ 16.000), keyframe a cada 1 s, perfil high, faixa
    1 (`AdvOut.RecTracks = 1`); tela base = saída = **1170×2532** a `record.fps` (⚠️ 60); áudio 48 kHz,
    mesmas configurações de áudio do perfil do dono (para a troca de perfil não pedir reinício).
-   Cena "Contrarregra": fonte "iPhone" (`macos-avcapture`, preset High, sem buffering, áudio do
+   O obs-websocket 5.6.2 não alcança o codificador de gravação (taxa, keyframe, perfil): o `obs setup`,
+   só quando não há processo do OBS e logo antes de reabri-lo no perfil, cria ou reconcilia
+   `~/Library/Application Support/obs-studio/basic/profiles/Contrarregra/recordEncoder.json` com
+   `{rate_control: "ABR", bitrate: record.bitrateKbps, keyint_sec: 1, profile: "high"}` — só na pasta
+   do perfil "Contrarregra". Cena "Contrarregra": fonte "iPhone" (`macos-avcapture`, preset High, sem buffering, áudio do
    iPhone só na faixa 1, enquadramento "bounds inner" em 1170×2532; o `device` é o `itemValue` cujo
    `itemName` é `device.name`, lido com `GetInputPropertiesListPropertyItems {propertyName:
    "device"}` — esperado igual ao UDID; SP-5 confirma) e a fonte de cor "Sync Flash" (branca, tela

@@ -131,7 +131,7 @@ recordVideo` e passos `sim: skip|simulate`.
 | `~/Movies/contrarregra/spikes/SP-n/` | capturas, quadros e gravações de spike | ferramenta; cada gravação apagada logo depois de medida (um G4 por spike, com o dono) |
 | contêiner do `.xctrunner` no iPhone | `Documents/contrarregra/<takeId>/events.ndjson` | runner |
 | Chaveiro do macOS, serviço `contrarregra` | `OBS_WEBSOCKET_PASSWORD` (e, opcionais, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `GEMINI_API_KEY`) | dono cria; ferramenta só lê |
-| `~/Library/Application Support/obs-studio/basic/{profiles,scenes}/Contrarregra*` | perfil e cenas da ferramenta | OBS (criados por `obs setup`) |
+| `~/Library/Application Support/obs-studio/basic/{profiles,scenes}/Contrarregra*` | perfil e cenas da ferramenta; `profiles/Contrarregra/recordEncoder.json` (codificador de gravação, S9 item 1) | OBS (criados por `obs setup`); o `recordEncoder.json` é escrito pela ferramenta, só com o OBS fechado |
 
 Esquemas versionados: `contrarregra.choreography/1`, `contrarregra.events/1`,
 `contrarregra.take/1`, `contrarregra.preflight/1`, `contrarregra.sync/1`, `contrarregra.status/1`,
