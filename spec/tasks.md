@@ -492,10 +492,22 @@ Regras comuns:
   (parcial: protótipo sem simulador), AC-8.9 (parcial: OBS real e runner falso), AC-5.3 (medição).
   Done: **sucesso** = todos os números das ACs. **Plano B** = tomada pela CLI em segundo plano e MCP
   só lendo arquivos. Deps: T-0.11, T-0.13, T-0.15, T-0.22. Implements: S8, ADR-11.
-- [ ] **T-0.34** **SP-14 (baixo) — deriva do relógio.** Rajadas de 32 trocas a cada 10 s por 20 min
+- [x] **T-0.34** **SP-14 (baixo) — deriva do relógio.** Rajadas de 32 trocas a cada 10 s por 20 min
   (como S7); ajuste linear; comparar só-pré, pré+pós e completo. Files: `spikes/SP-14.md`,
   `spikes/sp-14/**`. AC: AC-7.1. Done: resíduo RMS ≤ 1 ms; erro de pré+pós no meio ≤ 2 ms. **Plano B**
   = rajadas durante a tomada obrigatórias. Deps: T-0.19, T-0.22. Implements: S7.
+  *Resultado (2026-10-14, iPhone 12 iPhone13,2, iOS 26.7.1 23H30, Xcode 26.6, build Spike, cabo `wired`; `spikes/SP-14.md`):*
+  critério **atingido** → **principal** (pré + pós bastam; plano B não se aplica; sem G1). Aparelho parado, sem o dono,
+  nada na fila do XCTest (`clock.ping` na `sync`, `health` na `control`: fila 0, destravado). 121/121 rajadas em 20,0 min,
+  3.872 trocas, 0 erros, 0 reaberturas, sem sono. Pré = 1ª rajada, pós = a última, meio = a do minuto 10. **Completo:**
+  resíduo RMS **0,068 ms**, b 7,13 ppm (8,56 ms acumulados em 20 min). **Pré+pós:** erro no meio **0,154 ms** (0,101 contra a
+  reta completa; o maior em qualquer rajada, 0,214 ms), b 7,18 ppm. **Só-pré** (θ constante): 4,47 ms no meio e 8,63 ms no
+  fim (= b·Δt). Completo a cada 20 s ≈ a cada 10 s (resíduo 0,070 ms). Tomadas de 5 e 10 min deslizando pela medição: pior erro de
+  pré+pós no meio 0,105 ms; só-pré até 1,23 e 2,26 ms. b caiu devagar (7,33 → 7,00 ppm em trechos de 5 min; flecha
+  ≈ 0,09 ms); entre sessões mudou mais (retas de referência do SP-4, ~10 min, 1 h antes: 9,54 e 8,40 ppm; metades de 10 min aqui:
+  7,31 e 6,97) → b nunca reaproveitado entre tomadas (a spec já ajusta por tomada). Ressalva: aparelho parado; a carga de
+  uma tomada fica para o SP-6 e para o ajuste visual (a checagem de qualidade de S7 item 2 só a enxerga com rajadas
+  durante a tomada). ≈ 21 min de iPhone, 0 do dono.
 - [ ] **T-0.35** **SP-15 (baixo) — ritmo da guia.** O dono lê as falas das cenas 1, 4 e 8 (calibração)
   e 2, 6 e 10 (verificação), gravando num gravador qualquer, com os WAVs em
   `~/Movies/contrarregra/spikes/SP-15/`, ou com `paths.ffmpeg -f avfoundation` (Microfone liberado,
