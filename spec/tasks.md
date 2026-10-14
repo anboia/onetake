@@ -248,7 +248,7 @@ Regras comuns:
   **plano B** = (1) pontos de controle `who: runner` com `steps` em tudo que não é credencial (avião,
   arrasto de destravar); (2) comparar com a Gravação de Tela do iOS; (3) levar ⏳ Q-9 ao dono com os
   quadros. Deps: T-0.11, T-0.13, T-0.14, T-0.17. Implements: HC-6, S1 item 9, S5 item 6.
-- [ ] **T-0.17** **SP-2 (bloqueador) — sessão do XCTest × modo avião; forçar o cabo.** Ligar o cabo
+- [x] **T-0.17** **SP-2 (bloqueador) — sessão do XCTest × modo avião; forçar o cabo.** Ligar o cabo
   e sondar `devicectl list devices --json-output <arquivo temporário>` a cada 1 s, lendo
   `transportType`/`tunnelState`; se seguir `localNetwork`, o dono, à mão, desliga o Wi-Fi do iPhone
   em Settings por 10 s e religar; medir até `wired` e se continua `wired` por 30 min. Depois: runner
@@ -265,6 +265,19 @@ Regras comuns:
   antes e depois; se falhar também, levar ⏳ Q-12 ao dono num G1 imediato (`requirements.md` §5; nada
   que ponha o runner na tela durante a tomada entra antes dele). Deps: T-0.11. Implements: HC-4, S2,
   ADR-10.
+  *Resultado (2026-10-14, iPhone 12 iPhone13,2, iOS 26.7.1 23H30, Xcode 26.6; `spikes/SP-2.md`):* critério atingido,
+  principal mantido (sem plano B; ⏳ Q-12 sem G1 imediato). Cabo → `wired/connected` em ≤ 2 s (0,98 s e 1,98 s com
+  registro; religar o cabo tira do `localNetwork`; o Wi-Fi em Ajustes não foi preciso). Controle negativo (cabo tirado →
+  sessão em `localNetwork`) + avião: `xcodebuild` morto 10,0 s depois ("The connection was invalidated"); 0 linhas "IDE
+  disconnection" no Console. O **Acesso Pessoal pelo cabo** ("iPhone USB" 172.20.10.2) derrubou a sessão na volta do
+  celular → proposta de item de pré-voo (G1 da T-0.39). Série 1 (o dono liga o avião, Acesso Pessoal desligado): o dono
+  pulou rodadas, só 4 ciclos confirmados — não sustenta 10/10; `wired` em 1.899/1.899 amostras por 31,7 min. **Série 2
+  (o runner liga e desliga o avião pela Central de Controle, build Spike, G5):** 10/10 com `value` 0→1→0 e rede
+  offline/online confirmados, PID 32524 constante, `xcodebuild` vivo, 0 `E_TIMEOUT` em 24.115 `health`, maior intervalo
+  938 ms (979 ms pela definição estrita), fases de toque real a toque real ≥ 73,5 s, 100 % `wired`; a sessão sobreviveu
+  a 20 períodos de avião ligado pelo runner (até ~7,9 min). O runner alterna o avião pela Central (útil ao SP-9/cena 9),
+  mas `ui.tap`/leituras no SpringBoard passam dos 10 s da fila do XCTest (`E_TIMEOUT` rodando = a ação VAI acontecer,
+  até ~2 min depois, com a fila presa; confirmar por `wait.for`/rede) → S1 item 3/S0.3 no G1 da T-0.39.
 - [ ] **T-0.18** **SP-3 (alto) — toques com o app animando.** Pré-condição: PX-2 e PX-3 em
   `runner.privateAllowed` (✅ Q-5b/c). No leitor do Hagah com o Salmo 23 tocando: escolher e registrar
   um botão cujo toque não para o áudio (ex.: "Forward 15 seconds" no Now Playing) e fazer 50 toques
