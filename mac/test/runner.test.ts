@@ -435,6 +435,8 @@ interface Env {
   toolsDir: string;
   tools: RunnerTools;
   configPath: string;
+  /** A pasta do `config.json` (temporária): onde o `runner build` grava a linha de base da assinatura. */
+  configDir: string;
   config: Config;
   usbmuxd: FakeUsbmuxd;
   /** As portas do "aparelho" no usbmuxd falso (sem a 8700 = runner não escuta: `Connect` → 3). */
@@ -562,6 +564,7 @@ async function setup(options: SetupOptions = {}): Promise<Env> {
     toolsDir,
     tools,
     configPath,
+    configDir: root,
     config,
     usbmuxd,
     devicePorts,
@@ -758,7 +761,7 @@ describe('.xctestrun da sessão (S2 item 1, S1 item 9)', () => {
 describe('runner build (S2 item 1, D3.3)', () => {
   test('xcodegen generate + xcodebuild build-for-testing com o time fixo e assinatura automática, saída em arquivo', async () => {
     const env = await setup();
-    const result = await buildRunner(env.config, { tools: env.tools });
+    const result = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     const [gen] = calls(env, 'xcodegen');
     assert.deepEqual(gen!.args, ['generate', '--spec', join(REPO_ROOT, 'ios', 'project.yml')]);
     const [build] = calls(env, 'xcodebuild');
@@ -786,7 +789,7 @@ describe('runner build (S2 item 1, D3.3)', () => {
 
   test('--configuration Spike passa -configuration Spike e devolve o .xctestrun do Spike', async () => {
     const env = await setup();
-    const result = await buildRunner(env.config, { tools: env.tools, configuration: 'Spike' });
+    const result = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir, configuration: 'Spike' });
     const [build] = calls(env, 'xcodebuild');
     const at = build!.args.indexOf('-configuration');
     assert.ok(at > 0 && build!.args[at + 1] === 'Spike');
@@ -796,7 +799,7 @@ describe('runner build (S2 item 1, D3.3)', () => {
   test('xcodegen falhando para antes do xcodebuild, com o caminho do registro', async () => {
     const env = await setup();
     writeFileSync(join(env.toolsDir, 'xcodegen.exit'), '1');
-    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(data['reason'], 'build-failed');
     assert.equal(data['step'], 'xcodegen generate');
     assert.ok(typeof data['log'] === 'string' && existsSync(data['log']));
@@ -829,7 +832,7 @@ describe('runner build: UILaunchScreen e reassinatura do XCTRunner (S2 item 1; P
 
   test('acrescenta UILaunchScreen e reassina só o .app do XCTRunner, com a identidade e os entitlements que o Xcode usou', async () => {
     const env = await setup();
-    const result = await buildRunner(env.config, { tools: env.tools });
+    const result = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     const { app, host, xcent } = productPaths(env);
     assert.equal(count(readFileSync(join(app, 'Info.plist'), 'utf8'), '<key>UILaunchScreen</key>'), 1);
     assert.ok(readFileSync(join(env.toolsDir, 'plist-at-sign'), 'utf8').includes('<key>UILaunchScreen</key>'), 'a chave entrou antes da assinatura');
@@ -860,8 +863,8 @@ describe('runner build: UILaunchScreen e reassinatura do XCTRunner (S2 item 1; P
 
   test('idempotente: com a chave já no plist (build incremental), não a duplica e reassina de novo', async () => {
     const env = await setup();
-    await buildRunner(env.config, { tools: env.tools });
-    const second = await buildRunner(env.config, { tools: env.tools });
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+    const second = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     const { app } = productPaths(env);
     assert.equal(count(readFileSync(join(app, 'Info.plist'), 'utf8'), '<key>UILaunchScreen</key>'), 1);
     assert.equal(addCalls(env).length, 1, 'Add só na primeira vez');
@@ -871,7 +874,7 @@ describe('runner build: UILaunchScreen e reassinatura do XCTRunner (S2 item 1; P
 
   test('--configuration Spike: o .app, o .xcent e o Info.plist são os do Spike', async () => {
     const env = await setup();
-    const result = await buildRunner(env.config, { tools: env.tools, configuration: 'Spike' });
+    const result = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir, configuration: 'Spike' });
     const { app, xcent } = productPaths(env, 'Spike');
     assert.equal(result.resign.app, app);
     assert.deepEqual(signCalls(env)[0]!.args, ['--force', '--sign', LEAF_SHA1, '--entitlements', xcent, '--timestamp=none', '--generate-entitlement-der', app]);
@@ -890,7 +893,7 @@ describe('runner build: UILaunchScreen e reassinatura do XCTRunner (S2 item 1; P
     for (const [label, arrange] of cases) {
       const env = await setup();
       arrange(env);
-      const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+      const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
       assert.equal(data['reason'], 'resign-failed', label);
       assert.ok(typeof data['log'] === 'string' && existsSync(data['log']), `${label}: com o registro`);
       assert.match(message, /reassinatura do XCTRunner/, label);
@@ -910,7 +913,7 @@ describe('runner build: UILaunchScreen e reassinatura do XCTRunner (S2 item 1; P
     for (const [label, arrange, pattern] of cases) {
       const env = await setup();
       arrange(env);
-      const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+      const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
       assert.equal(data['reason'], 'resign-failed', label);
       assert.match(message, pattern, label);
     }
@@ -919,21 +922,23 @@ describe('runner build: UILaunchScreen e reassinatura do XCTRunner (S2 item 1; P
   test('PlistBuddy falhando no Add → o build falha antes de assinar', async () => {
     const env = await setup();
     writeFileSync(join(env.toolsDir, 'add.exit'), '1');
-    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(data['reason'], 'resign-failed');
     assert.equal(signCalls(env).length, 0);
   });
 });
 
 describe('runner build: linha de base da assinatura (P-3; S2 item 1)', () => {
-  const baselinePath = (env: Env): string => join(env.cache, SIGNING_BASELINE_FILE);
+  // Na pasta da configuração da máquina (aqui, a temporária do `config.json`), nunca no `paths.cache`.
+  const baselinePath = (env: Env): string => join(env.configDir, SIGNING_BASELINE_FILE);
+  const legacyPath = (env: Env): string => join(env.cache, SIGNING_BASELINE_FILE);
   const readBaseline = (env: Env): Record<string, unknown> => JSON.parse(readFileSync(baselinePath(env), 'utf8')) as Record<string, unknown>;
   const sha256 = (text: string): string => createHash('sha256').update(text).digest('hex');
   const withNew = identitiesListing([[OTHER_SHA1, 'Apple Development: outra pessoa (9RLNRB8QXR)'], [LEAF_SHA1, IDENTITY], [NEW_SHA1, IDENTITY]]);
 
   test('o primeiro build grava a linha de base: o sha das identidades e o SHA-1 do certificado folha', async () => {
     const env = await setup();
-    await buildRunner(env.config, { tools: env.tools });
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     const baseline = readBaseline(env);
     assert.equal(baseline['schema'], 'contrarregra.signing-baseline/1');
     assert.equal(baseline['identitiesSha256'], sha256(IDENTITIES));
@@ -942,22 +947,104 @@ describe('runner build: linha de base da assinatura (P-3; S2 item 1)', () => {
     assert.equal(baseline['team'], TEAM);
   });
 
+  test('mora na pasta da configuração (0600; pasta criada com 0700 se faltar), não no cache', async () => {
+    const env = await setup();
+    const configDir = join(env.root, 'home', '.config', 'contrarregra');
+    await buildRunner(env.config, { tools: env.tools, configDir });
+    const path = join(configDir, SIGNING_BASELINE_FILE);
+    // gravada duas vezes (identidades antes do xcodebuild, certificado folha depois de conferir), sempre 0600
+    assert.equal((JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>)['leafSha1'], LEAF_SHA1);
+    assert.equal(statSync(path).mode & 0o777, 0o600, 'arquivo 0600');
+    assert.equal(statSync(configDir).mode & 0o777, 0o700, 'pasta criada com 0700');
+    assert.equal(existsSync(legacyPath(env)), false, 'nada no paths.cache');
+  });
+
+  test('pelo CLI, a linha de base vai para a pasta do config.json lido', async () => {
+    const env = await setup();
+    const out: string[] = [];
+    const err: string[] = [];
+    const io = { stdout: (t: string) => void out.push(t), stderr: (t: string) => void err.push(t) };
+    assert.equal(await main(['runner', 'build', '--json'], { config: { configPath: env.configPath }, tools: env.tools, io }), 0, err.join(''));
+    assert.equal(readBaseline(env)['leafSha1'], LEAF_SHA1);
+    assert.equal(existsSync(legacyPath(env)), false);
+  });
+
+  test('migração única: só a do cache existe → é copiada (a mesma) para a pasta da configuração e a antiga fica', async () => {
+    const env = await setup();
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+    const text = readFileSync(baselinePath(env), 'utf8');
+    // como estava antes da mudança: só em paths.cache
+    writeFileSync(legacyPath(env), text);
+    rmSync(baselinePath(env));
+    const result = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+    assert.equal(readFileSync(baselinePath(env), 'utf8'), text, 'o mesmo conteúdo, sem recriar');
+    assert.equal(statSync(baselinePath(env)).mode & 0o777, 0o600);
+    assert.equal(readFileSync(legacyPath(env), 'utf8'), text, 'a antiga não é apagada nem mexida');
+    assert.match(readFileSync(result.log, 'utf8'), /linha de base da assinatura migrada de .*signing-baseline\.json para .*signing-baseline\.json/);
+  });
+
+  test('migração da do cache que diverge do chaveiro → recusa antes do xcodebuild, apontando o caminho novo (e a cópia antiga)', async () => {
+    const env = await setup();
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+    writeFileSync(legacyPath(env), readFileSync(baselinePath(env), 'utf8'));
+    rmSync(baselinePath(env));
+    writeFileSync(join(env.toolsDir, 'identities.txt'), withNew);
+    const builds = calls(env, 'xcodebuild').length;
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
+    assert.equal(data['reason'], 'signing-baseline');
+    assert.equal(data['baseline'], baselinePath(env));
+    assert.equal(data['legacyBaseline'], legacyPath(env));
+    const hint = String(data['hint']);
+    assert.ok(hint.includes(baselinePath(env)) && hint.includes(legacyPath(env)), 'apagar só a nova faria a antiga voltar pela migração');
+    assert.equal(calls(env, 'xcodebuild').length, builds, 'nem chega ao xcodebuild');
+    assert.equal(readBaseline(env)['identitiesSha256'], sha256(IDENTITIES), 'migrada, não recriada do chaveiro atual');
+  });
+
+  test('as duas existem → vale a da pasta da configuração; a do cache é ignorada (mesmo divergente ou ilegível)', async () => {
+    const env = await setup();
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+    const text = readFileSync(baselinePath(env), 'utf8');
+    const stale = { ...(JSON.parse(text) as Record<string, unknown>), identitiesSha256: '0'.repeat(64), identities: [], leafSha1: OTHER_SHA1 };
+    for (const legacy of [`${JSON.stringify(stale, null, 2)}\n`, '{ilegível']) {
+      writeFileSync(legacyPath(env), legacy);
+      await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+      assert.equal(readFileSync(baselinePath(env), 'utf8'), text, 'a nova não muda');
+      assert.equal(readFileSync(legacyPath(env), 'utf8'), legacy, 'a antiga não é tocada');
+    }
+  });
+
+  test('só a do cache, ilegível → recusa (fail-closed) apontando a do cache; nada é criado na pasta da configuração', async () => {
+    const env = await setup();
+    mkdirSync(env.cache, { recursive: true });
+    writeFileSync(legacyPath(env), '{ilegível');
+    const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
+    assert.equal(data['reason'], 'signing-baseline');
+    assert.equal(data['baseline'], legacyPath(env));
+    assert.match(message, /ilegível/);
+    assert.equal(existsSync(baselinePath(env)), false);
+    assert.equal(calls(env, 'xcodebuild').length, 0);
+  });
+
   test('o build nº 1 falha depois de o Xcode criar uma identidade → falha dizendo isso; o nº 2 recusa antes do xcodebuild', async () => {
     const env = await setup();
     writeFileSync(join(env.toolsDir, 'identities.after.txt'), withNew);
     writeFileSync(join(env.toolsDir, 'xcodebuild.adds-identity'), '');
     writeFileSync(join(env.toolsDir, 'build.exit'), '65');
-    const first = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const first = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(first.data['reason'], 'signing-baseline');
     assert.match(first.message, /identidade nova/);
     assert.match(String(first.data['hint']), /G5/);
+    assert.equal(first.data['baseline'], baselinePath(env), 'o erro aponta a linha de base na pasta da configuração');
+    assert.ok(String(first.data['hint']).includes(baselinePath(env)), 'a instrução de G5 cita o caminho novo');
+    assert.ok(!String(first.data['hint']).includes(env.cache), 'e nada no cache');
+    assert.equal(first.data['legacyBaseline'], undefined);
     assert.equal(readBaseline(env)['identitiesSha256'], sha256(IDENTITIES), 'a linha de base é a de antes do build');
     assert.equal(readBaseline(env)['leafSha1'], null);
     assert.equal(calls(env, 'codesign').filter((call) => call.args[0] === '--force').length, 0);
 
     rmSync(join(env.toolsDir, 'build.exit'));
     const builds = calls(env, 'xcodebuild').length;
-    const second = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const second = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(second.data['reason'], 'signing-baseline');
     assert.equal(calls(env, 'xcodebuild').length, builds, 'o nº 2 nem chega ao xcodebuild');
     assert.equal(calls(env, 'codesign').filter((call) => call.args[0] === '--force').length, 0, 'nada reassinado');
@@ -968,7 +1055,7 @@ describe('runner build: linha de base da assinatura (P-3; S2 item 1)', () => {
     writeFileSync(join(env.toolsDir, 'identities.after.txt'), withNew);
     writeFileSync(join(env.toolsDir, 'xcodebuild.adds-identity'), '');
     writeFileSync(join(env.toolsDir, 'codesign.display'), codesignDisplay('Apple Development: outra pessoa (9RLNRB8QXR)'));
-    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(data['reason'], 'signing-baseline');
     assert.equal(data['buildError'] !== undefined, true, 'leva a falha original junto');
   });
@@ -976,7 +1063,7 @@ describe('runner build: linha de base da assinatura (P-3; S2 item 1)', () => {
   test('identidade nova depois da reassinatura → falha; nada fica marcado como conferido', async () => {
     const env = await setup();
     writeFileSync(join(env.toolsDir, 'identities.after.txt'), withNew);
-    const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(data['reason'], 'signing-baseline');
     assert.match(message, /identidade nova/);
     const { data: up } = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
@@ -989,19 +1076,19 @@ describe('runner build: linha de base da assinatura (P-3; S2 item 1)', () => {
     const LEAF2_SHA1 = createHash('sha1').update(LEAF2_CERT).digest('hex').toUpperCase();
     const both = identitiesListing([[LEAF_SHA1, IDENTITY], [LEAF2_SHA1, IDENTITY]]);
     writeFileSync(join(env.toolsDir, 'identities.txt'), both);
-    await buildRunner(env.config, { tools: env.tools });
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     // o Xcode passa a assinar com o outro certificado do mesmo nome (o chaveiro é o mesmo da linha de base)
     writeFileSync(join(env.toolsDir, 'leaf.cer'), LEAF2_CERT);
     rmSync(join(env.toolsDir, 'signed'), { force: true });
     const signs = calls(env, 'codesign').filter((call) => call.args[0] === '--force').length;
-    const leaf = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const leaf = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(leaf.data['reason'], 'signing-baseline');
     assert.match(leaf.message, /certificado/);
     assert.equal(calls(env, 'codesign').filter((call) => call.args[0] === '--force').length, signs, 'nada reassinado');
     // uma identidade a menos no chaveiro: recusa antes do xcodebuild
     writeFileSync(join(env.toolsDir, 'identities.txt'), identitiesListing([[LEAF_SHA1, IDENTITY]]));
     const builds = calls(env, 'xcodebuild').length;
-    const removed = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const removed = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     assert.equal(removed.data['reason'], 'signing-baseline');
     assert.equal(calls(env, 'xcodebuild').length, builds);
   });
@@ -1011,7 +1098,7 @@ describe('runner up só com build conferido (S2 item 1; P-3)', () => {
   test('a reassinatura falhou → runner up recusa (unverified-build) e nada é instalado', async () => {
     const env = await setup();
     writeFileSync(join(env.toolsDir, 'verify.exit'), '1');
-    await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     const { message, data } = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
     assert.equal(data['reason'], 'unverified-build');
     assert.equal(data['hint'], 'contrarregra runner build');
@@ -1021,7 +1108,7 @@ describe('runner up só com build conferido (S2 item 1; P-3)', () => {
 
   test('build conferido → runner up sobe; um build novo que falha, ou um .app mexido depois, invalida a marca', async () => {
     const env = await setup();
-    await buildRunner(env.config, { tools: env.tools });
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     await upRunner(env.config, fast(env));
     await downRunner(env.config, fast(env));
 
@@ -1031,17 +1118,17 @@ describe('runner up só com build conferido (S2 item 1; P-3)', () => {
     assert.equal(tampered.data['reason'], 'unverified-build');
 
     // de novo conferido; depois, um build que falha no xcodebuild apaga a marca
-    await buildRunner(env.config, { tools: env.tools });
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     writeFileSync(join(env.toolsDir, 'build.exit'), '65');
-    await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_RUNNER_DOWN');
     const failed = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
     assert.equal(failed.data['reason'], 'unverified-build');
   });
 
   test('um build Spike depois do Debug: o Debug deixa de valer (o Xcode usa o mesmo nome de .xctestrun)', async () => {
     const env = await setup();
-    await buildRunner(env.config, { tools: env.tools });
-    await buildRunner(env.config, { tools: env.tools, configuration: 'Spike' });
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir, configuration: 'Spike' });
     const { data } = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
     assert.ok(['no-build', 'unverified-build'].includes(String(data['reason'])), String(data['reason']));
     await upRunner(env.config, fast(env, { spike: true }));
@@ -1304,7 +1391,7 @@ describe('runner up (S2 item 1; P-3; S1 item 9)', () => {
     await downRunner(env.config, fast(env));
 
     // O build-for-testing não apaga o .xctestrun de outro SDK: o build devolve o que acabou de gerar.
-    const built = await buildRunner(env.config, { tools: env.tools });
+    const built = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
     assert.equal(built.xctestrun, join(env.products, XCTESTRUN_NAME));
     assert.ok(existsSync(stale));
   });

@@ -31,7 +31,11 @@ function lifecycle(ctx: CommandContext): LifecycleOptions {
 
 /** `runner build [--configuration Spike]`. */
 export function runnerBuild(ctx: CommandContext, args: { configuration?: string } = {}): Promise<BuildResult> {
-  return buildRunner(ctx.config, { ...lifecycle(ctx), ...(args.configuration === undefined ? {} : { configuration: args.configuration }) });
+  return buildRunner(ctx.config, {
+    ...lifecycle(ctx),
+    ...(ctx.configDir === undefined ? {} : { configDir: ctx.configDir }),
+    ...(args.configuration === undefined ? {} : { configuration: args.configuration }),
+  });
 }
 
 /** `runner up [--spike [--bind loopback|endpoint]]`. */

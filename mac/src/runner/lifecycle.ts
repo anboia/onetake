@@ -5,8 +5,9 @@
 //   só esse `.app` com a identidade e o `.xcent` que o Xcode usou, conferindo a assinatura, os entitlements e
 //   que nenhuma identidade nova apareceu no chaveiro (S2 item 1; P-3); devolve o `.xctestrun` gerado da
 //   configuração (`Debug` ou `Spike`). O chaveiro é comparado com uma linha de base persistida
-//   (`paths.cache/signing-baseline.json`: identidades no primeiro build, certificado folha no primeiro build
-//   conferido) antes do xcodebuild e em toda saída depois dele; divergência → falha com instrução de G5. Só um build
+//   (`~/.config/contrarregra/signing-baseline.json`, ao lado do `config.json` e fora do cache, que o macOS apaga:
+//   identidades no primeiro build, certificado folha no primeiro build conferido) antes do xcodebuild e em toda
+//   saída depois dele; divergência → falha com instrução de G5. Só um build
 //   conferido ganha a marca `verified-build-<configuração>.json` (impressão digital do `.xctestrun` e dos dois
 //   `.app`), apagada no começo de todo build; o `up` só aceita build com a marca válida.
 // - up: recusa durante tomada (`E_BUSY`), exige o cabo (`E_NO_USB` em ≤ 1 s), para a sessão viva que
@@ -20,8 +21,8 @@
 //   pede o corte por `sever.json {forS}` + `SIGUSR1`.
 
 import { createHash } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { appendFileSync, chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { isDeepStrictEqual } from 'node:util';
 
@@ -129,6 +130,8 @@ export interface BuildOptions extends LifecycleOptions {
   /** `Debug` (padrão) ou `Spike`. */
   configuration?: string;
   repoRoot?: string;
+  /** A pasta da configuração da máquina, onde mora a linha de base da assinatura (padrão: `~/.config/contrarregra/`). */
+  configDir?: string;
 }
 
 export interface ResignResult {
@@ -169,7 +172,7 @@ export async function buildRunner(config: Config, options: BuildOptions = {}): P
     throw new ContrarregraError('E_CONFIG', `configuração de build desconhecida: ${configuration} (use ${CONFIGURATIONS.join(' ou ')})`, { configuration });
   }
   const tools = resolveTools(options.tools);
-  const paths = runnerPaths(config);
+  const paths = runnerPaths(config, options.configDir);
   const repoRoot = options.repoRoot ?? REPO_ROOT;
   const log = join(paths.logs, `runner-build-${stamp()}-${configuration}.log`);
   const started = performance.now();
@@ -184,7 +187,7 @@ export async function buildRunner(config: Config, options: BuildOptions = {}): P
     logLine(log, `linha de base da assinatura criada em ${signingBaselinePath(paths)} (identidades ${identitiesBefore.sha256})`);
   } else {
     const diff = keychainDiff(baseline, identitiesBefore);
-    if (diff !== undefined) throw signingBaselineError(paths, log, 'before-build', `o chaveiro mudou desde a linha de base: ${describeDiff(diff)}`, diff);
+    if (diff !== undefined) throw signingBaselineError(paths, log, 'before-build', `o chaveiro mudou desde a linha de base: ${describeDiff(diff)}`, { diff });
   }
   // Um build novo (bom ou ruim) mexe nos produtos: nenhuma marca de "conferido" sobrevive a ele.
   invalidateVerifiedBuilds(paths);
@@ -231,7 +234,7 @@ export async function buildRunner(config: Config, options: BuildOptions = {}): P
   const diff = keychainDiff(baseline, identitiesAfter);
   if (diff !== undefined) {
     const buildError = failure === undefined ? undefined : errorSummary(failure);
-    throw signingBaselineError(paths, log, 'after-build', `o chaveiro mudou durante o build: ${describeDiff(diff)}`, diff, buildError);
+    throw signingBaselineError(paths, log, 'after-build', `o chaveiro mudou durante o build: ${describeDiff(diff)}`, { diff, buildError });
   }
   if (failure !== undefined || done === undefined) throw failure;
 
@@ -273,7 +276,16 @@ export interface SigningBaseline {
   updatedAt?: string;
 }
 
+/**
+ * Na pasta da configuração da máquina (`~/.config/contrarregra/signing-baseline.json`), não em `paths.cache`: o
+ * macOS apaga o cache inteiro com disco baixo, e o `runner build` seguinte recriaria a linha de base em silêncio.
+ */
 export function signingBaselinePath(paths: RunnerPaths): string {
+  return join(paths.configDir, SIGNING_BASELINE_FILE);
+}
+
+/** Onde a linha de base morava antes (`paths.cache/signing-baseline.json`): só lida, para a migração única. */
+export function legacySigningBaselinePath(paths: RunnerPaths): string {
   return join(paths.cache, SIGNING_BASELINE_FILE);
 }
 
@@ -282,37 +294,58 @@ function signingBaselineError(
   log: string,
   when: 'before-build' | 'after-build' | 'certificate',
   message: string,
-  diff?: KeychainDiff,
-  buildError?: Record<string, unknown>,
+  extra: { diff?: KeychainDiff; buildError?: Record<string, unknown>; file?: string } = {},
 ): ContrarregraError {
-  const path = signingBaselinePath(paths);
+  const { diff, buildError } = extra;
+  const path = extra.file ?? signingBaselinePath(paths);
+  // A cópia antiga que a migração deixou no cache voltaria (migrada de novo) se o dono apagasse só a nova.
+  const legacy = legacySigningBaselinePath(paths);
+  const stale = path !== legacy && existsSync(legacy) ? legacy : undefined;
+  const remove = stale === undefined ? 'apagar esse arquivo' : `apagar esse arquivo e a cópia antiga em ${stale}`;
   return new ContrarregraError('E_RUNNER_DOWN', `${message}; nada foi reassinado e o build não serve para \`runner up\` — veja ${log}`, {
     reason: 'signing-baseline',
     when,
     baseline: path,
+    ...(stale === undefined ? {} : { legacyBaseline: stale }),
     ...(diff === undefined ? {} : { added: diff.added, removed: diff.removed }),
     ...(buildError === undefined ? {} : { buildError }),
     log,
-    hint: `G5: a assinatura divergiu da linha de base (${path}). Mostre ao dono; só com o sim dele: apagar esse arquivo (G4) e rodar \`contrarregra runner build\` de novo`,
+    hint: `G5: a assinatura divergiu da linha de base (${path}). Mostre ao dono; só com o sim dele: ${remove} (G4) e rodar \`contrarregra runner build\` de novo`,
   });
 }
 
-/** A linha de base gravada; ilegível → falha (fail-closed: não se recria uma linha de base por cima de outra). */
+/**
+ * A linha de base gravada; ilegível → falha (fail-closed: não se recria uma linha de base por cima de outra).
+ * Migração única: sem o arquivo novo e com o antigo em `paths.cache`, o antigo (conferido) é copiado para o
+ * lugar novo, e fica onde está; havendo o novo, o antigo é ignorado.
+ */
 function readSigningBaseline(paths: RunnerPaths, log: string): SigningBaseline | undefined {
   const path = signingBaselinePath(paths);
-  if (!existsSync(path)) return undefined;
+  if (existsSync(path)) return parseSigningBaseline(paths, path, log);
+  const legacy = legacySigningBaselinePath(paths);
+  if (!existsSync(legacy)) return undefined;
+  const baseline = parseSigningBaseline(paths, legacy, log);
+  writeSigningBaseline(paths, baseline);
+  logLine(log, `linha de base da assinatura migrada de ${legacy} para ${path} (a cópia antiga fica onde está, sem uso)`);
+  return baseline;
+}
+
+function parseSigningBaseline(paths: RunnerPaths, file: string, log: string): SigningBaseline {
   try {
-    const doc = JSON.parse(readFileSync(path, 'utf8')) as SigningBaseline;
+    const doc = JSON.parse(readFileSync(file, 'utf8')) as SigningBaseline;
     if (doc.schema === SIGNING_BASELINE_SCHEMA && typeof doc.identitiesSha256 === 'string' && Array.isArray(doc.identities)) return doc;
   } catch {
     // cai no erro abaixo
   }
-  throw signingBaselineError(paths, log, 'before-build', `a linha de base da assinatura em ${path} está ilegível`);
+  throw signingBaselineError(paths, log, 'before-build', `a linha de base da assinatura em ${file} está ilegível`, { file });
 }
 
+/** Arquivo da máquina: 0600, numa pasta criada com 0700 se faltar (a do `config.json` existente não é mexida). */
 function writeSigningBaseline(paths: RunnerPaths, baseline: SigningBaseline): void {
-  mkdirSync(paths.cache, { recursive: true });
-  writeFileSync(signingBaselinePath(paths), `${JSON.stringify(baseline, null, 2)}\n`);
+  const path = signingBaselinePath(paths);
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  writeFileSync(path, `${JSON.stringify(baseline, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(path, 0o600);
 }
 
 function newSigningBaseline(config: Config, identities: Identities): SigningBaseline {

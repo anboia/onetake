@@ -2,9 +2,11 @@
 // (AC-0.5) e, só nos testes, as ferramentas trocadas por falsos. CLI e MCP montam o contexto por aqui e
 // não importam nada abaixo de `commands` (architecture.md A2).
 
+import { dirname } from 'node:path';
+
 import { z } from 'zod';
 
-import { loadConfig, type Config, type LoadConfigOptions } from '../core/config.ts';
+import { defaultConfigPath, loadConfig, type Config, type LoadConfigOptions } from '../core/config.ts';
 import { isContrarregraError } from '../core/errors.ts';
 import { parseOrThrow } from '../core/schema.ts';
 import { RpcProtocolError } from '../runner/rpc.ts';
@@ -15,6 +17,8 @@ export type { LoadConfigOptions } from '../core/config.ts';
 
 export interface CommandContext {
   config: Config;
+  /** A pasta do `config.json` lido (`~/.config/contrarregra/`): arquivos da máquina fora do cache, como a linha de base da assinatura. */
+  configDir?: string;
   /** Caminhos das ferramentas (`xcodebuild`, `xcodegen`, `caffeinate`, `xcrun`); padrão: os do sistema. */
   tools?: Partial<RunnerTools>;
   /** Linhas de andamento para o dono. */
@@ -29,7 +33,7 @@ export interface ContextOptions {
 
 /** Carrega a configuração (`E_CONFIG` sai daqui, antes de qualquer efeito). */
 export function loadContext(options: ContextOptions = {}): CommandContext {
-  const context: CommandContext = { config: loadConfig(options.config) };
+  const context: CommandContext = { config: loadConfig(options.config), configDir: dirname(options.config?.configPath ?? defaultConfigPath()) };
   if (options.tools !== undefined) context.tools = options.tools;
   if (options.onProgress !== undefined) context.onProgress = options.onProgress;
   return context;

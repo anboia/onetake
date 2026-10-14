@@ -135,8 +135,8 @@ recordVideo` e passos `sim: skip|simulate`.
 | Onde | O quê | Dono |
 |---|---|---|
 | repositório | código, `config/defaults.json`, coreografias YAML, spec, notas de spike (`SP-n.md`) | git |
-| `~/.config/contrarregra/config.json` | configuração da máquina (S0.1), sem segredos; o iOS validado fica aqui (`toolchain.validated.ios`), e o `config/defaults.json` traz as outras chaves de `toolchain.validated`: `xcode`, `macos`, `obs`, `obsWebsocket`, `ffmpeg`, `node` | dono |
-| `~/Library/Caches/contrarregra/` | DerivedData do runner, `sessions/*.xctestrun` (0600, apagados no `down`), `locks/<udid>.lock`, `confirmations.json` (confirmações humanas do pré-voo), cache da guia, capturas de exploração (podadas), registros (`logs/`), `signing-baseline.json` e `verified-build-<configuração>.json` (A9), `obs/restart-pending` (A13) | ferramenta |
+| `~/.config/contrarregra/` | `config.json`: configuração da máquina (S0.1), sem segredos; o iOS validado fica aqui (`toolchain.validated.ios`), e o `config/defaults.json` traz as outras chaves de `toolchain.validated`: `xcode`, `macos`, `obs`, `obsWebsocket`, `ffmpeg`, `node`. `signing-baseline.json`: linha de base da assinatura (A9; 0600, pasta criada com 0700 se faltar), aqui e não no cache para não sumir quando o macOS o apaga | dono; o `signing-baseline.json` a ferramenta cria e completa, e só o dono o apaga (G4) |
+| `~/Library/Caches/contrarregra/` | DerivedData do runner, `sessions/*.xctestrun` (0600, apagados no `down`), `locks/<udid>.lock`, `confirmations.json` (confirmações humanas do pré-voo), cache da guia, capturas de exploração (podadas), registros (`logs/`), `verified-build-<configuração>.json` (A9), `obs/restart-pending` (A13) | ferramenta |
 | `~/Movies/contrarregra/<app>/<takeId>/` | pasta da tomada (S0.8) | ferramenta; fora do git |
 | `~/Movies/contrarregra/spikes/SP-n/` | capturas, quadros e gravações de spike | ferramenta; cada gravação apagada logo depois de medida (um G4 por spike, com o dono) |
 | contêiner do `.xctrunner` no iPhone | `Documents/contrarregra/<takeId>/events.ndjson` | runner |
@@ -344,9 +344,12 @@ sem autenticação (contra P-3).
 - Assinatura: `DEVELOPMENT_TEAM=984PNJZ8B9` no `project.yml` e na linha de comando; o build falha se o
   `.xctrunner` não tiver esse `TeamIdentifier` e a identidade `6NKUX5CX7G` (AC-1.14); uma identidade
   nova no chaveiro depois de assinar para tudo (G5). O `runner build` compara o chaveiro com uma
-  linha de base persistida em `paths.cache/signing-baseline.json` (identidades de antes do primeiro
-  build e SHA-1 do certificado folha do primeiro build conferido); divergência → `E_RUNNER_DOWN`
-  (`reason: signing-baseline`) com instrução de G5. Só um build conferido ganha
+  linha de base persistida em `~/.config/contrarregra/signing-baseline.json` (identidades de antes do
+  primeiro build e SHA-1 do certificado folha do primeiro build conferido), fora de `paths.cache`, que o
+  macOS apaga com disco baixo (e o build seguinte recriaria a linha de base em silêncio); a que ficou em
+  `paths.cache/signing-baseline.json` de antes é copiada uma vez para lá se só ela existir, e fica onde
+  está (o G5 cita as duas). Divergência → `E_RUNNER_DOWN` (`reason: signing-baseline`) com instrução
+  de G5. Só um build conferido ganha
   `paths.cache/verified-build-<configuração>.json` (SHA-256 do `.xctestrun` e do `Info.plist` e do
   executável dos dois `.app`), apagado no começo de todo build; o `runner up` só instala build com
   essa marca válida (senão `E_RUNNER_DOWN`, `reason: unverified-build`).
