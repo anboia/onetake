@@ -845,3 +845,108 @@ public final class AllowListStore: @unchecked Sendable {
         set { lock.withLock { value = newValue } }
     }
 }
+
+// MARK: Prova da tela de início limpa (S1 item 11; T-0.11)
+
+/// Qual ícone do SpringBoard prova a "tela de início limpa" e como achá-lo na consulta do XCTest **só por geometria e
+/// tipo**. Medido no aparelho (iPhone 12, 390×844): a ordem do snapshot não é a da consulta `springboard.icons` (o #28
+/// da pré-ordem é o #21 da consulta), os widgets são elementos `.icon` (166×188) e varrer a consulta custa ~0,2 s por
+/// elemento. A descrição de toda consulta do XCTest vai para o registro da sessão (`xcodebuild-<sessão>.log` e o
+/// `.xcresult`), então a consulta **nunca** leva identificador, rótulo ou valor de elemento do SpringBoard (S1 item 11,
+/// P-3) — só o frame e a posição. Então:
+/// - o ícone sondado é o **ícone de app** (até `maxAppIconSize`) visível **inteiro dentro da tela** mais acima e mais
+///   à esquerda (menor y, depois menor x) pelo frame do snapshot — widgets ficam de fora;
+/// - ele precisa ser único no snapshot (nenhum outro ícone a ± `frameTolerance` do mesmo frame);
+/// - na consulta: `matching(frame == <frame do snapshot>)` tem de achar exatamente um elemento, no frame; senão, o
+///   elemento na **posição em largura** do ícone entre os ícones do snapshot (a ordem que a consulta segue), com o
+///   frame conferido. Nunca se varre a consulta: no máximo `maxQueryLookups` buscas por leitura.
+/// Qualquer outra coisa → `notProven`, e quem chama trata como camada (FAIL-CLOSED). O critério da tela limpa não
+/// muda: sem marcador de camada, centro tocável no SpringBoard e esse ícone `isHittable`.
+public enum HomeScreenProbe {
+    /// Tolerância por coordenada (x, y, largura, altura), em pontos, entre o frame do snapshot e o da consulta: os
+    /// dois vêm da mesma árvore, a folga só absorve arredondamento.
+    public static let frameTolerance = 1.0
+    /// Maior ícone de app (com o nome embaixo) que entra na escolha. Medido no iPhone 12: ícones 68×90, widgets
+    /// 166×188. A revisar no SP-10 (outros tamanhos de texto e de ícone, outros aparelhos).
+    public static let maxAppIconSize = Size(w: 100, h: 120)
+    /// Teto de buscas do runner na consulta por leitura da tela: count pelo frame + frame do achado + frame na
+    /// posição em largura + o `isHittable` final.
+    public static let maxQueryLookups = 4
+
+    /// Um elemento `.icon` do snapshot do SpringBoard: só posição, tipo e frame — nada de identificador, rótulo ou
+    /// valor. `index` é a posição entre os ícones na pré-ordem; `breadthIndex`, em largura.
+    public struct Icon: Sendable, Equatable {
+        public var index: Int
+        public var breadthIndex: Int
+        public var type: ElementType
+        public var frame: Rect
+
+        public init(index: Int, breadthIndex: Int, type: ElementType, frame: Rect) {
+            self.index = index
+            self.breadthIndex = breadthIndex
+            self.type = type
+            self.frame = frame
+        }
+    }
+
+    public enum Via: String, Sendable, Equatable {
+        /// `matching(frame == …)` achou exatamente um elemento, no frame.
+        case framePredicate
+        /// O elemento na posição em largura do ícone, no frame.
+        case breadthIndex
+    }
+
+    public enum NotProven: String, Sendable, Equatable {
+        /// Nenhum ícone de app inteiro dentro da tela.
+        case noIcon
+        /// Outro ícone do snapshot no mesmo frame.
+        case ambiguousInSnapshot
+        /// Nem o predicado de frame nem a posição em largura acharam o ícone no frame.
+        case notFound
+    }
+
+    public enum Outcome: Sendable, Equatable {
+        case resolved(icon: Icon, via: Via)
+        case notProven(NotProven)
+    }
+
+    public static func sameFrame(_ a: Rect, _ b: Rect, tolerance: Double = frameTolerance) -> Bool {
+        abs(a.x - b.x) <= tolerance && abs(a.y - b.y) <= tolerance && abs(a.w - b.w) <= tolerance && abs(a.h - b.h) <= tolerance
+    }
+
+    static func fullyOnScreen(_ frame: Rect, _ screen: Size) -> Bool {
+        frame.w > 0 && frame.h > 0 && frame.minX >= 0 && frame.minY >= 0 && frame.maxX <= screen.w && frame.maxY <= screen.h
+    }
+
+    static func appSized(_ frame: Rect) -> Bool {
+        frame.w <= maxAppIconSize.w && frame.h <= maxAppIconSize.h
+    }
+
+    /// O ícone de app inteiro dentro da tela mais acima e mais à esquerda (empate exato: o primeiro da pré-ordem).
+    public static func choose(_ icons: [Icon], screen: Size) -> Icon? {
+        icons.filter { appSized($0.frame) && fullyOnScreen($0.frame, screen) }.min { a, b in
+            if a.frame.y != b.frame.y { return a.frame.y < b.frame.y }
+            if a.frame.x != b.frame.x { return a.frame.x < b.frame.x }
+            return a.index < b.index
+        }
+    }
+
+    /// Escolhe o ícone e o acha na consulta, com no máximo uma chamada de cada:
+    /// - `countWithFrame(f)`: quantos elementos de `springboard.icons` têm `frame == f` (`nil` = o XCTest não aceitou);
+    /// - `frameOfFrameMatch()`: o frame do único achado;
+    /// - `frameAtBreadthIndex(i)`: o frame do i-ésimo elemento de `springboard.icons` (`nil` = não existe).
+    public static func probe(_ icons: [Icon], screen: Size, countWithFrame: (Rect) -> Int?, frameOfFrameMatch: () -> Rect?,
+                             frameAtBreadthIndex: (Int) -> Rect?) -> Outcome {
+        guard let chosen = choose(icons, screen: screen) else { return .notProven(.noIcon) }
+        if icons.contains(where: { $0.index != chosen.index && sameFrame($0.frame, chosen.frame) }) {
+            return .notProven(.ambiguousInSnapshot)
+        }
+        if countWithFrame(chosen.frame) == 1, let frame = frameOfFrameMatch(), sameFrame(frame, chosen.frame) {
+            return .resolved(icon: chosen, via: .framePredicate)
+        }
+        if let frame = frameAtBreadthIndex(chosen.breadthIndex), sameFrame(frame, chosen.frame) {
+            return .resolved(icon: chosen, via: .breadthIndex)
+        }
+        return .notProven(.notFound)
+    }
+}

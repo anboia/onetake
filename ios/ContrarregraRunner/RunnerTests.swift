@@ -17,7 +17,10 @@ final class RunnerTests: XCTestCase {
     private static let serving = Flag()
 
     override func record(_ issue: XCTIssue) {
-        if Self.serving.isOn {
+        if SensitiveQueryScope.isActive {
+            // A descrição de uma falha na sondagem da tela de início traria a consulta ao SpringBoard (S1 item 11).
+            RunnerLog.warn("falha do XCTest registrada e ignorada: E_XCTEST na sondagem da tela de início (detalhe omitido)")
+        } else if Self.serving.isOn {
             RunnerLog.warn("falha do XCTest registrada e ignorada: \(issue.compactDescription)")
         } else {
             super.record(issue)
@@ -154,7 +157,16 @@ private enum RunnerDevice {
             ?? UIApplication.shared.openSessions.compactMap { $0.scene as? UIWindowScene }.first
         let screen = scene?.screen ?? fallbackScreen()
         let traits = scene?.traitCollection ?? screen.traitCollection
+        // `screenPt` = `bounds` da cena do runner. Ele só é a tela real porque o `runner build` acrescenta
+        // `UILaunchScreen` ao Info.plist do XCTRunner e o reassina (S2 item 1): o modelo do Xcode
+        // (Agents/XCTRunner.app) não tem a chave, e sem ela o iOS roda o runner no modo de compatibilidade, em que
+        // `bounds` e também `nativeBounds`/`nativeScale` dão 320×480 pt no iPhone 12 (T-0.11: sem a chave,
+        // bounds=320x480pt native=960x1440px; com ela, bounds=390x844pt native=1170x2532px, ambos @3x).
+        // A linha abaixo registra os dois para conferir a cada subida.
         let size = screen.bounds.size
+        let native = screen.nativeBounds.size
+        RunnerLog.info("tela: bounds=\(Int(size.width))x\(Int(size.height))pt @\(screen.scale)x "
+                       + "native=\(Int(native.width))x\(Int(native.height))px @\(screen.nativeScale)x")
         return DeviceInfo(
             model: machine() ?? UIDevice.current.model,
             os: DeviceTraits.osDescription(version: UIDevice.current.systemVersion, build: sysctlString("kern.osversion")),

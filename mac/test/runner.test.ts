@@ -1,14 +1,16 @@
 // Testes da T-0.10: cliente JSON-RPC e `contrarregra runner build|up|down|status|sever` (S2 itens 1, 3,
 // 6–8; S1 item 9; P-3; AC-0.5). Tudo falso: o usbmuxd de `helpers/usbmuxd.ts` (socket Unix curto via
 // `usbmux.socketPath`), o servidor WebSocket de `helpers/ws-server.ts` no papel do runner, e scripts
-// `xcodebuild`, `xcodegen`, `caffeinate` e `xcrun` num diretório temporário que registram como foram
-// chamados (argumentos, se a entrada/saída é pipe ou arquivo, grupo de processo). Nunca roda o
-// `xcodebuild` de verdade, nunca assina, nunca fala com o iPhone; nenhum `.xctestrun` fica no repositório.
+// `xcodebuild`, `xcodegen`, `caffeinate`, `xcrun`, `codesign`, `PlistBuddy` e `security` num diretório temporário
+// que registram como foram chamados (argumentos, se a entrada/saída é pipe ou arquivo, grupo de processo). Nunca
+// roda o `xcodebuild` de verdade, nunca assina (o `codesign` falso só marca o .app), nunca lê o chaveiro, nunca
+// fala com o iPhone; nenhum `.xctestrun` fica no repositório.
 
 import { after, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
@@ -17,12 +19,22 @@ import { loadConfig, type Config } from '../src/core/config.ts';
 import { ContrarregraError, isContrarregraError } from '../src/core/errors.ts';
 import { parseDevicectlList } from '../src/device/devicectl.ts';
 import { openRunner, withRunner, type RunnerConnection } from '../src/runner/client.ts';
-import { buildRunner, downRunner, percentile, runnerStatus, severRunner, upRunner, type UpOptions } from '../src/runner/lifecycle.ts';
+import {
+  buildRunner,
+  downRunner,
+  percentile,
+  recordVerifiedBuild,
+  runnerStatus,
+  severRunner,
+  SIGNING_BASELINE_FILE,
+  upRunner,
+  type UpOptions,
+} from '../src/runner/lifecycle.ts';
 import { backoffDelays, installSeverHandler, RunnerLink, type LinkState } from '../src/runner/link.ts';
-import { REPO_ROOT } from '../src/runner/paths.ts';
+import { REPO_ROOT, runnerPaths } from '../src/runner/paths.ts';
 import { RpcConnection, RpcProtocolError } from '../src/runner/rpc.ts';
-import type { RunnerTools } from '../src/runner/xcodebuild.ts';
-import { makeSessionXctestrun, parseXctestrun, runnerTarget, xctestrunConfiguration } from '../src/runner/xctestrun.ts';
+import { DEFAULT_TOOLS, type RunnerTools } from '../src/runner/xcodebuild.ts';
+import { findBuiltXctestrun, makeSessionXctestrun, parseXctestrun, runnerTarget, xctestrunConfiguration } from '../src/runner/xctestrun.ts';
 import { decodePlist, isPlistDict, type PlistDict } from '../src/usbmux/plist.ts';
 import { shortTempDir, startFakeUsbmuxd, type FakeEntry, type FakeUsbmuxd } from './helpers/usbmuxd.ts';
 import { startWsServer, type WsTestConnection, type WsTestServer } from './helpers/ws-server.ts';
@@ -36,6 +48,47 @@ const USB_ENTRY: FakeEntry = { deviceId: 3, connectionType: 'USB', serial: UDID 
 const XCTESTRUN_NAME = 'ContrarregraRunner_iphoneos26.5-arm64.xctestrun';
 const NO_USB_BOUND_MS = 1000;
 const TAKE_ID = '20261012-101500-s02';
+
+// Assinatura (P-3; S2 item 1): a identidade e o time esperados, um certificado folha falso (o SHA-1 dele é a
+// "identidade" no chaveiro falso) e os entitlements que o Xcode falso "usou". Hashes falsos, nunca os reais.
+const TEAM = '984PNJZ8B9';
+const IDENTITY = 'Apple Development: Andre Saboia (6NKUX5CX7G)';
+const LEAF_CERT = 'certificado folha falso 6NKUX5CX7G';
+const LEAF_SHA1 = createHash('sha1').update(LEAF_CERT).digest('hex').toUpperCase();
+const OTHER_SHA1 = '1111111111111111111111111111111111111111';
+const NEW_SHA1 = '2222222222222222222222222222222222222222';
+function identitiesListing(entries: readonly [string, string][]): string {
+  const lines = entries.map(([sha1, name], i) => `  ${i + 1}) ${sha1} "${name}"`);
+  return `${lines.join('\n')}\n     ${entries.length} valid identities found\n`;
+}
+const IDENTITIES = identitiesListing([
+  [OTHER_SHA1, 'Apple Development: outra pessoa (9RLNRB8QXR)'],
+  [LEAF_SHA1, IDENTITY],
+]);
+function codesignDisplay(authority = IDENTITY, team = TEAM, identifier = 'app.kifactory.contrarregra.runner.xctrunner'): string {
+  return [
+    `Identifier=${identifier}`,
+    'Format=app bundle with Mach-O universal (arm64)',
+    `Authority=${authority}`,
+    'Authority=Apple Worldwide Developer Relations Certification Authority',
+    'Authority=Apple Root CA',
+    `TeamIdentifier=${team}`,
+    '',
+  ].join('\n');
+}
+function entitlementsXml(appId = `${TEAM}.app.kifactory.contrarregra.runner.xctrunner`): string {
+  return `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>application-identifier</key><string>${appId}</string><key>com.apple.developer.team-identifier</key><string>${TEAM}</string><key>get-task-allow</key><true/><key>keychain-access-groups</key><array><string>${appId}</string></array></dict></plist>`;
+}
+/** O Info.plist que o Xcode copia do modelo do XCTRunner (sem `UILaunchScreen`). */
+const RUNNER_INFO_PLIST = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>app.kifactory.contrarregra.runner.xctrunner</string>
+</dict>
+</plist>
+`;
 
 const FIXTURES = new URL('./fixtures/protocol/', import.meta.url);
 const HELLO_RESULT = (JSON.parse(readFileSync(new URL('RpcResponse.session.hello.json', FIXTURES), 'utf8')) as { result: unknown }).result;
@@ -134,6 +187,20 @@ case "$1" in
     done
     mkdir -p "$dd/Build/Products"
     sed "s/@CONFIG@/$cfg/g" "$dir/template.xctestrun" > "$dd/Build/Products/${XCTESTRUN_NAME}"
+    # os dois .app "assinados pelo Xcode"; o Info.plist do XCTRunner só é copiado do modelo quando falta
+    # (build incremental: o Xcode não o recopia) e o .xcent é o que o Xcode usou na assinatura
+    app="$dd/Build/Products/$cfg-iphoneos/ContrarregraRunner-Runner.app"
+    mkdir -p "$app" "$dd/Build/Products/$cfg-iphoneos/ContrarregraHost.app"
+    [ -f "$app/Info.plist" ] || cp "$dir/runner-info.plist" "$app/Info.plist"
+    [ -f "$app/ContrarregraRunner-Runner" ] || echo "binário do runner" > "$app/ContrarregraRunner-Runner"
+    host="$dd/Build/Products/$cfg-iphoneos/ContrarregraHost.app"
+    [ -f "$host/Info.plist" ] || echo "plist do hospedeiro" > "$host/Info.plist"
+    [ -f "$host/ContrarregraHost" ] || echo "binário do hospedeiro" > "$host/ContrarregraHost"
+    # o "Xcode" cria uma identidade nova no chaveiro durante o build (P-3: o runner build tem de parar)
+    [ -f "$dir/xcodebuild.adds-identity" ] && touch "$dir/keychain.changed"
+    xcent="$dd/Build/Intermediates.noindex/Contrarregra.build/$cfg-iphoneos/ContrarregraRunner.build"
+    mkdir -p "$xcent"
+    cp "$dir/xcent.xml" "$xcent/ContrarregraRunner.xctest.xcent"
     exit "$(cat "$dir/build.exit" 2>/dev/null || echo 0)"
     ;;
   test-without-building)
@@ -165,6 +232,56 @@ out=""; prev=""
 for a in "$@"; do [ "$prev" = --json-output ] && out="$a"; prev="$a"; done
 if [ "$1" = devicectl ] && [ -n "$out" ]; then cp "$dir/devicectl.json" "$out"; exit 0; fi
 exit 1
+`;
+
+const FAKE_CODESIGN = `#!/bin/sh
+# codesign falso (T-0.11): nunca assina de verdade. O .app é sempre o último argumento; depois da "reassinatura"
+# (--force) o .app ganha a marca .resigned e, se existirem, valem as versões *.after das respostas.
+${RECORD}
+last=""; for a in "$@"; do last="$a"; done
+pick() { if [ -f "$last/.resigned" ] && [ -f "$dir/$1.after" ]; then cat "$dir/$1.after"; else cat "$dir/$1"; fi; }
+case "$1" in
+  -d)
+    case "$2" in
+      --verbose=2) echo "Executable=$last/bin" >&2; pick codesign.display >&2; exit 0 ;;
+      --extract-certificates=*) prefix="\${2#--extract-certificates=}"; pick leaf.cer > "\${prefix}0"; echo raiz > "\${prefix}1"; exit 0 ;;
+      --entitlements) echo "Executable=$last/bin" >&2; pick entitlements.xml; exit 0 ;;
+    esac ;;
+  --force)
+    cp "$last/Info.plist" "$dir/plist-at-sign"
+    echo "reassinado" >> "$last/$(basename "$last" .app)"
+    touch "$last/.resigned" "$dir/signed"
+    exit "$(cat "$dir/sign.exit" 2>/dev/null || echo 0)" ;;
+  --verify) exit "$(cat "$dir/verify.exit" 2>/dev/null || echo 0)" ;;
+esac
+exit 64
+`;
+
+const FAKE_PLISTBUDDY = `#!/bin/sh
+# PlistBuddy falso (T-0.11): só Print/Add :UILaunchScreen num plist XML que termina em </dict></plist>
+${RECORD}
+case "$2" in
+  "Print :UILaunchScreen")
+    if grep -q "<key>UILaunchScreen</key>" "$3"; then echo "Dict {"; echo "}"; exit 0; fi
+    echo 'Print: Entry, ":UILaunchScreen", Does Not Exist' >&2; exit 1 ;;
+  "Add :UILaunchScreen dict")
+    [ -f "$dir/add.exit" ] && exit "$(cat "$dir/add.exit")"
+    sed '$d' "$3" | sed '$d' > "$3.tmp"
+    printf '\t<key>UILaunchScreen</key>\n\t<dict/>\n</dict>\n</plist>\n' >> "$3.tmp"
+    mv "$3.tmp" "$3"; exit 0 ;;
+esac
+exit 64
+`;
+
+const FAKE_SECURITY = `#!/bin/sh
+# security falso (T-0.11): só find-identity -v -p codesigning; depois da "reassinatura" ou de o "Xcode" criar uma
+# identidade (keychain.changed), vale identities.after.txt
+${RECORD}
+if [ "$1" = find-identity ]; then
+  if { [ -f "$dir/signed" ] || [ -f "$dir/keychain.changed" ]; } && [ -f "$dir/identities.after.txt" ]; then cat "$dir/identities.after.txt"; else cat "$dir/identities.txt"; fi
+  exit 0
+fi
+exit 64
 `;
 
 function devicectlJson(transportType: string, tunnelState: string): string {
@@ -391,11 +508,23 @@ async function setup(options: SetupOptions = {}): Promise<Env> {
     xcodegen: join(toolsDir, 'xcodegen'),
     caffeinate: join(toolsDir, 'caffeinate'),
     xcrun: join(toolsDir, 'xcrun'),
+    codesign: join(toolsDir, 'codesign'),
+    plistBuddy: join(toolsDir, 'PlistBuddy'),
+    security: join(toolsDir, 'security'),
   };
   writeScript(tools.xcodebuild, FAKE_XCODEBUILD);
   writeScript(tools.xcodegen, FAKE_XCODEGEN);
   writeScript(tools.caffeinate, FAKE_CAFFEINATE);
   writeScript(tools.xcrun, FAKE_XCRUN);
+  writeScript(tools.codesign, FAKE_CODESIGN);
+  writeScript(tools.plistBuddy, FAKE_PLISTBUDDY);
+  writeScript(tools.security, FAKE_SECURITY);
+  writeFileSync(join(toolsDir, 'runner-info.plist'), RUNNER_INFO_PLIST);
+  writeFileSync(join(toolsDir, 'xcent.xml'), entitlementsXml());
+  writeFileSync(join(toolsDir, 'entitlements.xml'), entitlementsXml());
+  writeFileSync(join(toolsDir, 'leaf.cer'), LEAF_CERT);
+  writeFileSync(join(toolsDir, 'codesign.display'), codesignDisplay());
+  writeFileSync(join(toolsDir, 'identities.txt'), IDENTITIES);
   writeFileSync(join(toolsDir, 'template.xctestrun'), generatedXctestrun('@CONFIG@'));
   writeFileSync(join(toolsDir, 'devicectl.json'), devicectlJson('wired', 'connected'));
 
@@ -426,6 +555,7 @@ async function setup(options: SetupOptions = {}): Promise<Env> {
   if (options.built !== undefined) {
     mkdirSync(products, { recursive: true });
     writeFileSync(join(products, XCTESTRUN_NAME), generatedXctestrun(options.built));
+    markVerified(config, products, options.built);
   }
   const env: Env = {
     root,
@@ -445,6 +575,22 @@ async function setup(options: SetupOptions = {}): Promise<Env> {
   };
   envs.push(env);
   return env;
+}
+
+/** Os dois .app de um build (como o `build-for-testing` deixa) e a marca de "conferido" que o `runner build` grava. */
+function markVerified(config: Config, products: string, configuration: string): void {
+  const dir = join(products, `${configuration}-iphoneos`);
+  for (const [app, exe] of [
+    ['ContrarregraRunner-Runner.app', 'ContrarregraRunner-Runner'],
+    ['ContrarregraHost.app', 'ContrarregraHost'],
+  ] as const) {
+    mkdirSync(join(dir, app), { recursive: true });
+    writeFileSync(join(dir, app, 'Info.plist'), RUNNER_INFO_PLIST);
+    writeFileSync(join(dir, app, exe), `binário ${exe}`);
+  }
+  const built = findBuiltXctestrun(products, configuration);
+  assert.ok(built !== undefined, `há .xctestrun ${configuration}`);
+  recordVerifiedBuild(runnerPaths(config), built);
 }
 
 function calls(env: Env, tool: string): Call[] {
@@ -655,6 +801,250 @@ describe('runner build (S2 item 1, D3.3)', () => {
     assert.equal(data['step'], 'xcodegen generate');
     assert.ok(typeof data['log'] === 'string' && existsSync(data['log']));
     assert.equal(calls(env, 'xcodebuild').length, 0);
+  });
+});
+
+describe('runner build: UILaunchScreen e reassinatura do XCTRunner (S2 item 1; P-3)', () => {
+  function productPaths(env: Env, configuration = 'Debug') {
+    const dir = join(env.products, `${configuration}-iphoneos`);
+    return {
+      app: join(dir, 'ContrarregraRunner-Runner.app'),
+      host: join(dir, 'ContrarregraHost.app'),
+      xcent: join(env.cache, 'DerivedData', 'Build', 'Intermediates.noindex', 'Contrarregra.build', `${configuration}-iphoneos`, 'ContrarregraRunner.build', 'ContrarregraRunner.xctest.xcent'),
+    };
+  }
+  const signCalls = (env: Env): Call[] => calls(env, 'codesign').filter((call) => call.args[0] === '--force');
+  const addCalls = (env: Env): Call[] => calls(env, 'PlistBuddy').filter((call) => call.args[1] === 'Add :UILaunchScreen dict');
+  const sha256 = (text: string): string => createHash('sha256').update(text).digest('hex');
+  const count = (text: string, needle: string): number => text.split(needle).length - 1;
+
+  test('os testes nunca usam as ferramentas de verdade (nenhuma assinatura real, nenhum chaveiro)', async () => {
+    const env = await setup();
+    for (const key of ['codesign', 'plistBuddy', 'security', 'xcodebuild'] as const) {
+      assert.ok(env.tools[key].startsWith(env.toolsDir), `${key} falso`);
+      assert.notEqual(env.tools[key], DEFAULT_TOOLS[key]);
+    }
+    assert.deepEqual([DEFAULT_TOOLS.codesign, DEFAULT_TOOLS.plistBuddy, DEFAULT_TOOLS.security], ['/usr/bin/codesign', '/usr/libexec/PlistBuddy', '/usr/bin/security']);
+  });
+
+  test('acrescenta UILaunchScreen e reassina só o .app do XCTRunner, com a identidade e os entitlements que o Xcode usou', async () => {
+    const env = await setup();
+    const result = await buildRunner(env.config, { tools: env.tools });
+    const { app, host, xcent } = productPaths(env);
+    assert.equal(count(readFileSync(join(app, 'Info.plist'), 'utf8'), '<key>UILaunchScreen</key>'), 1);
+    assert.ok(readFileSync(join(env.toolsDir, 'plist-at-sign'), 'utf8').includes('<key>UILaunchScreen</key>'), 'a chave entrou antes da assinatura');
+    const signs = signCalls(env);
+    assert.equal(signs.length, 1, 'uma única reassinatura');
+    assert.deepEqual(signs[0]!.args, ['--force', '--sign', LEAF_SHA1, '--entitlements', xcent, '--timestamp=none', '--generate-entitlement-der', app]);
+    assert.ok(!signs[0]!.args.includes('--deep'), 'nada aninhado é reassinado (frameworks, .xctest)');
+    const verifies = calls(env, 'codesign').filter((call) => call.args[0] === '--verify');
+    assert.deepEqual(
+      verifies.map((call) => call.args),
+      [
+        ['--verify', '--deep', '--strict', app],
+        ['--verify', '--deep', '--strict', host],
+      ],
+    );
+    assert.equal(calls(env, 'security').length, 2, 'chaveiro lido antes do build e depois da reassinatura');
+    for (const call of calls(env, 'security')) assert.deepEqual(call.args, ['find-identity', '-v', '-p', 'codesigning']);
+    assert.deepEqual(result.resign, {
+      app,
+      launchScreen: 'added',
+      identity: IDENTITY,
+      sha1: LEAF_SHA1,
+      team: TEAM,
+      identitiesSha256: sha256(IDENTITIES),
+    });
+    assert.ok(readFileSync(result.log, 'utf8').includes('UILaunchScreen'), 'a etapa aparece no registro do build');
+  });
+
+  test('idempotente: com a chave já no plist (build incremental), não a duplica e reassina de novo', async () => {
+    const env = await setup();
+    await buildRunner(env.config, { tools: env.tools });
+    const second = await buildRunner(env.config, { tools: env.tools });
+    const { app } = productPaths(env);
+    assert.equal(count(readFileSync(join(app, 'Info.plist'), 'utf8'), '<key>UILaunchScreen</key>'), 1);
+    assert.equal(addCalls(env).length, 1, 'Add só na primeira vez');
+    assert.equal(second.resign.launchScreen, 'present');
+    assert.equal(signCalls(env).length, 2);
+  });
+
+  test('--configuration Spike: o .app, o .xcent e o Info.plist são os do Spike', async () => {
+    const env = await setup();
+    const result = await buildRunner(env.config, { tools: env.tools, configuration: 'Spike' });
+    const { app, xcent } = productPaths(env, 'Spike');
+    assert.equal(result.resign.app, app);
+    assert.deepEqual(signCalls(env)[0]!.args, ['--force', '--sign', LEAF_SHA1, '--entitlements', xcent, '--timestamp=none', '--generate-entitlement-der', app]);
+    assert.ok(readFileSync(join(app, 'Info.plist'), 'utf8').includes('<key>UILaunchScreen</key>'));
+  });
+
+  test('antes de mexer: assinatura do Xcode fora do esperado, certificado fora do chaveiro ou entitlements divergentes → o build falha e nada é reassinado', async () => {
+    const cases: [string, (env: Env) => void][] = [
+      ['outra identidade', (env) => writeFileSync(join(env.toolsDir, 'codesign.display'), codesignDisplay('Apple Development: outra pessoa (9RLNRB8QXR)'))],
+      ['outro time', (env) => writeFileSync(join(env.toolsDir, 'codesign.display'), codesignDisplay(IDENTITY, '59CB45686C'))],
+      ['outro bundle id', (env) => writeFileSync(join(env.toolsDir, 'codesign.display'), codesignDisplay(IDENTITY, TEAM, 'app.kifactory.hagah'))],
+      ['certificado ausente do chaveiro', (env) => writeFileSync(join(env.toolsDir, 'identities.txt'), identitiesListing([[OTHER_SHA1, IDENTITY]]))],
+      ['certificado com outro nome no chaveiro', (env) => writeFileSync(join(env.toolsDir, 'identities.txt'), identitiesListing([[LEAF_SHA1, 'Apple Distribution: outra empresa (V4397KJVXZ)']]))],
+      ['.xcent diferente dos entitlements do .app', (env) => writeFileSync(join(env.toolsDir, 'xcent.xml'), entitlementsXml('984PNJZ8B9.outro.app'))],
+    ];
+    for (const [label, arrange] of cases) {
+      const env = await setup();
+      arrange(env);
+      const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+      assert.equal(data['reason'], 'resign-failed', label);
+      assert.ok(typeof data['log'] === 'string' && existsSync(data['log']), `${label}: com o registro`);
+      assert.match(message, /reassinatura do XCTRunner/, label);
+      assert.equal(signCalls(env).length, 0, `${label}: nada reassinado`);
+      assert.equal(addCalls(env).length, 0, `${label}: o Info.plist não foi tocado`);
+    }
+  });
+
+  test('depois de reassinar: verify falhando, assinatura ou entitlements mudados, ou identidade nova no chaveiro → o build falha', async () => {
+    const cases: [string, (env: Env) => void, RegExp][] = [
+      ['codesign --sign falhou', (env) => writeFileSync(join(env.toolsDir, 'sign.exit'), '1'), /codesign/],
+      ['verify falhou', (env) => writeFileSync(join(env.toolsDir, 'verify.exit'), '1'), /verify/],
+      ['outra identidade depois', (env) => writeFileSync(join(env.toolsDir, 'codesign.display.after'), codesignDisplay('Apple Development: outra pessoa (9RLNRB8QXR)')), /identidade|Authority/],
+      ['outro certificado depois', (env) => writeFileSync(join(env.toolsDir, 'leaf.cer.after'), 'outro certificado'), /certificado/],
+      ['entitlements mudados', (env) => writeFileSync(join(env.toolsDir, 'entitlements.xml.after'), entitlementsXml('984PNJZ8B9.outro.app')), /entitlements/],
+    ];
+    for (const [label, arrange, pattern] of cases) {
+      const env = await setup();
+      arrange(env);
+      const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+      assert.equal(data['reason'], 'resign-failed', label);
+      assert.match(message, pattern, label);
+    }
+  });
+
+  test('PlistBuddy falhando no Add → o build falha antes de assinar', async () => {
+    const env = await setup();
+    writeFileSync(join(env.toolsDir, 'add.exit'), '1');
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    assert.equal(data['reason'], 'resign-failed');
+    assert.equal(signCalls(env).length, 0);
+  });
+});
+
+describe('runner build: linha de base da assinatura (P-3; S2 item 1)', () => {
+  const baselinePath = (env: Env): string => join(env.cache, SIGNING_BASELINE_FILE);
+  const readBaseline = (env: Env): Record<string, unknown> => JSON.parse(readFileSync(baselinePath(env), 'utf8')) as Record<string, unknown>;
+  const sha256 = (text: string): string => createHash('sha256').update(text).digest('hex');
+  const withNew = identitiesListing([[OTHER_SHA1, 'Apple Development: outra pessoa (9RLNRB8QXR)'], [LEAF_SHA1, IDENTITY], [NEW_SHA1, IDENTITY]]);
+
+  test('o primeiro build grava a linha de base: o sha das identidades e o SHA-1 do certificado folha', async () => {
+    const env = await setup();
+    await buildRunner(env.config, { tools: env.tools });
+    const baseline = readBaseline(env);
+    assert.equal(baseline['schema'], 'contrarregra.signing-baseline/1');
+    assert.equal(baseline['identitiesSha256'], sha256(IDENTITIES));
+    assert.equal(baseline['leafSha1'], LEAF_SHA1);
+    assert.equal(baseline['identity'], IDENTITY);
+    assert.equal(baseline['team'], TEAM);
+  });
+
+  test('o build nº 1 falha depois de o Xcode criar uma identidade → falha dizendo isso; o nº 2 recusa antes do xcodebuild', async () => {
+    const env = await setup();
+    writeFileSync(join(env.toolsDir, 'identities.after.txt'), withNew);
+    writeFileSync(join(env.toolsDir, 'xcodebuild.adds-identity'), '');
+    writeFileSync(join(env.toolsDir, 'build.exit'), '65');
+    const first = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    assert.equal(first.data['reason'], 'signing-baseline');
+    assert.match(first.message, /identidade nova/);
+    assert.match(String(first.data['hint']), /G5/);
+    assert.equal(readBaseline(env)['identitiesSha256'], sha256(IDENTITIES), 'a linha de base é a de antes do build');
+    assert.equal(readBaseline(env)['leafSha1'], null);
+    assert.equal(calls(env, 'codesign').filter((call) => call.args[0] === '--force').length, 0);
+
+    rmSync(join(env.toolsDir, 'build.exit'));
+    const builds = calls(env, 'xcodebuild').length;
+    const second = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    assert.equal(second.data['reason'], 'signing-baseline');
+    assert.equal(calls(env, 'xcodebuild').length, builds, 'o nº 2 nem chega ao xcodebuild');
+    assert.equal(calls(env, 'codesign').filter((call) => call.args[0] === '--force').length, 0, 'nada reassinado');
+  });
+
+  test('uma falha da reassinatura (certificado fora do chaveiro) com uma identidade nova → vale a divergência do chaveiro', async () => {
+    const env = await setup();
+    writeFileSync(join(env.toolsDir, 'identities.after.txt'), withNew);
+    writeFileSync(join(env.toolsDir, 'xcodebuild.adds-identity'), '');
+    writeFileSync(join(env.toolsDir, 'codesign.display'), codesignDisplay('Apple Development: outra pessoa (9RLNRB8QXR)'));
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    assert.equal(data['reason'], 'signing-baseline');
+    assert.equal(data['buildError'] !== undefined, true, 'leva a falha original junto');
+  });
+
+  test('identidade nova depois da reassinatura → falha; nada fica marcado como conferido', async () => {
+    const env = await setup();
+    writeFileSync(join(env.toolsDir, 'identities.after.txt'), withNew);
+    const { message, data } = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    assert.equal(data['reason'], 'signing-baseline');
+    assert.match(message, /identidade nova/);
+    const { data: up } = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
+    assert.equal(up['reason'], 'unverified-build');
+  });
+
+  test('com a linha de base: identidade sumida também é divergência; certificado folha diferente do da linha de base → recusa sem reassinar', async () => {
+    const env = await setup();
+    const LEAF2_CERT = 'outro certificado folha 6NKUX5CX7G';
+    const LEAF2_SHA1 = createHash('sha1').update(LEAF2_CERT).digest('hex').toUpperCase();
+    const both = identitiesListing([[LEAF_SHA1, IDENTITY], [LEAF2_SHA1, IDENTITY]]);
+    writeFileSync(join(env.toolsDir, 'identities.txt'), both);
+    await buildRunner(env.config, { tools: env.tools });
+    // o Xcode passa a assinar com o outro certificado do mesmo nome (o chaveiro é o mesmo da linha de base)
+    writeFileSync(join(env.toolsDir, 'leaf.cer'), LEAF2_CERT);
+    rmSync(join(env.toolsDir, 'signed'), { force: true });
+    const signs = calls(env, 'codesign').filter((call) => call.args[0] === '--force').length;
+    const leaf = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    assert.equal(leaf.data['reason'], 'signing-baseline');
+    assert.match(leaf.message, /certificado/);
+    assert.equal(calls(env, 'codesign').filter((call) => call.args[0] === '--force').length, signs, 'nada reassinado');
+    // uma identidade a menos no chaveiro: recusa antes do xcodebuild
+    writeFileSync(join(env.toolsDir, 'identities.txt'), identitiesListing([[LEAF_SHA1, IDENTITY]]));
+    const builds = calls(env, 'xcodebuild').length;
+    const removed = await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    assert.equal(removed.data['reason'], 'signing-baseline');
+    assert.equal(calls(env, 'xcodebuild').length, builds);
+  });
+});
+
+describe('runner up só com build conferido (S2 item 1; P-3)', () => {
+  test('a reassinatura falhou → runner up recusa (unverified-build) e nada é instalado', async () => {
+    const env = await setup();
+    writeFileSync(join(env.toolsDir, 'verify.exit'), '1');
+    await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const { message, data } = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
+    assert.equal(data['reason'], 'unverified-build');
+    assert.equal(data['hint'], 'contrarregra runner build');
+    assert.match(message, /runner build/);
+    assert.equal(serveCalls(env).length, 0, 'nenhum xcodebuild test-without-building');
+  });
+
+  test('build conferido → runner up sobe; um build novo que falha, ou um .app mexido depois, invalida a marca', async () => {
+    const env = await setup();
+    await buildRunner(env.config, { tools: env.tools });
+    await upRunner(env.config, fast(env));
+    await downRunner(env.config, fast(env));
+
+    // um .app mexido depois do build
+    appendFileSync(join(env.products, 'Debug-iphoneos', 'ContrarregraRunner-Runner.app', 'ContrarregraRunner-Runner'), 'mexido');
+    const tampered = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
+    assert.equal(tampered.data['reason'], 'unverified-build');
+
+    // de novo conferido; depois, um build que falha no xcodebuild apaga a marca
+    await buildRunner(env.config, { tools: env.tools });
+    writeFileSync(join(env.toolsDir, 'build.exit'), '65');
+    await rejectsWith(buildRunner(env.config, { tools: env.tools }), 'E_RUNNER_DOWN');
+    const failed = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
+    assert.equal(failed.data['reason'], 'unverified-build');
+  });
+
+  test('um build Spike depois do Debug: o Debug deixa de valer (o Xcode usa o mesmo nome de .xctestrun)', async () => {
+    const env = await setup();
+    await buildRunner(env.config, { tools: env.tools });
+    await buildRunner(env.config, { tools: env.tools, configuration: 'Spike' });
+    const { data } = await rejectsWith(upRunner(env.config, fast(env)), 'E_RUNNER_DOWN');
+    assert.ok(['no-build', 'unverified-build'].includes(String(data['reason'])), String(data['reason']));
+    await upRunner(env.config, fast(env, { spike: true }));
   });
 });
 
@@ -908,6 +1298,7 @@ describe('runner up (S2 item 1; P-3; S1 item 9)', () => {
     const hourAgo = new Date(Date.now() - 3_600_000);
     utimesSync(stale, hourAgo, hourAgo);
     writeFileSync(join(env.products, XCTESTRUN_NAME), generatedXctestrun('Debug', 'sdk-26.5'));
+    markVerified(env.config, env.products, 'Debug');
     const up = await upRunner(env.config, fast(env));
     assert.equal(sessionVars(sessionDoc(up.xctestrun))['SDK_MARKER'], 'sdk-26.5');
     await downRunner(env.config, fast(env));

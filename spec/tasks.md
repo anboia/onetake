@@ -169,7 +169,7 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   `PreferredScreenCaptureFormat = screenshots`; `-collect-test-diagnostics never` no `xcodebuild`,
   S1 item 9), sessões velhas são apagadas, `runner down` o apaga, o `xcodebuild` nunca recebe pipes.
   Deps: T-0.4, T-0.9. Implements: S2 itens 1, 3, 6–8.
-- [ ] **T-0.11** Transporte no aparelho: **G5 antes da primeira instalação do runner e do
+- [x] **T-0.11** Transporte no aparelho: **G5 antes da primeira instalação do runner e do
   hospedeiro**; o primeiro passo é uma sonda de alcance (`runner up`, um `Connect` e
   `session.hello`): se o `Connect` for recusado com o runner vivo, repetir com o build `Spike` nas duas
   formas de `CONTRARREGRA_BIND` (G5 para instalá-lo); recusado nas duas, a tarefa para e vale o plano B
@@ -179,6 +179,13 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   AC-1.2, AC-1.12, AC-1.13, AC-2.3 (parte: `runner up`/`runner status` sem cabo), AC-2.5, AC-2.7,
   AC-2.9. Done: a sonda passa; `runner up` → `status: up` e as ACs passam; `runner down` apaga o
   `.xctestrun`. Deps: T-0.8, T-0.10. Implements: S2.
+  *Resultado (2026-10-13, iPhone 12 iPhone13,2, iOS 26.7.1 23H30, no cabo):* primeira instalação (G5).
+  Loopback alcançável pelo usbmuxd (Connect 22,5 ms) → ⏳ Q-13 dispensável; SerialNumber cru
+  `00008101-001E79203A68001E`. AC-1.1 390×844 @3 (depois do G1 5161b4e: o `runner build` acrescenta
+  `UILaunchScreen` ao XCTRunner e o reassina com a mesma identidade, contra uma linha de base persistida; o
+  `runner up` só instala build conferido). AC-1.2, AC-1.13, AC-2.3 (sem cabo, ≤ 157 ms), AC-2.5 (23,9 ms),
+  AC-2.7 (6,7–23,6 s), AC-2.9 OK. AC-1.12 OK nas duas páginas da tela de início (30/30, health p95 ≤ 1,84 ms).
+  Prova da tela de início limpa só por geometria (sem identificador na consulta); recusas mantidas.
 - [x] **T-0.12** Mac: cliente obs-websocket próprio (Hello/Identify, autenticação, prazo por pedido,
   rejeitar pendentes ao fechar, guarda do perfil antes de escrever, `GetVersion`, `GetRecordStatus`,
   `StartRecord`/`StopRecord`, `CreateRecordChapter`, `GetStats`, `GetOutputStatus`,

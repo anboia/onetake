@@ -667,3 +667,139 @@ extension AllowList {
         try checkElementAction(action, app: app, node: node, point: point, display: TreeFixtures.screen, screen: screen)
     }
 }
+
+/// Prova da "tela de início limpa" (S1 item 11; T-0.11): o ícone sondado é o **ícone de app** (≤ 100×120 pt) visível
+/// inteiro na tela mais acima e mais à esquerda pelo frame do snapshot; na consulta `springboard.icons`, só geometria e
+/// tipo: primeiro `matching(frame == <frame>)` (exatamente um elemento, no frame), depois o elemento na posição do
+/// ícone em largura (a ordem da consulta), com o frame conferido. Nunca identificador, rótulo ou valor (a descrição da
+/// consulta vai para o registro do XCTest). Sem isso → não provado (o runner trata como camada: FAIL-CLOSED).
+final class HomeScreenProbeTests: XCTestCase {
+    typealias Icon = HomeScreenProbe.Icon
+    let screen = Size(w: 390, h: 844)
+
+    func icon(_ index: Int, _ x: Double, _ y: Double, _ w: Double = 68, _ h: Double = 90, breadth: Int? = nil) -> Icon {
+        Icon(index: index, breadthIndex: breadth ?? index, type: .icon, frame: Rect(x: x, y: y, w: w, h: h))
+    }
+
+    /// As duas páginas vistas no aparelho: (1) widgets de Clima e Calendário no topo, apps a partir de y = 261;
+    /// (2) uma fileira de apps no topo. As duas com o Dock (ícones sem nome, 68×68) e um ícone da página seguinte
+    /// entrando pela direita.
+    var widgetsOnTop: [Icon] {
+        [
+            icon(0, 25, 750, 68, 68), icon(1, 22, 65, 166, 188), icon(2, 202, 65, 166, 188),  // Dock, widgets
+            icon(3, 26, 261), icon(4, 116, 261), icon(5, 206, 261), icon(6, 297, 261),       // apps
+            icon(7, 417, 261),                                                                // página seguinte
+        ]
+    }
+    var appsOnTop: [Icon] {
+        [
+            icon(0, 25, 750, 68, 68), icon(1, 116, 750, 68, 68),                              // Dock
+            icon(28, 25, 65, breadth: 21), icon(29, 116, 65), icon(38, 206, 65), icon(39, 297, 65),
+            icon(40, 20, 470, 170, 170),                                                      // widget embaixo
+            icon(41, 380, 175),                                                               // página seguinte
+        ]
+    }
+    let appOnWidgetPage = Rect(x: 26, y: 261, w: 68, h: 90)
+    let appOnAppsPage = Rect(x: 25, y: 65, w: 68, h: 90)
+
+    /// As buscas que o runner faria na consulta, contadas. `byFrame` = quantos elementos `frame == f` acha (nil =
+    /// predicado não aceito); `matchFrame` = o frame do elemento achado; `byBreadth` = frames por posição na consulta.
+    final class FakeQuery {
+        var byFrame: [(Rect, Int)]?
+        var matchFrame: Rect?
+        var byBreadth: [Int: Rect]
+        var calls: [String] = []
+        init(byFrame: [(Rect, Int)]? = [], matchFrame: Rect? = nil, byBreadth: [Int: Rect] = [:]) {
+            self.byFrame = byFrame
+            self.matchFrame = matchFrame
+            self.byBreadth = byBreadth
+        }
+        func count(_ frame: Rect) -> Int? {
+            calls.append("count")
+            guard let byFrame else { return nil }
+            return byFrame.first { $0.0 == frame }?.1 ?? 0
+        }
+        func frameOfMatch() -> Rect? {
+            calls.append("matchFrame")
+            return matchFrame
+        }
+        func frameAt(_ index: Int) -> Rect? {
+            calls.append("breadth \(index)")
+            return byBreadth[index]
+        }
+    }
+
+    func probe(_ icons: [Icon], _ query: FakeQuery) -> HomeScreenProbe.Outcome {
+        HomeScreenProbe.probe(icons, screen: screen, countWithFrame: query.count, frameOfFrameMatch: query.frameOfMatch,
+                              frameAtBreadthIndex: query.frameAt)
+    }
+
+    func testTheIconCarriesOnlyGeometryAndType() {
+        let labels = Mirror(reflecting: icon(0, 25, 65)).children.compactMap(\.label)
+        XCTAssertEqual(Set(labels), ["index", "breadthIndex", "type", "frame"], "nada de identificador, rótulo ou valor")
+    }
+
+    func testOnlyAppSizedIconsCountAndTheTopLeftWins() {
+        XCTAssertEqual(HomeScreenProbe.choose(widgetsOnTop, screen: screen)?.index, 3, "widgets no topo ficam de fora")
+        XCTAssertEqual(HomeScreenProbe.choose(appsOnTop, screen: screen)?.index, 28)
+        XCTAssertEqual(HomeScreenProbe.choose(appsOnTop.reversed(), screen: screen)?.index, 28)
+        XCTAssertEqual(HomeScreenProbe.choose([icon(0, 25, 750, 68, 68), icon(1, 22, 65, 166, 188)], screen: screen)?.index, 0)
+        XCTAssertNil(HomeScreenProbe.choose([icon(1, 22, 65, 166, 188), icon(2, 202, 65, 166, 188)], screen: screen))
+    }
+
+    func testAppIconSizeLimitIsAConstant() {
+        XCTAssertEqual(HomeScreenProbe.maxAppIconSize, Size(w: 100, h: 120))
+        XCTAssertEqual(HomeScreenProbe.choose([icon(0, 25, 65, 100, 120)], screen: screen)?.index, 0)
+        XCTAssertNil(HomeScreenProbe.choose([icon(0, 25, 65, 101, 120)], screen: screen))
+        XCTAssertNil(HomeScreenProbe.choose([icon(0, 25, 65, 100, 121)], screen: screen))
+    }
+
+    func testIconsPartlyOffScreenNeverCount() {
+        XCTAssertNil(HomeScreenProbe.choose([icon(0, 380, 175), icon(1, 417, 65), icon(2, 25, -40)], screen: screen))
+        XCTAssertNil(HomeScreenProbe.choose([], screen: screen))
+    }
+
+    func testResolvesByTheFramePredicateFirst() {
+        let query = FakeQuery(byFrame: [(appOnAppsPage, 1)], matchFrame: appOnAppsPage)
+        XCTAssertEqual(probe(appsOnTop, query), .resolved(icon: icon(28, 25, 65, breadth: 21), via: .framePredicate))
+        XCTAssertEqual(query.calls, ["count", "matchFrame"])
+    }
+
+    func testFallsBackToTheBreadthIndexWhenTheFramePredicateDoesNotFindExactlyOne() {
+        for byFrame in [nil, [], [(appOnAppsPage, 2)]] as [[(Rect, Int)]?] {
+            let query = FakeQuery(byFrame: byFrame, byBreadth: [21: appOnAppsPage, 28: Rect(x: 116, y: 175, w: 68, h: 90)])
+            XCTAssertEqual(probe(appsOnTop, query), .resolved(icon: icon(28, 25, 65, breadth: 21), via: .breadthIndex))
+            XCTAssertEqual(query.calls.last, "breadth 21", "a posição em largura, não a da pré-ordem")
+        }
+        // o predicado acha um, mas noutro lugar: também cai para a posição em largura
+        let elsewhere = FakeQuery(byFrame: [(appOnWidgetPage, 1)], matchFrame: Rect(x: 0, y: 0, w: 0, h: 0), byBreadth: [3: appOnWidgetPage])
+        XCTAssertEqual(probe(widgetsOnTop, elsewhere), .resolved(icon: icon(3, 26, 261), via: .breadthIndex))
+    }
+
+    func testWithoutEitherPathItIsNotProvenAndNoSnapshotDoubtIsQueried() {
+        XCTAssertEqual(probe(widgetsOnTop, FakeQuery(byBreadth: [3: Rect(x: 116, y: 261, w: 68, h: 90)])), .notProven(.notFound))
+        XCTAssertEqual(probe(widgetsOnTop, FakeQuery(byFrame: nil)), .notProven(.notFound))
+        let doubled = FakeQuery(byFrame: [(appOnAppsPage, 1)], matchFrame: appOnAppsPage)
+        XCTAssertEqual(probe([icon(0, 25, 65), icon(1, 25.4, 65.3)], doubled), .notProven(.ambiguousInSnapshot))
+        XCTAssertEqual(doubled.calls, [])
+        let none = FakeQuery()
+        XCTAssertEqual(probe([icon(1, 22, 65, 166, 188)], none), .notProven(.noIcon))
+        XCTAssertEqual(none.calls, [])
+    }
+
+    func testAtMostThreeLookupsBeforeTheHittableCheck() {
+        XCTAssertEqual(HomeScreenProbe.maxQueryLookups, 4, "count + frame + posição em largura + o isHittable final")
+        for query in [FakeQuery(), FakeQuery(byFrame: nil), FakeQuery(byFrame: [(appOnWidgetPage, 1)], matchFrame: appOnWidgetPage),
+                      FakeQuery(byFrame: [(appOnWidgetPage, 1)], matchFrame: appOnAppsPage, byBreadth: [3: appOnWidgetPage])] {
+            _ = probe(widgetsOnTop, query)
+            XCTAssertLessThanOrEqual(query.calls.count, HomeScreenProbe.maxQueryLookups - 1)
+        }
+    }
+
+    func testFrameToleranceIsSmall() {
+        XCTAssertEqual(HomeScreenProbe.frameTolerance, 1)
+        XCTAssertTrue(HomeScreenProbe.sameFrame(appOnAppsPage, Rect(x: 25.9, y: 64.2, w: 68.5, h: 89.1)))
+        XCTAssertFalse(HomeScreenProbe.sameFrame(appOnAppsPage, Rect(x: 27, y: 65, w: 68, h: 90)))
+        XCTAssertFalse(HomeScreenProbe.sameFrame(appOnAppsPage, Rect(x: 25, y: 65, w: 70, h: 90)))
+    }
+}
