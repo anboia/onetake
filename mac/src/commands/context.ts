@@ -18,7 +18,7 @@ export type { LoadConfigOptions } from '../core/config.ts';
 export interface CommandContext {
   config: Config;
   /** A pasta do `config.json` lido (`~/.config/contrarregra/`): arquivos da máquina fora do cache, como a linha de base da assinatura. */
-  configDir?: string;
+  configDir: string;
   /** Caminhos das ferramentas (`xcodebuild`, `xcodegen`, `caffeinate`, `xcrun`); padrão: os do sistema. */
   tools?: Partial<RunnerTools>;
   /** Linhas de andamento para o dono. */

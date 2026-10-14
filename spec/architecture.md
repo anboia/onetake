@@ -347,9 +347,9 @@ sem autenticação (contra P-3).
   linha de base persistida em `~/.config/contrarregra/signing-baseline.json` (identidades de antes do
   primeiro build e SHA-1 do certificado folha do primeiro build conferido), fora de `paths.cache`, que o
   macOS apaga com disco baixo (e o build seguinte recriaria a linha de base em silêncio); a que ficou em
-  `paths.cache/signing-baseline.json` de antes é copiada uma vez para lá se só ela existir, e fica onde
-  está (o G5 cita as duas). Divergência → `E_RUNNER_DOWN` (`reason: signing-baseline`) com instrução
-  de G5. Só um build conferido ganha
+  `paths.cache/signing-baseline.json` de antes é copiada para lá sempre que só ela existir, e fica onde
+  está (por isso o G5 cita as duas). Divergência → `E_RUNNER_DOWN` (`reason: signing-baseline`) com
+  instrução de G5. Só um build conferido ganha
   `paths.cache/verified-build-<configuração>.json` (SHA-256 do `.xctestrun` e do `Info.plist` e do
   executável dos dois `.app`), apagado no começo de todo build; o `runner up` só instala build com
   essa marca válida (senão `E_RUNNER_DOWN`, `reason: unverified-build`).

@@ -33,7 +33,7 @@ function lifecycle(ctx: CommandContext): LifecycleOptions {
 export function runnerBuild(ctx: CommandContext, args: { configuration?: string } = {}): Promise<BuildResult> {
   return buildRunner(ctx.config, {
     ...lifecycle(ctx),
-    ...(ctx.configDir === undefined ? {} : { configDir: ctx.configDir }),
+    configDir: ctx.configDir,
     ...(args.configuration === undefined ? {} : { configuration: args.configuration }),
   });
 }

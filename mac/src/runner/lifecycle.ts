@@ -130,8 +130,11 @@ export interface BuildOptions extends LifecycleOptions {
   /** `Debug` (padrão) ou `Spike`. */
   configuration?: string;
   repoRoot?: string;
-  /** A pasta da configuração da máquina, onde mora a linha de base da assinatura (padrão: `~/.config/contrarregra/`). */
-  configDir?: string;
+  /**
+   * A pasta da configuração da máquina (a do `config.json` lido; `~/.config/contrarregra/`), onde mora a linha de
+   * base da assinatura. Obrigatória e sem padrão: esquecê-la é erro de tipo, não uma gravação no `~/.config` real.
+   */
+  configDir: string;
 }
 
 export interface ResignResult {
@@ -166,13 +169,14 @@ function buildFailed(step: string, result: RunResult, log: string): Contrarregra
   });
 }
 
-export async function buildRunner(config: Config, options: BuildOptions = {}): Promise<BuildResult> {
+export async function buildRunner(config: Config, options: BuildOptions): Promise<BuildResult> {
   const configuration = options.configuration ?? DEFAULT_CONFIGURATION;
   if (!(CONFIGURATIONS as readonly string[]).includes(configuration)) {
     throw new ContrarregraError('E_CONFIG', `configuração de build desconhecida: ${configuration} (use ${CONFIGURATIONS.join(' ou ')})`, { configuration });
   }
   const tools = resolveTools(options.tools);
-  const paths = runnerPaths(config, options.configDir);
+  const paths = runnerPaths(config);
+  const files = signingBaselineFiles(options.configDir, paths);
   const repoRoot = options.repoRoot ?? REPO_ROOT;
   const log = join(paths.logs, `runner-build-${stamp()}-${configuration}.log`);
   const started = performance.now();
@@ -180,14 +184,14 @@ export async function buildRunner(config: Config, options: BuildOptions = {}): P
   // O chaveiro antes de tudo, contra a linha de base (P-3): no primeiro build ela nasce daqui; nos seguintes,
   // qualquer divergência para antes do xcodebuild.
   const identitiesBefore = await readIdentities(tools, log);
-  let baseline = readSigningBaseline(paths, log);
+  let baseline = readSigningBaseline(files, log);
   if (baseline === undefined) {
     baseline = newSigningBaseline(config, identitiesBefore);
-    writeSigningBaseline(paths, baseline);
-    logLine(log, `linha de base da assinatura criada em ${signingBaselinePath(paths)} (identidades ${identitiesBefore.sha256})`);
+    writeSigningBaseline(files, baseline);
+    logLine(log, `linha de base da assinatura criada em ${files.file} (identidades ${identitiesBefore.sha256})`);
   } else {
     const diff = keychainDiff(baseline, identitiesBefore);
-    if (diff !== undefined) throw signingBaselineError(paths, log, 'before-build', `o chaveiro mudou desde a linha de base: ${describeDiff(diff)}`, { diff });
+    if (diff !== undefined) throw signingBaselineError(files, log, 'before-build', `o chaveiro mudou desde a linha de base: ${describeDiff(diff)}`, { diff });
   }
   // Um build novo (bom ou ruim) mexe nos produtos: nenhuma marca de "conferido" sobrevive a ele.
   invalidateVerifiedBuilds(paths);
@@ -224,7 +228,7 @@ export async function buildRunner(config: Config, options: BuildOptions = {}): P
       });
     }
     options.onProgress?.(`runner build: ${LAUNCH_SCREEN_KEY} no XCTRunner e reassinatura com a identidade do Xcode`);
-    const resign = await resignXctrunner(config, { tools, paths, built: xctestrun, configuration, log, identitiesBefore, baseline });
+    const resign = await resignXctrunner(config, { tools, paths, built: xctestrun, configuration, log, identitiesBefore, baseline, files });
     done = { xctestrun, resign };
   } catch (error) {
     failure = error;
@@ -234,13 +238,13 @@ export async function buildRunner(config: Config, options: BuildOptions = {}): P
   const diff = keychainDiff(baseline, identitiesAfter);
   if (diff !== undefined) {
     const buildError = failure === undefined ? undefined : errorSummary(failure);
-    throw signingBaselineError(paths, log, 'after-build', `o chaveiro mudou durante o build: ${describeDiff(diff)}`, { diff, buildError });
+    throw signingBaselineError(files, log, 'after-build', `o chaveiro mudou durante o build: ${describeDiff(diff)}`, { diff, buildError });
   }
   if (failure !== undefined || done === undefined) throw failure;
 
   if (baseline.leafSha1 === null) {
     baseline = { ...baseline, leafSha1: done.resign.sha1, updatedAt: new Date().toISOString() };
-    writeSigningBaseline(paths, baseline);
+    writeSigningBaseline(files, baseline);
     logLine(log, `linha de base da assinatura: certificado folha ${done.resign.sha1}`);
   }
   recordVerifiedBuild(paths, done.xctestrun);
@@ -277,30 +281,30 @@ export interface SigningBaseline {
 }
 
 /**
- * Na pasta da configuração da máquina (`~/.config/contrarregra/signing-baseline.json`), não em `paths.cache`: o
- * macOS apaga o cache inteiro com disco baixo, e o `runner build` seguinte recriaria a linha de base em silêncio.
+ * Onde a linha de base mora (`file`: na pasta da configuração da máquina, `~/.config/contrarregra/signing-baseline.json`)
+ * e onde morava antes (`legacy`: `paths.cache/signing-baseline.json`, só lida para a migração). Fora do cache porque
+ * o macOS o apaga inteiro com disco baixo, e o `runner build` seguinte recriaria a linha de base em silêncio.
  */
-export function signingBaselinePath(paths: RunnerPaths): string {
-  return join(paths.configDir, SIGNING_BASELINE_FILE);
+export interface SigningBaselineFiles {
+  file: string;
+  legacy: string;
 }
 
-/** Onde a linha de base morava antes (`paths.cache/signing-baseline.json`): só lida, para a migração única. */
-export function legacySigningBaselinePath(paths: RunnerPaths): string {
-  return join(paths.cache, SIGNING_BASELINE_FILE);
+export function signingBaselineFiles(configDir: string, paths: RunnerPaths): SigningBaselineFiles {
+  return { file: join(configDir, SIGNING_BASELINE_FILE), legacy: join(paths.cache, SIGNING_BASELINE_FILE) };
 }
 
 function signingBaselineError(
-  paths: RunnerPaths,
+  files: SigningBaselineFiles,
   log: string,
   when: 'before-build' | 'after-build' | 'certificate',
   message: string,
   extra: { diff?: KeychainDiff; buildError?: Record<string, unknown>; file?: string } = {},
 ): ContrarregraError {
   const { diff, buildError } = extra;
-  const path = extra.file ?? signingBaselinePath(paths);
+  const path = extra.file ?? files.file;
   // A cópia antiga que a migração deixou no cache voltaria (migrada de novo) se o dono apagasse só a nova.
-  const legacy = legacySigningBaselinePath(paths);
-  const stale = path !== legacy && existsSync(legacy) ? legacy : undefined;
+  const stale = path !== files.legacy && existsSync(files.legacy) ? files.legacy : undefined;
   const remove = stale === undefined ? 'apagar esse arquivo' : `apagar esse arquivo e a cópia antiga em ${stale}`;
   return new ContrarregraError('E_RUNNER_DOWN', `${message}; nada foi reassinado e o build não serve para \`runner up\` — veja ${log}`, {
     reason: 'signing-baseline',
@@ -316,36 +320,33 @@ function signingBaselineError(
 
 /**
  * A linha de base gravada; ilegível → falha (fail-closed: não se recria uma linha de base por cima de outra).
- * Migração única: sem o arquivo novo e com o antigo em `paths.cache`, o antigo (conferido) é copiado para o
- * lugar novo, e fica onde está; havendo o novo, o antigo é ignorado.
+ * Migração: sem o arquivo novo e com o antigo em `paths.cache`, o antigo (conferido) é copiado para o lugar
+ * novo, e fica onde está; havendo o novo, o antigo é ignorado.
  */
-function readSigningBaseline(paths: RunnerPaths, log: string): SigningBaseline | undefined {
-  const path = signingBaselinePath(paths);
-  if (existsSync(path)) return parseSigningBaseline(paths, path, log);
-  const legacy = legacySigningBaselinePath(paths);
-  if (!existsSync(legacy)) return undefined;
-  const baseline = parseSigningBaseline(paths, legacy, log);
-  writeSigningBaseline(paths, baseline);
-  logLine(log, `linha de base da assinatura migrada de ${legacy} para ${path} (a cópia antiga fica onde está, sem uso)`);
+function readSigningBaseline(files: SigningBaselineFiles, log: string): SigningBaseline | undefined {
+  if (existsSync(files.file)) return parseSigningBaseline(files, files.file, log);
+  if (!existsSync(files.legacy)) return undefined;
+  const baseline = parseSigningBaseline(files, files.legacy, log);
+  writeSigningBaseline(files, baseline);
+  logLine(log, `linha de base da assinatura migrada de ${files.legacy} para ${files.file} (a cópia antiga fica onde está)`);
   return baseline;
 }
 
-function parseSigningBaseline(paths: RunnerPaths, file: string, log: string): SigningBaseline {
+function parseSigningBaseline(files: SigningBaselineFiles, file: string, log: string): SigningBaseline {
   try {
     const doc = JSON.parse(readFileSync(file, 'utf8')) as SigningBaseline;
     if (doc.schema === SIGNING_BASELINE_SCHEMA && typeof doc.identitiesSha256 === 'string' && Array.isArray(doc.identities)) return doc;
   } catch {
     // cai no erro abaixo
   }
-  throw signingBaselineError(paths, log, 'before-build', `a linha de base da assinatura em ${file} está ilegível`, { file });
+  throw signingBaselineError(files, log, 'before-build', `a linha de base da assinatura em ${file} está ilegível`, { file });
 }
 
 /** Arquivo da máquina: 0600, numa pasta criada com 0700 se faltar (a do `config.json` existente não é mexida). */
-function writeSigningBaseline(paths: RunnerPaths, baseline: SigningBaseline): void {
-  const path = signingBaselinePath(paths);
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
-  writeFileSync(path, `${JSON.stringify(baseline, null, 2)}\n`, { mode: 0o600 });
-  chmodSync(path, 0o600);
+function writeSigningBaseline(files: SigningBaselineFiles, baseline: SigningBaseline): void {
+  mkdirSync(dirname(files.file), { recursive: true, mode: 0o700 });
+  writeFileSync(files.file, `${JSON.stringify(baseline, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(files.file, 0o600);
 }
 
 function newSigningBaseline(config: Config, identities: Identities): SigningBaseline {
@@ -564,6 +565,7 @@ interface ResignContext {
   log: string;
   identitiesBefore: Identities;
   baseline: SigningBaseline;
+  files: SigningBaselineFiles;
 }
 
 /**
@@ -574,7 +576,7 @@ interface ResignContext {
  * mesmos entitlements, e nenhuma identidade nova no chaveiro. Qualquer divergência → o build falha.
  */
 async function resignXctrunner(config: Config, ctx: ResignContext): Promise<Omit<ResignResult, 'identitiesSha256'>> {
-  const { tools, paths, built, configuration, log, identitiesBefore, baseline } = ctx;
+  const { tools, paths, built, configuration, log, identitiesBefore, baseline, files } = ctx;
   const app = productPath(built, 'TestHostPath', paths.products, log);
   const host = productPath(built, 'UITargetAppPath', paths.products, log);
   const plist = join(app, 'Info.plist');
@@ -591,7 +593,7 @@ async function resignXctrunner(config: Config, ctx: ResignContext): Promise<Omit
     expectSignature(await readSignature(tools, app, log, 'xcode-signature'), want, log, 'xcode-signature', app);
     const sha1 = await leafSha1(tools, app, scratch, log, 'xcode-certificate');
     if (baseline.leafSha1 !== null && baseline.leafSha1 !== sha1) {
-      throw signingBaselineError(paths, log, 'certificate', `o Xcode assinou com o certificado ${sha1}, não com o da linha de base (${baseline.leafSha1})`);
+      throw signingBaselineError(files, log, 'certificate', `o Xcode assinou com o certificado ${sha1}, não com o da linha de base (${baseline.leafSha1})`);
     }
     const inKeychain = identitiesBefore.list.filter((entry) => entry.sha1 === sha1);
     if (inKeychain.length === 0 || !inKeychain.every((entry) => entry.name === want.identity)) {

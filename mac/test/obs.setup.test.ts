@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 
 import { main } from '../src/cli/main.ts';
 import { obsSetup, type ObsCommandDeps } from '../src/commands/obs.ts';
@@ -663,8 +663,9 @@ function depsFor(fake: FakeObs, extra: ObsCommandDeps = {}): ObsCommandDeps {
 }
 
 async function setup(fake: FakeObs, extra: ObsCommandDeps = {}, obs: JsonObject = {}): Promise<ObsSetupResult> {
-  const config = loadConfig(configFor(fake, obs));
-  return obsSetup({ config }, depsFor(fake, extra));
+  const options = configFor(fake, obs);
+  // configDir: a pasta temporária do config.json (o CommandContext a exige; o obs setup não a usa).
+  return obsSetup({ config: loadConfig(options), configDir: dirname(options.configPath) }, depsFor(fake, extra));
 }
 
 /**
