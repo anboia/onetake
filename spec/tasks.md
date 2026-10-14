@@ -285,10 +285,10 @@ Regras comuns:
   T-0.17. Implements: S2, ADR-9.
 - [ ] **T-0.20** **SP-5 (alto) — OBS, parte 1: fonte, áudio e gravação longa.** Quatro configurações
   da fonte (preset High; formato manual 60 fps; "Capture Card"; preset 4K); áudio do iPhone com o
-  Salmo 23 tocando (picos, silêncio no alto-falante, sincronia áudio/vídeo); 10 min a 1170×2532@60 com
+  Salmo 23 tocando (picos, silêncio no alto-falante, sincronia áudio/vídeo); 10 min a 1168×2532@60 com
   H.264 por hardware ABR 16 Mbps (quadros pulados, `ffprobe`, tamanho); OBS aberto antes do cabo e
   "chute"; resolver o `device` pelo `itemName`. Files: `spikes/SP-5.md`, `spikes/sp-5/**`. AC:
-  AC-9.3 (parcial: o chute sem pré-voo), AC-9.7. Done: **sucesso** = 1170×2532 sem cor lavada
+  AC-9.3 (parcial: o chute sem pré-voo), AC-9.7. Done: **sucesso** = 1168×2532 sem cor lavada
   (diferença ≤ 3/255 em áreas lisas), picos entre −20 e −3 dBFS, defasagem A/V ≤ ±45 ms, 0 quadros
   pulados, fonte recuperada pelo chute em ≤ 15 s. **Plano B** = HEVC; 30 fps; QuickTime manual. Deps:
   T-0.12, T-0.13. Implements: S9 itens 1, 3 e 6, ADR-4, ADR-14, ⏳ Q-8.

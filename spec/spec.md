@@ -1192,16 +1192,19 @@ scenes:
    dono, e relata as diferenças que corrigiu. Saída **Avançada** (`Output.Mode = Advanced`),
    gravação Padrão, formato **Hybrid MP4** (`AdvOut.RecFormat2 = hybrid_mp4`), codificador Apple VT
    H.264 por hardware, ABR `record.bitrateKbps` (⚠️ 16.000), keyframe a cada 1 s, perfil high, faixa
-   1 (`AdvOut.RecTracks = 1`); tela base = saída = **1170×2532** a `record.fps` (⚠️ 60); áudio 48 kHz,
+   1 (`AdvOut.RecTracks = 1`); tela base = saída = **1168×2532** a `record.fps` (⚠️ 60) — o OBS 31.1.2
+   exige largura múltipla de 4 e arredonda 1170 para 1168 —; áudio 48 kHz,
    mesmas configurações de áudio do perfil do dono (para a troca de perfil não pedir reinício).
    O obs-websocket 5.6.2 não alcança o codificador de gravação (taxa, keyframe, perfil): o `obs setup`,
    só quando não há processo do OBS e logo antes de reabri-lo no perfil, cria ou reconcilia
    `~/Library/Application Support/obs-studio/basic/profiles/Contrarregra/recordEncoder.json` com
    `{rate_control: "ABR", bitrate: record.bitrateKbps, keyint_sec: 1, profile: "high"}` — só na pasta
    do perfil "Contrarregra". Cena "Contrarregra": fonte "iPhone" (`macos-avcapture`, preset High, sem buffering, áudio do
-   iPhone só na faixa 1, enquadramento "bounds inner" em 1170×2532; o `device` é o `itemValue` cujo
+   iPhone só na faixa 1, sem escala: a fonte nativa de 1170×2532 entra recortada 1 px à esquerda e 1 px
+   à direita, sem reamostragem; o `device` é o `itemValue` cujo
    `itemName` é `device.name`, lido com `GetInputPropertiesListPropertyItems {propertyName:
-   "device"}` — esperado igual ao UDID; SP-5 confirma) e a fonte de cor "Sync Flash" (branca, tela
+   "device"}` — no OBS 31.1.2 é um identificador próprio do macOS, não o UDID (medido na T-0.13); SP-5
+   confirma) e a fonte de cor "Sync Flash" (branca, tela
    inteira, desligada). Áudio da área de trabalho e microfone do Mac desligados.
 2. **Conexão e guarda do perfil**: cliente WebSocket próprio (Node 22, sem dependência), subprotocolo
    `obswebsocket.json`, autenticação `base64(sha256(base64(sha256(senha+salt))+challenge))`,
@@ -1216,7 +1219,8 @@ scenes:
    nada é escrito. Se o OBS estiver aberto noutro perfil, o pedido ao dono é fechar o OBS; a
    ferramenta o reabre com `open -a OBS --args --profile Contrarregra --collection Contrarregra
    --disable-shutdown-check --disable-missing-files-check` só quando não há processo do OBS.
-3. **Fonte viva**: antes de gravar, `GetSceneItemTransform` tem de dar 1170×2532 e
+3. **Fonte viva**: antes de gravar, `GetSceneItemTransform` tem de dar a fonte em 1170×2532 (tamanho
+   nativo, antes do recorte) e
    `GetSourceScreenshot` não pode ser preta; senão, "chuta" a fonte (`SetInputSettings {device}` com
    o valor resolvido no item 1) e espera até 15 s (contorna o bug #12062 do OBS 31); sem fonte viva
    depois disso, `E_OBS_SOURCE`.
@@ -1259,7 +1263,7 @@ scenes:
 
 **Acceptance Criteria (Given/When/Then)**
 - **AC-9.1** Given o OBS aberto com o perfil "Contrarregra", when `obs status` roda, then mostra as
-  versões 31.1.2/5.6.2/rpc 1 (⏳ Q-8), `outputMode = Advanced`, `recFormat = hybrid_mp4`, vídeo 1170×2532 a 60
+  versões 31.1.2/5.6.2/rpc 1 (⏳ Q-8), `outputMode = Advanced`, `recFormat = hybrid_mp4`, vídeo 1168×2532 a 60
   fps e a fonte viva.
 - **AC-9.2** Given uma gravação de teste com 3 `record_chapter` com títulos UTF-8 ("Cena 9 — Modo
   avião"), when finalizada, then o `ffprobe -show_chapters` lista os 3 títulos idênticos, mais no
@@ -1274,8 +1278,8 @@ scenes:
 - **AC-9.6** Given 10 gravações de cada duração (1, 5 e 10 min; 30 no total, cada arquivo apagado
   depois de medido), when o Mac declara cada arquivo pronto, then 0 são falsos prontos (o tamanho não
   muda nos 10 s seguintes e o `ffprobe -show_chapters` não falha) e o máximo STOPPED→pronto é ≤ 3 s.
-- **AC-9.7** Given uma gravação de 10 min a 1170×2532@60, when termina, then quadros pulados = 0, o
-  arquivo tem 1170×2532 a 60 fps, e o tamanho fica a ±25 % de 1,2 GB.
+- **AC-9.7** Given uma gravação de 10 min a 1168×2532@60, when termina, then quadros pulados = 0, o
+  arquivo tem 1168×2532 a 60 fps, e o tamanho fica a ±25 % de 1,2 GB.
 - **AC-9.8** Given o perfil do dono "Untitled", when `obs setup` termina, then o `basic.ini` dele está
   byte a byte igual ao de antes.
 - **AC-9.9** Given o OBS no perfil "Untitled", when `record_start` (MCP) ou `obs start` (CLI) é
@@ -1424,7 +1428,7 @@ scenes:
 | PF-04 | runner responde `session.hello` em ≤ 2 s ao supervisor; capacidades privadas que a coreografia exige liberadas e presentes | auto |
 | PF-05 | app alvo instalado, versão (build) = `app.expectVersion` (✅ Q-1), instalado pelo TestFlight/App Store e não pelo desenvolvedor (campo de origem do `devicectl device info apps --json-output`, a confirmar no SP-10; sem esse campo, o dono confirma) | auto / humano |
 | PF-06 | aparelho: idioma = `device.language`, tela em pontos = `device.screenPt`, tamanho de texto = `device.textSize`, aparência = `device.appearance` | auto (runner) |
-| PF-07 | OBS: conectado, versões, perfil e coleção "Contrarregra" ativos, `Output.Mode = Advanced`, `AdvOut.RecFormat2 = hybrid_mp4`, 1170×2532@fps, fonte viva | auto |
+| PF-07 | OBS: conectado, versões, perfil e coleção "Contrarregra" ativos, `Output.Mode = Advanced`, `AdvOut.RecFormat2 = hybrid_mp4`, 1168×2532@fps, fonte viva | auto |
 | PF-08 | disco livre ≥ limite (HC-11; ✅ Q-14) | auto |
 | PF-09 | segredo do OBS no Chaveiro | auto |
 | PF-10 | `alerts.sayDevice` existe (pela mesma busca por nome exato do S5 item 2) e não é BlackHole / Multi-Output / Aggregate; nenhuma fonte de áudio do Mac na cena do OBS | auto |

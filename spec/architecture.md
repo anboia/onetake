@@ -242,7 +242,7 @@ Reabrir exige motivo forte e G1 (P-6).
 - **ADR-13 XcodeGen com `.xcodeproj` fora do git.** Agentes editam YAML com segurança; pastas
   sincronizadas dispensam mexer no `pbxproj`.
 - **ADR-14 OBS com perfil e coleção próprios, saída Avançada, ABR 16 Mbps, guarda de perfil e cliente
-  WebSocket próprio.** Tamanho previsível para a guarda de disco (≈ 122 MB/min a 1170×2532@60); toda
+  WebSocket próprio.** Tamanho previsível para a guarda de disco (≈ 122 MB/min a 1168×2532@60); toda
   escrita confere o perfil ativo, para nunca cair no "Untitled" do dono; o `obs-websocket-js` deixa
   promessas penduradas ao desconectar e importa msgpack por padrão; um cliente de ~200 linhas com
   prazo por pedido resolve.
