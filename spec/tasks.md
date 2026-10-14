@@ -522,12 +522,35 @@ Regras comuns:
   `spikes/sp-16/**`. AC: AC-11.3 (método). Done: erro de mapeamento ≤ 17 ms em `pts_time`; diferenças
   de rótulo listadas. **Plano B** = ensaiar no aparelho sem gravar (`--mode dry`, quando existir).
   Deps: T-0.22, T-0.28. Implements: S11.
-- [ ] **T-0.37** **SP-17 (baixo) — puxar o registro e abrir link.** `devicectl device copy from
+- [x] **T-0.37** **SP-17 (baixo) — puxar o registro e abrir link.** `devicectl device copy from
   --domain-type appDataContainer --domain-identifier <runner>.xctrunner` com o runner vivo e parado;
   `XCUIDevice.shared.system.open(hagah://bible/ENGNIV/PSA/1)` pelo runner (mesmo PID do Hagah? pede
   confirmação?). Files: `spikes/SP-17.md`, `spikes/sp-17/**`. AC: —. Done: arquivo idêntico em ≤ 5 s nos
   dois estados; comportamento do link documentado. **Plano B** = `events.fetch` pelo canal; preparo só
   pela UI. Deps: T-0.11. Implements: S4 item 4, S12 item 2.
+  *Resultado (2026-10-14, iPhone 12 iPhone13,2, iOS 26.7.1 23H30, Xcode 26.6, devicectl 518.33, build Spike, cabo `wired`; `spikes/SP-17.md`):*
+  Done **atingido no modo `mac`**, sem G1. Registro → **principal PROVISÓRIO (modo `mac`)**; link → **principal**.
+  **Ressalva:** o `events.ndjson` de prova (64 KiB e 1 MiB, formato de S0.7) foi escrito no contêiner pelo Mac
+  (`devicectl device copy to`), não pelo runner — nenhum método do runner escreve arquivo hoje (`Documents/` estava
+  vazio). O plano B (`events.fetch`) **fica em aberto** até o teste com a escrita pelo próprio runner (arquivo aberto e
+  crescendo, classe de proteção do arquivo que ele cria; puxar vivo e parado, comparar com o hash que o runner diz):
+  G5 do `spike.logWrite` (`spikes/sp-17/proposed/SP17Log.swift`) ou tarefa do `events.ndjson` de produção — **item
+  explícito para a T-0.39**. Cópia: SHA-256 igual em 22/22; vivo 10/10 em 141–178 ms; parado 10/10 em 177–210 ms
+  (conferido uma vez, logo antes da série, pela lista de processos: `pids: []`; o `E_RUNNER_DOWN` é do registro de
+  sessões do Mac); de pé de novo (runner relançado, PID 34378 → 34425) 2/2 em 158–169 ms. Link (6 aberturas): chegou ao
+  Salmo 1 **sem toque**, vista pela leitura que terminou 0,45–0,9 s depois do retorno do `app.openURL`; nenhuma
+  camada vista. Hagah à frente 33997 → 33997 e 34394 → 34394, em segundo plano 33997 → 33997 e 34394 → 34394 (**mesmo
+  PID**, 4/4); encerrado → aberto a frio (34394, 34412). A página só está provada na `r2` (título "Psalms 1", 3/3,
+  1348–2444 ms); a `r1` (≤ 2,9 s) aceitava o título ou o mini-player e rodou com a versão anterior do driver. O
+  `system.open` leva 42–360 ms (`tDispatchNs`→`tDevEndNs`); o grosso da ida e volta do `app.openURL` (0,5–2,0 s) é a
+  releitura antes de abrir; a resposta não espera o app. Notas para a T-0.39:
+  - S12 item 2 / S13: o `prepare` precisa de `waitFor` da página depois de cada `openURL`; o mini-player passa a mostrar
+    o capítulo do link.
+  - A4/A13, provisório com a mesma ressalva: o `--filter` com `CONTAINS` sobre `executable` em `devicectl device info
+    processes` falhou (única forma tentada); não há `devicectl` para apagar arquivo do contêiner (provas ficam em
+    `Documents/contrarregra/sp17-r1-*`).
+
+  Hagah deixado à frente no Salmo 23; runner `down`, sem órfãos. ≈ 4 min de iPhone, 0 do dono.
 - [ ] **T-0.38** **SP-18 (baixo; ✅ Q-6) — cabine.** Laço de 10 cliques no Chrome
   (AudioWorklet) e com `ffmpeg -f avfoundation` (caminho fixado), fone com fio e alto-falante
   embutido; Microfone liberado ao Chrome e ao processo que roda o ffmpeg (`deploy.md` D0.3). Files:
