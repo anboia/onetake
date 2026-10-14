@@ -1,7 +1,8 @@
 # Contrarregra — Arquitetura
 
 > Viva: descreve o COMO planejado e passa a descrever o construído conforme as tarefas terminam.
-> Nada aqui existe ainda (2026-10-02). As afirmações técnicas têm fonte em A12 e nas notas de
+> Escrita antes do código (2026-10-02); o que a Fase 0 construiu e a spec não diz está em A13 e nas
+> seções a que pertence. As afirmações técnicas têm fonte em A12 e nas notas de
 > `research/`; o que não pôde ser verificado sem o aparelho está ligado a um spike (SP-n, `tasks.md`
 > Fase 0).
 
@@ -74,6 +75,12 @@
 O `Driver` expõe protocolos (`Toucher`, `Locker`…); as implementações privadas de `PrivateXCT`
 entram por injeção quando a sondagem confirma e `CONTRARREGRA_PRIVATE` permite.
 
+Na Fase 0, a lógica pura do `Driver` e do `Choreo` mora no Kit (pastas `Driver/` e `Choreo/`,
+testadas com `swift test`): lista permitida, resolução de alvos, árvore e refs, casamento do OCR,
+recusas de digitação, os métodos de leitura, ação e aparelho, e a avaliação das condições de S0.3.
+O runner só implementa `DeviceReader`, `Toucher`, `DeviceController` e `Locker` com o
+XCUIAutomation, o Vision e o `PrivateXCT`, e monta a tabela de métodos em `Server/RunnerMethods.swift`.
+
 **Mac** (`mac/src/`)
 
 | Módulo | Faz | Regra |
@@ -91,7 +98,10 @@ entram por injeção quando a sondagem confirma e `CONTRARREGRA_PRIVATE` permite
 | `commands` | uma função por operação; é o que CLI e MCP chamam | todos os acima |
 | `cli`, `mcp` | adaptam argumentos e saída; **nenhuma lógica** | só `commands` |
 
-Segredos só passam por `core/secret.ts`; ninguém mais chama `/usr/bin/security`.
+Segredos só passam por `core/secret.ts`; ninguém mais chama `/usr/bin/security`. Os códigos de
+erro de S0.5 ficam numa tabela só, `core/errors.ts` (`MAC_ERROR_CODES`; `RPC_ERROR_CODES`, nome →
+código), espelhada no Kit por `Protocol/RpcErrors.swift`; todo erro com código é um
+`ContrarregraError {code, message, data}`.
 
 ## A3. Fluxos de ponta a ponta
 
@@ -125,8 +135,8 @@ recordVideo` e passos `sim: skip|simulate`.
 | Onde | O quê | Dono |
 |---|---|---|
 | repositório | código, `config/defaults.json`, coreografias YAML, spec, notas de spike (`SP-n.md`) | git |
-| `~/.config/contrarregra/config.json` | configuração da máquina (S0.1), sem segredos | dono |
-| `~/Library/Caches/contrarregra/` | DerivedData do runner, `sessions/*.xctestrun` (0600, apagados no `down`), `locks/<udid>.lock`, `confirmations.json` (confirmações humanas do pré-voo), cache da guia, capturas de exploração (podadas), registros | ferramenta |
+| `~/.config/contrarregra/config.json` | configuração da máquina (S0.1), sem segredos; o iOS validado fica aqui (`toolchain.validated.ios`), e o `config/defaults.json` traz as outras chaves de `toolchain.validated`: `xcode`, `macos`, `obs`, `obsWebsocket`, `ffmpeg`, `node` | dono |
+| `~/Library/Caches/contrarregra/` | DerivedData do runner, `sessions/*.xctestrun` (0600, apagados no `down`), `locks/<udid>.lock`, `confirmations.json` (confirmações humanas do pré-voo), cache da guia, capturas de exploração (podadas), registros (`logs/`), `signing-baseline.json` e `verified-build-<configuração>.json` (A9), `obs/restart-pending` (A13) | ferramenta |
 | `~/Movies/contrarregra/<app>/<takeId>/` | pasta da tomada (S0.8) | ferramenta; fora do git |
 | `~/Movies/contrarregra/spikes/SP-n/` | capturas, quadros e gravações de spike | ferramenta; cada gravação apagada logo depois de medida (um G4 por spike, com o dono) |
 | contêiner do `.xctrunner` no iPhone | `Documents/contrarregra/<takeId>/events.ndjson` | runner |
@@ -148,7 +158,8 @@ contrarregra/                      # repositório separado em ~/project/contrarr
 ├── .gitignore                     # ios/*.xcodeproj, .build/, node_modules/, *.mp4, *.mov, *.wav, *.aiff, *.aif,
 │                                  #   *.m4a, *.caf, *.png, *.jpg, *.jpeg, *.heic, *.xcresult, *.xctestrun, *.log,
 │                                  #   *.ndjson, *.p8, *.p12, *.mobileprovision, *.cer, spikes/sp-*/out/
-├── bin/contrarregra, bin/contrarregra-mcp   # shims POSIX que acham Node 22.x ≥ 22.18
+├── bin/contrarregra, bin/contrarregra-mcp   # shims POSIX que acham Node 22.x ≥ 22.18; `contrarregra` roda
+│                                  #   mac/src/cli/main.ts; `contrarregra-mcp` (link para o primeiro), mac/src/mcp/main.ts
 ├── config/defaults.json
 ├── mac/src/{core,usbmux,device,runner,choreo,guide,clock,align,obs,media,outputs,mix,booth,take,sim,commands,cli,mcp}/
 ├── mac/tools/ocr.swift            # ajudante de OCR (Vision) para quadros de vídeo
@@ -157,7 +168,10 @@ contrarregra/                      # repositório separado em ~/project/contrarr
 │   ├── project.yml                # XcodeGen; DEVELOPMENT_TEAM 984PNJZ8B9; assinatura automática; configuração Spike (bundle ids ✅ Q-3)
 │   ├── ContrarregraHost/          # app hospedeiro (tela de relógio de calibração)
 │   ├── ContrarregraRunner/        # RunnerTests.swift (testServe) + Server/ Driver/ PrivateXCT/ OCR/ Choreo/ Log/ Spikes/
-│   └── ContrarregraKit/           # pacote Swift (Package.swift, Sources/, Tests/)
+│   └── ContrarregraKit/           # pacote Swift (Package.swift, Sources/, Tests/), um alvo; em Sources/ContrarregraKit/:
+│                                  #   Models/ (S0), JSON/ (parser, JCS), Protocol/ (JSON-RPC, erros, métodos de base),
+│                                  #   Validation/ (as regras do zod), Runner/ (roteador, núcleo do servidor, fila do XCTest,
+│                                  #   ambiente), Driver/ e Choreo/ (lógica pura, A2), Clock/ (D, código e geometria S0.10)
 ├── choreographies/
 │   ├── hagah/v8.5-review.choreo.yaml   # com o catálogo `targets:` medido no SP-10
 │   └── fixtures/                  # s02-s07.choreo.yaml, timing.choreo.yaml, settings.choreo.yaml (US-17)
@@ -315,9 +329,27 @@ sem autenticação (contra P-3).
   captura do iOS esconde campos de senha e o teclado.
 - Dados pessoais no iPhone: o preparo não apaga dado do app alvo que nenhuma tomada criou sem a
   confirmação do dono (✅ Q-15).
+- Lista permitida (S1 item 11): no Kit, `Driver/AllowList.swift`, FAIL-CLOSED — o que não se prova
+  à frente não libera nada. Regras provisórias da T-0.6 (e da T-0.11), até os spikes medirem: faixa de
+  notificação ou Central de Notificações sobre a tela destravada bloqueia tudo (nada se lê, age ou
+  captura); alerta do SpringBoard também é camada — o runner não o lê nem o toca, e quem o fecha é a
+  pessoa, num ponto de controle; nomes de app pessoal recusados como `app.iconLabel` no aparelho só em
+  inglês e pt-BR; do SpringBoard, só o `value` do interruptor do modo avião sai numa leitura;
+  `apple.co` conta como loja (com `apps.apple.com` e `itunes.apple.com`); prefixo `http(s)://` sem
+  host não vale no aparelho; link ou prefixo com userinfo é recusado também no simulador; `ui.tree`,
+  `ui.find` e condições só leem o app provadamente à frente, nunca um em segundo plano; arrasto,
+  rolagem e toque longo não começam nas faixas de gesto do sistema (47 pt em cima e 34 pt embaixo em
+  telas com ≥ 812 pt de altura; 20 e 20 nas outras); a tela de início limpa se prova por um ícone de
+  app de até 100×120 pt (widgets ficam de fora).
 - Assinatura: `DEVELOPMENT_TEAM=984PNJZ8B9` no `project.yml` e na linha de comando; o build falha se o
   `.xctrunner` não tiver esse `TeamIdentifier` e a identidade `6NKUX5CX7G` (AC-1.14); uma identidade
-  nova no chaveiro depois de assinar para tudo (G5).
+  nova no chaveiro depois de assinar para tudo (G5). O `runner build` compara o chaveiro com uma
+  linha de base persistida em `paths.cache/signing-baseline.json` (identidades de antes do primeiro
+  build e SHA-1 do certificado folha do primeiro build conferido); divergência → `E_RUNNER_DOWN`
+  (`reason: signing-baseline`) com instrução de G5. Só um build conferido ganha
+  `paths.cache/verified-build-<configuração>.json` (SHA-256 do `.xctestrun` e do `Info.plist` e do
+  executável dos dois `.app`), apagado no começo de todo build; o `runner up` só instala build com
+  essa marca válida (senão `E_RUNNER_DOWN`, `reason: unverified-build`).
 
 ## A10. Registro de APIs privadas (módulo `PrivateXCT`)
 
@@ -430,3 +462,52 @@ locais do Xcode 26.6). As notas completas, com cada achado, fonte e grau de conf
 - Node 22: WebSocket global, TypeScript, `node:test`, `parseArgs`, `statfs`: https://nodejs.org/docs/latest-v22.x/api/
 - XcodeGen: https://github.com/yonaskolb/XcodeGen
 - Código do Hagah (alvos, estado, flags de build): `hagah/apps/mobile/src/**`, `packages/core/src/i18n/messages/en/**`, `apps/mobile/app.json`, `apps/mobile/eas.json`, `plans/mobile/STATE.md`
+
+## A13. Notas de implementação da Fase 0
+
+Fatos do código que a spec não fixa e que não mudam comportamento, com a tarefa que os trouxe.
+
+- **Aparelho, apps e espera (T-0.8; `Driver/DeviceMethods.swift` do Kit).** `device.state` →
+  `{locked, network, foregroundApp, language, screenPt, textSize, appearance}` (no Mac, o
+  `DeviceStateSchema` estrito de `commands/device.ts`), FAIL-CLOSED: bloqueio não lido = `locked:
+  true`, rede ainda desconhecida = `offline`, nada provado à frente = `foregroundApp: ""`; idioma,
+  texto e aparência são lidos a cada chamada, a tela em pontos é a da subida.
+  `device.home|press|wake|controlCenter|lock` e `app.activate|terminate|openURL` → `{tDevStartNs,
+  tDispatchNs, tDevEndNs, path}` (a resposta de ação de S0.5 sem `point`/`nodeRef`); com a tela já
+  como pedido, nada é enviado e `tDispatchNs = tDevEndNs`. `device.controlCenter {action:
+  open|close}` (o campo do passo `controlCenter`). `app.state {bundleId}` → `{state:
+  foreground|background|notRunning}` (desconhecido → `E_APP_STATE`). `wait.for {condition,
+  timeoutMs}` → `{tDevStartNs, tDevEndNs}` (`timeoutMs: 0` avalia uma vez; `changed` não vale).
+- **Ambiente do runner (T-0.5, T-0.6; `Runner/RunnerEnvironment.swift`).** `CONTRARREGRA_PRIVATE` e
+  `CONTRARREGRA_ALLOWED` aceitam lista separada por vírgula e/ou espaço (o Mac escreve com vírgula).
+  `CONTRARREGRA_ALLOWED` leva `apps.allowed` e `urls.allowedPrefixes` juntos; item com `:` é prefixo
+  de link. Id PX desconhecido é ignorado e registrado.
+- **Registro do runner (T-0.5).** Cada linha vai ao `os_log` (subsistema
+  `app.kifactory.contrarregra.runner`) e à saída padrão como `CONTRARREGRA <NÍVEL> <mensagem>`, que o
+  `xcodebuild` grava em `paths.cache/logs/xcodebuild-<sessão>.log`. Com o `NWListener` pronto, o
+  runner escreve `CONTRARREGRA_READY port=<porta> bind=<loopback|endpoint>`; é só diagnóstico: o Mac
+  não procura essa linha, e "pronto" continua sendo responder `session.hello` (S2 item 1; o `runner
+  up` tenta a cada 500 ms, por até ⚠️ 120 s).
+- **Relógio de calibração (T-0.4; `Clock/CalibrationLayout.swift`, a geometria que o Mac amostra).**
+  A grade de 8 × 6 células de 44 pt (5 linhas de dados + paridade; 352 × 264 pt) fica centrada na
+  tela — origem (19, 290) pt no iPhone 12 (390 × 844) —, com os dígitos numa faixa de 88 pt, 22 pt
+  acima dela. O hospedeiro desenha o D previsto para o instante em que o quadro aparece
+  (`CADisplayLink.targetTimestamp`), não o da chamada. No Mac, `clock/code.ts` recebe a posição da
+  grade como parâmetro.
+- **Mídia (T-0.22; `media/ffmpeg.ts`, `media/frames.ts`).** Todo tempo de vídeo que entra ou sai de
+  `media` está em R = pts − `start_time` do formato (o menor entre os fluxos), em segundos; o ffmpeg
+  roda sempre com `-copyts -start_at_zero` (e, com janela, `-ss <R>` de entrada), para a saída vir em
+  R com ou sem janela. O primeiro quadro de vídeo tem R > 0 quando o áudio começa antes.
+- **`obs setup` (T-0.13; `obs/setup.ts`).** Áudio da área de trabalho e microfones do Mac
+  (`GetSpecialInputs`) ficam como fontes mudas (`SetInputMute`), não removidas. A "Sync Flash" fica
+  em (0, 0), acima do iPhone na ordem da cena. O OBS reaberto pela ferramenta tem ⚠️ 30 s para
+  aceitar a conexão. Parâmetro de perfil mudado com o OBS aberto deixa o marcador
+  `paths.cache/obs/restart-pending` (texto puro: o instante em ISO), limpo quando o OBS em execução
+  começou depois dele. O `Audio.ChannelSetup` do dono vem, a cada passada, do `basic.ini` dos outros
+  perfis no disco (só leitura; se discordam, fica como está). Nunca `SetCurrentProfile` nem
+  `SetCurrentSceneCollection`.
+- **O que o supervisor da tomada terá de cumprir (`runner sever`, T-0.10).** Com a trava do aparelho,
+  o `sever` acha `paths.takes/<app>/<takeId>/status.json`, lê o `pid` e só manda o `SIGUSR1` se o
+  arquivo foi regravado há ≤ 10 s (mtime) e se a linha de comando do processo contém o `takeId`; senão
+  `E_RUNNER_DOWN` (`reason: no-control-owner`) e nenhum sinal. Então o supervisor é lançado com a pasta
+  da tomada nos argumentos e regrava o `status.json` a cada 1 s.
