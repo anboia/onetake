@@ -290,7 +290,7 @@ Regras comuns:
   (c), (d) com p95 ≤ 150 ms, p99 ≤ 300 ms e 0 linhas de espera; (a) caracterizada. **Plano B** = (d)
   para todo passo com tempo; se nada servir, pausar o áudio antes dos toques que não precisam dele (G1
   na coreografia do Hagah). Deps: T-0.11. Implements: S1 item 5, A10 PX-2/PX-3, ✅ Q-5b/c.
-- [ ] **T-0.19** **SP-4 (alto) — canal usbmux → WebSocket no loopback.** Duas formas de prender o
+- [x] **T-0.19** **SP-4 (alto) — canal usbmux → WebSocket no loopback.** Duas formas de prender o
   listener (`requiredInterfaceType = .loopback`; `requiredLocalEndpoint 127.0.0.1:P`), no build
   `Spike`. 1.000 ecos de 64 bytes e 100 de 64 KB numa conexão persistente e 1.000 com conexão nova;
   100 capturas (com o Hagah em primeiro plano, S1 item 11); rajadas NTP; tudo de novo com o modo
@@ -301,6 +301,28 @@ Regras comuns:
   **Plano B** = se o loopback não for alcançável por usbmux, parar e levar ao dono ⏳ Q-13 num G1
   imediato (emenda de P-3/P-7 e HC-4); nenhuma escuta fora do loopback antes desse G1. Deps: T-0.11,
   T-0.17. Implements: S2, ADR-9.
+  *Resultado (2026-10-14, iPhone 12 iPhone13,2, iOS 26.7.1 23H30, Xcode 26.6, build Spike; `spikes/SP-4.md`):*
+  **principal** (ADR-9 confirmado; ⏳ Q-13 dispensada, sem G1 imediato), com a fase suplementar `concurrent2` da revisão
+  (abaixo) passando. Sem o dono: o runner ligou/desligou o avião pela Central (`wait.for {airplane}` antes do toque, `wait.for
+  {network}` depois; 10–12 s por troca, 0 `E_TIMEOUT`) e pôs o Hagah (pausado) à frente por `app.activate`; 0
+  `OWNER_ACTION`. SerialNumber cru `00008101-001E79203A68001E` (com hífen; uma só entrada, `USB`). loopback × endpoint,
+  sem avião / com avião (ms): eco 64 B p50/p95 0,63/1,36 e 0,78/1,45 × 0,79/1,44 e 0,67/0,83 (AC-2.1 OK); eco 64 KB
+  p50/p95 10,3/19,8 e 10,6/13,9 × 10,2/12,2 e 9,38/12,0; conexão nova (ListDevices + túnel novo + WebSocket +
+  `session.hello` + ping) p95 10,3 e 9,44 × 10,1 e 9,34; θ: resíduo da reta de referência (sem carga e sem avião)
+  0,06 × 0,07, viés com capturas/avião ≤ 0,09; 0 falhas do canal e 0 quedas em 2 × 11,4 min. AC-2.6 (só a reconexão):
+  6/6 cortes de 30 s, `control` e `sync` de volta 22–30 ms depois da janela, θ contínuo. Fica a forma de produção
+  (`requiredInterfaceType = .loopback`). **Leitura dos limites:** p50 ≤ 5 / p95 ≤ 20 ms aplicados só ao eco de 64 B
+  (AC-2.1); numa leitura literal da T-0.19/research S0-RTT (os dois tamanhos), o eco de 64 KB reprova no p50 (≈ 10 ms
+  nos 4 blocos; p95 loopback sem avião 19,8, p99 26,4) — questão para o G1. "Sem mudança com avião" = os mesmos
+  limites passam, sem falhas nem quedas; na loopback o avião piorou um pouco (64 B p50/p95 0,63/1,36 → 0,78/1,45, máx
+  5,53 → 14,7; NTP p50 1,58 → 2,03 ms), na endpoint não. **Capturas simultâneas:** na `concurrent` os 1.000 ecos de
+  64 B couberam na 1ª captura (nenhum dos 4.000 cruzou uma captura em trânsito; só 27/1.536 trocas NTP, RTT ≤ 2,5 ms) →
+  fase suplementar `concurrent2` (loopback, sem avião, 87,5 s, ≈ 2,2 min de iPhone): capturas de fundo 60 ok/0 erros sem
+  parar; eco de 64 B espaçado (20–51 ms, 60 s) p50/p95 1,54/2,26 ms, 26 de 1.701 cruzaram uma captura em trânsito (p95
+  2,04 ms, iguais aos outros); eco de 64 KB p50/p95 9,20/14,7 (3 cruzaram); conexão nova p95 4,09 (6 cruzaram); 0 erros
+  → passa. Fora do critério: `screen.shot` p50 ≈ 1,5 s, p95 1,55–1,62 s (2 estouros do prazo de 3 s sob carga)
+  → sinal de que o AC-1.4 (T-0.28) falha e o PX-6 (⏳ Q-5f) entra. G1 propostos no SP-4.md: S2 item 2 com o formato do
+  serial; Q-13 fechada; o limite do eco de 64 KB.
 - [ ] **T-0.20** **SP-5 (alto) — OBS, parte 1: fonte, áudio e gravação longa.** Quatro configurações
   da fonte (preset High; formato manual 60 fps; "Capture Card"; preset 4K); áudio do iPhone com o
   Salmo 23 tocando (picos, silêncio no alto-falante, sincronia áudio/vídeo); 10 min a 1168×2532@60 com
