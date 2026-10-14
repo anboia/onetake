@@ -194,12 +194,17 @@ a G1 · **Data-alvo:** D+8 · **Sinal de atraso:** SP-1 ou SP-2 falhando nos doi
   AC: AC-8.5 (parte do segredo), AC-9.9 (parcial: a guarda do cliente com um OBS falso). Done: teste
   com vetores de autenticação calculados localmente (o exemplo da documentação não é vetor válido);
   busca literal da senha em logs = 0. Deps: T-0.1, T-0.3. Implements: S9 item 2, P-3. [P]
-- [ ] **T-0.13** `contrarregra obs setup` idempotente: cria/reconcilia o perfil e a coleção
+- [x] **T-0.13** `contrarregra obs setup` idempotente: cria/reconcilia o perfil e a coleção
   "Contrarregra" (S9 item 1) com o dono presente (**G5**), sem tocar no "Untitled"; inclui o
   procedimento de reabrir o OBS no perfil. Files: `mac/src/obs/setup.ts`, `mac/src/commands/obs.ts`,
   `mac/src/cli/**`, `mac/test/obs.setup.test.ts`. AC: AC-9.8, AC-9.10. Done: no OBS real, o perfil
   existe com os parâmetros de S9 e o `basic.ini` do "Untitled" está byte a byte igual. Deps: T-0.10,
   T-0.12. Implements: S9 item 1, P-6.
+  *Resultado (2026-10-13, OBS 31.1.2 real, G5):* perfil e coleção "Contrarregra" criados e reconciliados;
+  `recordEncoder.json` (ABR 16000, keyint 1 s, high) escrito com o OBS fechado (G1 3070d7c); vídeo 1168×2532@60
+  com o iPhone sem escala e recortado 1 px por lado (G1 2dbd2a8); a passada seguinte não acha nada a corrigir.
+  AC-9.8: sha256 do `basic.ini` do Untitled igual em todas as conferências. AC-9.10: 9 casos com o OBS falso.
+  `device` do iPhone no OBS = `EE35C40D-…` (não é o UDID; ver SP-5).
 - [x] **T-0.14** Ajudante de OCR no Mac: `mac/tools/ocr.swift` (Vision e CoreText, frameworks da
   Apple, sem G2), rodado com `xcrun swift`; lê quadros PNG e devolve caixas em JSON; um modo
   `--render-text` gera a imagem de teste (o ffmpeg 8.1.1 fixado não tem `drawtext`). Files:

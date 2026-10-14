@@ -1,14 +1,16 @@
 // CLI `contrarregra` (S8 item 1; chamada pelo shim `bin/contrarregra`). Só adapta argumentos e saída
-// (architecture.md A2): a lógica está em `mac/src/commands`. Por ora só `runner build|up|down|status|
-// sever` (T-0.10); os demais subcomandos de S8 entram com as tarefas deles. Ordem fixa: argumentos →
-// configuração (`E_CONFIG` antes de qualquer processo filho ou conexão, AC-0.5) → comando. Todo
-// subcomando aceita `--json` (o mesmo objeto que a ferramenta MCP devolve). Saída: 0 ok, 1 erro, 2 uso.
+// (architecture.md A2): a lógica está em `mac/src/commands`. Por ora `runner build|up|down|status|sever`
+// (T-0.10) e `obs setup` (T-0.13); os demais subcomandos de S8 entram com as tarefas deles. Ordem fixa:
+// argumentos → configuração (`E_CONFIG` antes de qualquer processo filho ou conexão, AC-0.5) → comando.
+// Todo subcomando aceita `--json` (o mesmo objeto que a ferramenta MCP devolve). Saída: 0 ok, 1 erro, 2
+// uso.
 
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import { isContrarregraError, loadContext, type ContextOptions } from '../commands/context.ts';
+import { obsLaunchCommand, obsSetup, restartHint, type ObsCommandDeps, type ObsSetupChange, type ObsSetupResult } from '../commands/obs.ts';
 import {
   RUNNER_BIND_MODES,
   RUNNER_CONFIGURATIONS,
@@ -30,7 +32,8 @@ export const USAGE = `uso:
   contrarregra runner up [--spike [--bind loopback|endpoint]] [--json]
   contrarregra runner down [--json]
   contrarregra runner status [--json]
-  contrarregra runner sever --for <segundos> [--json]`;
+  contrarregra runner sever --for <segundos> [--json]
+  contrarregra obs setup [--json]`;
 
 export interface CliIo {
   stdout: (text: string) => void;
@@ -40,6 +43,8 @@ export interface CliIo {
 /** Só para testes: onde está a configuração e quais ferramentas usar. */
 export interface CliDeps extends Omit<ContextOptions, 'onProgress'> {
   io?: CliIo;
+  /** OBS falso: sem processo real, sem Chaveiro real. */
+  obs?: ObsCommandDeps;
 }
 
 class UsageError extends Error {}
@@ -53,18 +58,24 @@ const OPTIONS = {
   help: { type: 'boolean', short: 'h' },
 } as const;
 
-/** Quais opções cada subcomando aceita (além de `--json`). */
-const ALLOWED: Record<string, readonly string[]> = {
-  build: ['configuration'],
-  up: ['spike', 'bind'],
-  down: [],
-  status: [],
-  sever: ['for'],
+/** Quais opções cada subcomando de cada grupo aceita (além de `--json`). */
+const ALLOWED: Record<string, Record<string, readonly string[]>> = {
+  runner: {
+    build: ['configuration'],
+    up: ['spike', 'bind'],
+    down: [],
+    status: [],
+    sever: ['for'],
+  },
+  obs: {
+    setup: [],
+  },
 };
 
 type Values = { json?: boolean; configuration?: string; spike?: boolean; bind?: string; for?: string; help?: boolean };
 
 interface Parsed {
+  group: string;
   sub: string;
   values: Values;
 }
@@ -79,13 +90,15 @@ function parse(argv: string[]): Parsed | 'help' {
   const values = parsed.values as Values;
   if (values.help) return 'help';
   const [group, sub, ...rest] = parsed.positionals;
-  if (group !== 'runner' || sub === undefined || !(sub in ALLOWED)) {
+  // Só chaves próprias: `constructor`, `toString`, `__proto__`… vêm de Object.prototype e não são comandos.
+  const subs = group !== undefined && Object.hasOwn(ALLOWED, group) ? ALLOWED[group] : undefined;
+  if (group === undefined || subs === undefined || sub === undefined || !Object.hasOwn(subs, sub)) {
     throw new UsageError(group === undefined ? 'falta o subcomando' : `subcomando desconhecido: ${parsed.positionals.join(' ')}`);
   }
   if (rest.length > 0) throw new UsageError(`argumento a mais: ${rest.join(' ')}`);
   for (const key of Object.keys(values)) {
     if (key === 'json' || key === 'help') continue;
-    if (!ALLOWED[sub]!.includes(key)) throw new UsageError(`--${key} não vale para runner ${sub}`);
+    if (!subs[sub]!.includes(key)) throw new UsageError(`--${key} não vale para ${group} ${sub}`);
   }
   if (values.configuration !== undefined && !(RUNNER_CONFIGURATIONS as readonly string[]).includes(values.configuration)) {
     throw new UsageError(`--configuration ${values.configuration}: use ${RUNNER_CONFIGURATIONS.join(' ou ')}`);
@@ -98,10 +111,47 @@ function parse(argv: string[]): Parsed | 'help' {
     const forS = values.for === undefined ? NaN : Number(values.for);
     if (!Number.isFinite(forS) || forS <= 0) throw new UsageError('runner sever precisa de --for <segundos> (> 0)');
   }
-  return { sub, values };
+  return { group, sub, values };
 }
 
-function human(sub: string, result: unknown): string {
+function changeLine(c: ObsSetupChange): string {
+  return `  ${c.item}: ${c.from === null ? '(não existia)' : JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`;
+}
+
+function obsSetupText(r: ObsSetupResult): string {
+  const lines: string[] = [];
+  if (r.launched) lines.push(`OBS aberto pela ferramenta: ${obsLaunchCommand(r.profile, r.collection)}`);
+  lines.push(
+    r.changes.length === 0
+      ? `obs setup: perfil "${r.profile}" e coleção "${r.collection}" conferidos; nada a corrigir (nenhuma escrita)`
+      : `obs setup: perfil "${r.profile}" e coleção "${r.collection}"; ${r.changes.length} diferença(s) corrigida(s):`,
+  );
+  for (const c of r.changes) lines.push(changeLine(c));
+  lines.push(`iPhone: "${r.device.name}" → device ${r.device.value}`);
+  const encoder = { ok: 'conferido', written: 'corrigido antes de abrir o OBS', pending: 'pendente: só é escrito com o OBS fechado' }[r.recordEncoder.status];
+  lines.push(`recordEncoder.json: ${encoder} — ${r.recordEncoder.path}`);
+  if (r.restartRequired) lines.push(`reinício: ${restartHint(r.profile, r.collection)}`);
+  return lines.join('\n');
+}
+
+/** Em texto, um erro do `obs setup` depois de escrever mostra o que já foi feito e o reinício pendente. */
+function errorProgressText(data: Readonly<Record<string, unknown>>): string {
+  const lines: string[] = [];
+  const changes = data['changes'];
+  if (Array.isArray(changes) && changes.length > 0) {
+    lines.push(`mudanças feitas antes do erro (${changes.length}):`);
+    for (const c of changes as ObsSetupChange[]) lines.push(changeLine(c));
+  }
+  const profile = data['profile'];
+  const collection = data['collection'];
+  if (data['restartRequired'] === true && typeof profile === 'string' && typeof collection === 'string') {
+    lines.push(`reinício: ${restartHint(profile, collection)}`);
+  }
+  return lines.map((line) => `${line}\n`).join('');
+}
+
+function human(group: string, sub: string, result: unknown): string {
+  if (group === 'obs') return obsSetupText(result as ObsSetupResult);
   switch (sub) {
     case 'build': {
       const r = result as BuildResult;
@@ -152,12 +202,15 @@ export async function main(argv: string[], deps: CliDeps = {}): Promise<number> 
     io.stdout(`${USAGE}\n`);
     return 0;
   }
-  const { sub, values } = parsed;
+  const { group, sub, values } = parsed;
   const json = values.json === true;
   try {
     const ctx = loadContext({ ...deps, onProgress: (line) => io.stderr(`${line}\n`) });
     let result: unknown;
-    switch (sub) {
+    switch (group === 'obs' ? `obs ${sub}` : sub) {
+      case 'obs setup':
+        result = await obsSetup(ctx, deps.obs);
+        break;
       case 'build':
         result = await runnerBuild(ctx, values.configuration === undefined ? {} : { configuration: values.configuration });
         break;
@@ -173,12 +226,13 @@ export async function main(argv: string[], deps: CliDeps = {}): Promise<number> 
       default:
         result = runnerSever(ctx, { forS: Number(values.for) });
     }
-    io.stdout(json ? `${JSON.stringify(result)}\n` : `${human(sub, result)}\n`);
+    io.stdout(json ? `${JSON.stringify(result)}\n` : `${human(group, sub, result)}\n`);
     return 0;
   } catch (error) {
     if (isContrarregraError(error)) {
       const hint = error.data?.['hint'];
-      io.stderr(`contrarregra: ${error.code}: ${error.message}\n${typeof hint === 'string' ? `dica: ${hint}\n` : ''}`);
+      const progress = json ? '' : errorProgressText(error.data ?? {});
+      io.stderr(`contrarregra: ${error.code}: ${error.message}\n${progress}${typeof hint === 'string' ? `dica: ${hint}\n` : ''}`);
       if (json) io.stdout(`${JSON.stringify({ error: { code: error.code, message: error.message, data: error.data ?? {} } })}\n`);
       return 1;
     }
