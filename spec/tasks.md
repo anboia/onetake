@@ -278,7 +278,7 @@ Regras comuns:
   a 20 períodos de avião ligado pelo runner (até ~7,9 min). O runner alterna o avião pela Central (útil ao SP-9/cena 9),
   mas `ui.tap`/leituras no SpringBoard passam dos 10 s da fila do XCTest (`E_TIMEOUT` rodando = a ação VAI acontecer,
   até ~2 min depois, com a fila presa; confirmar por `wait.for`/rede) → S1 item 3/S0.3 no G1 da T-0.39.
-- [ ] **T-0.18** **SP-3 (alto) — toques com o app animando.** Pré-condição: PX-2 e PX-3 em
+- [x] **T-0.18** **SP-3 (alto) — toques com o app animando.** Pré-condição: PX-2 e PX-3 em
   `runner.privateAllowed` (✅ Q-5b/c). No leitor do Hagah com o Salmo 23 tocando: escolher e registrar
   um botão cujo toque não para o áudio (ex.: "Forward 15 seconds" no Now Playing) e fazer 50 toques
   nele em quatro variantes — (a) `XCUIElement.tap()` público; (b) dentro de
@@ -290,6 +290,38 @@ Regras comuns:
   (c), (d) com p95 ≤ 150 ms, p99 ≤ 300 ms e 0 linhas de espera; (a) caracterizada. **Plano B** = (d)
   para todo passo com tempo; se nada servir, pausar o áudio antes dos toques que não precisam dele (G1
   na coreografia do Hagah). Deps: T-0.11. Implements: S1 item 5, A10 PX-2/PX-3, ✅ Q-5b/c.
+  *Resultado (2026-10-14, iPhone 12 iPhone13,2, iOS 26.7.1 23H30, Xcode 26.6, build Spike; `spikes/SP-3.md`):* critério
+  **não** atingido → **plano B (d)**. Botão "Forward 15 seconds" (build 7 = research); preparo sozinho pelo runner (link
+  `hagah://` sem confirmação, Repeat "Chapter" e devolvido a "Verse"). Três estados tocando no mesmo aparelho:
+  - **pesado** (≈ 05:19:40–05:28, a partir de ≈ 30 s depois do play): (d) 15,5 / 15,3 / 6,6 s; leitura da tela ≈ 5 s;
+    árvore do Hagah 1,5–2,0 s; dentro dos toques, SpringBoard ≈ 3,7× e Hagah ≈ 6× mais lentos (o aparelho carregado,
+    não só o Hagah);
+  - **piloto** (05:29): (d) 3721–3860 ms; envio 310 / 294 / 315 ms;
+  - **corrida** `sp3-run1`: 50 por variante e estado, 500/500 OK.
+  No estado da corrida, `tDevEndNs − tDevStartNs` p50/p95/p99 tocando: (a) 3446/4101/4207 ms; `a.coord` (o `ui.tap` de
+  hoje) 2502/2973/3028; (b) 2523/2870/2913; (c) 2450/3331/4425; (d) 2108/2304/2579. Pausado, de 1850 ms de p50 ((d)) a
+  2872 ms ((a)). O custo é a resolução (duas leituras da tela de ≈ 0,7–0,8 s + árvore ≈ 0,2 s), não a espera de
+  ociosidade. Envio p50/p95/p99: (d) 282/293/295 ms; (b) 685/752/771; (c) 661/811/1865; `a.coord` 771/841/1273; (a)
+  1890/2607/2697. Efeito: 480 causais, 20 ambíguos (fim natural do capítulo), 0 ausentes; a leitura no Mac aceita o salto
+  para 0:46. p95 do efeito, do início, tocando (causais + ambíguos): (d) 2551, `a.coord` 3211, (b) 3086, (c) 3585 ms. Linhas
+  de espera do Hagah: 0 em (b), (c) e (d); (a) 2 por toque (espera pós 1,34 s p50 tocando); `a.coord` 1 por toque (≈ 10 ms;
+  SpringBoard 0–40 ms).
+  Repetição a frio `sp3-heavy` (sessão nova do XCTest; Hagah fechado e reaberto pelo link; play e logo os toques, 0–5 min
+  depois): o estado pesado **não** voltou — (d) 1795/1867 ms total e 275/280 ms de envio tocando, `ui.tree` 0,77–1,03 s.
+  Não exclui a "1ª carga do capítulo". Pausar o áudio não basta para o AC-1.5 (tira 0,18–0,57 s do p50) e fica como
+  opção aberta da coreografia no G1.
+  Para o G1 da T-0.39: AC-1.5 inatingível com a resolução e a releitura de segurança (`checkForAction`, a única guarda
+  antes do (d)) na janela. Duas propostas:
+  - **(i)**: resolver no `hold` anterior, deixar a releitura logo antes do `tDispatchNs` com carimbo e limite próprios
+    (p95 ≤ 1,1 s, ou do atraso `tDispatchNs − hora agendada`) e medir o envio com p95 ≤ 350 e p99 ≤ 400 ms pelo PX-3.
+    Medido: 279–293 / 279–295 ms; o piloto chegou a 315, e o 319 do estado pesado é 1 de 3, sem registro. **Só a (i)
+    vale nos quatro estados.**
+  - **(ii)**: manter `tDevStartNs`, com p95 ≤ 2,5 e p99 ≤ 3,0 s; e a variante **(i′)**, com a releitura na janela e
+    p95 ≤ 1,5 s. As duas cobrem a corrida e a repetição, mas **falham 3/3 no piloto** ((ii) 3,7–3,9 s; (i′) 1,74–1,87 s)
+    e no estado pesado. Pedem leitura ≲ 1,0–1,1 s no pré-voo.
+  Mais: a espera do toque público fica em `tDevEndNs − tDispatchNs` (S1 item 5, AC-1.18); o `ui.tree` (5 s) estourou no
+  estado pesado (S1 item 3); PX-3 `synthesizeEvent:completion:` devolve `id` (A10). O `Toucher` sintetizado de produção é
+  tarefa própria.
 - [x] **T-0.19** **SP-4 (alto) — canal usbmux → WebSocket no loopback.** Duas formas de prender o
   listener (`requiredInterfaceType = .loopback`; `requiredLocalEndpoint 127.0.0.1:P`), no build
   `Spike`. 1.000 ecos de 64 bytes e 100 de 64 KB numa conexão persistente e 1.000 com conexão nova;

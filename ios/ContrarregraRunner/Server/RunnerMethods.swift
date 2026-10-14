@@ -42,6 +42,12 @@ enum RunnerMethods {
         let action = ActionMethods.Context(read: read, toucher: XCUICoordinateToucher(bridge: bridge), scale: device.scale)
         ActionMethods.register(into: &router, action)
 
+        #if SPIKE
+        // Build `Spike` (tasks.md, regras comuns dos spikes): os métodos `spike.*` de `Spikes/` (T-0.18 em diante), com o
+        // mesmo contexto de leitura e a mesma ponte; API privada só por `PrivateXCT`, com o PX-n presente e liberado.
+        SpikeMethods.register(into: &router, SpikeMethods.Context(read: read, bridge: bridge, capabilities: base.capabilities))
+        #endif
+
         // S0.3, S1 itens 4, 7, 8 e 10 (T-0.8): aparelho, apps e `wait.for`. `device.lock` só com o PX-1 presente e
         // liberado (o `Locker` de `PrivateXCT/Lock.swift`, injetado aqui como o `Toucher` privado será); sem ele,
         // `E_CAPABILITY_MISSING`. A seção `scenes` ainda não existe (o executor vem depois): `inScenes` é sempre falso
