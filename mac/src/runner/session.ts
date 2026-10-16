@@ -269,7 +269,9 @@ export function markSessionDown(paths: RunnerPaths, state: SessionState): Sessio
 
 /**
  * O `takeId` da trava do aparelho (`paths.cache/locks/<udid>.lock`, S2 item 3), ou `undefined` sem
- * trava. O conteúdo é o `takeId` (texto) ou um objeto JSON com `takeId`.
+ * trava. O conteúdo é o `takeId` (texto) ou um objeto JSON com `takeId` (e `pid`). Trava com `pid` cujo
+ * processo não vive — ou não é a tomada: a linha de comando não tem o `takeId` (pid reaproveitado) — é
+ * sobra de uma tomada que morreu e conta como ausente.
  */
 export function readTakeLock(paths: RunnerPaths): string | undefined {
   let text: string;
@@ -281,8 +283,11 @@ export function readTakeLock(paths: RunnerPaths): string | undefined {
   if (text.startsWith('{')) {
     try {
       const value: unknown = JSON.parse(text);
-      const takeId = typeof value === 'object' && value !== null ? (value as Record<string, unknown>)['takeId'] : undefined;
-      if (typeof takeId === 'string' && takeId !== '') return takeId;
+      const fields = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+      const takeId = typeof fields['takeId'] === 'string' && fields['takeId'] !== '' ? fields['takeId'] : undefined;
+      const pid = fields['pid'];
+      if (typeof pid === 'number' && !processAlive(pid, takeId)) return undefined;
+      if (takeId !== undefined) return takeId;
     } catch {
       // cai no texto cru
     }

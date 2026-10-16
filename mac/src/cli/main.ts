@@ -1,6 +1,7 @@
 // CLI `contrarregra` (S8 item 1; chamada pelo shim `bin/contrarregra`). Só adapta argumentos e saída
 // (architecture.md A2): a lógica está em `mac/src/commands`. Por ora `runner build|up|down|status|sever`
-// (T-0.10) e `obs setup` (T-0.13); os demais subcomandos de S8 entram com as tarefas deles. Ordem fixa:
+// (T-0.10), `obs setup` (T-0.13) e `take validate|run|control` (trilha do demo, M3); os demais
+// subcomandos de S8 entram com as tarefas deles. Ordem fixa:
 // argumentos → configuração (`E_CONFIG` antes de qualquer processo filho ou conexão, AC-0.5) → comando.
 // Todo subcomando aceita `--json` (o mesmo objeto que a ferramenta MCP devolve). Saída: 0 ok, 1 erro, 2
 // uso.
@@ -11,6 +12,17 @@ import { parseArgs } from 'node:util';
 
 import { isContrarregraError, loadContext, type ContextOptions } from '../commands/context.ts';
 import { obsLaunchCommand, obsSetup, restartHint, type ObsCommandDeps, type ObsSetupChange, type ObsSetupResult } from '../commands/obs.ts';
+import {
+  CONTROL_OPS,
+  takeControl,
+  takeRun,
+  takeValidate,
+  type TakeControlResult,
+  type TakeRunDeps,
+  type TakeRunOptions,
+  type TakeSummary,
+  type TakeValidation,
+} from '../commands/take.ts';
 import {
   RUNNER_BIND_MODES,
   RUNNER_CONFIGURATIONS,
@@ -33,7 +45,11 @@ export const USAGE = `uso:
   contrarregra runner down [--json]
   contrarregra runner status [--json]
   contrarregra runner sever --for <segundos> [--json]
-  contrarregra obs setup [--json]`;
+  contrarregra obs setup [--json]
+  contrarregra take validate <choreo.yaml> [--json]
+  contrarregra take run <choreo.yaml> [--dry] [--scenes s02,s05] [--from <stepId|sceneId>] [--until <stepId>]
+                        [--voice <voice.json>] [--no-prepare] [--no-cleanup] [--json]
+  contrarregra take control <takeDir> resume|retry|skip|abort [--json]`;
 
 export interface CliIo {
   stdout: (text: string) => void;
@@ -45,6 +61,8 @@ export interface CliDeps extends Omit<ContextOptions, 'onProgress'> {
   io?: CliIo;
   /** OBS falso: sem processo real, sem Chaveiro real. */
   obs?: ObsCommandDeps;
+  /** Tomada com runner, OBS, relógio e aviso falados falsos. */
+  take?: TakeRunDeps;
 }
 
 class UsageError extends Error {}
@@ -55,6 +73,13 @@ const OPTIONS = {
   spike: { type: 'boolean' },
   bind: { type: 'string' },
   for: { type: 'string' },
+  dry: { type: 'boolean' },
+  scenes: { type: 'string' },
+  from: { type: 'string' },
+  until: { type: 'string' },
+  voice: { type: 'string' },
+  'no-prepare': { type: 'boolean' },
+  'no-cleanup': { type: 'boolean' },
   help: { type: 'boolean', short: 'h' },
 } as const;
 
@@ -70,14 +95,43 @@ const ALLOWED: Record<string, Record<string, readonly string[]>> = {
   obs: {
     setup: [],
   },
+  take: {
+    validate: [],
+    run: ['dry', 'scenes', 'from', 'until', 'voice', 'no-prepare', 'no-cleanup'],
+    control: [],
+  },
 };
 
-type Values = { json?: boolean; configuration?: string; spike?: boolean; bind?: string; for?: string; help?: boolean };
+/** Argumentos posicionais de cada subcomando (os demais não têm nenhum). */
+const POSITIONALS: Record<string, Record<string, readonly string[]>> = {
+  take: {
+    validate: ['<choreo.yaml>'],
+    run: ['<choreo.yaml>'],
+    control: ['<takeDir>', CONTROL_OPS.join('|')],
+  },
+};
+
+type Values = {
+  json?: boolean;
+  configuration?: string;
+  spike?: boolean;
+  bind?: string;
+  for?: string;
+  dry?: boolean;
+  scenes?: string;
+  from?: string;
+  until?: string;
+  voice?: string;
+  'no-prepare'?: boolean;
+  'no-cleanup'?: boolean;
+  help?: boolean;
+};
 
 interface Parsed {
   group: string;
   sub: string;
   values: Values;
+  args: string[];
 }
 
 function parse(argv: string[]): Parsed | 'help' {
@@ -95,7 +149,9 @@ function parse(argv: string[]): Parsed | 'help' {
   if (group === undefined || subs === undefined || sub === undefined || !Object.hasOwn(subs, sub)) {
     throw new UsageError(group === undefined ? 'falta o subcomando' : `subcomando desconhecido: ${parsed.positionals.join(' ')}`);
   }
-  if (rest.length > 0) throw new UsageError(`argumento a mais: ${rest.join(' ')}`);
+  const expected = POSITIONALS[group]?.[sub] ?? [];
+  if (rest.length > expected.length) throw new UsageError(`argumento a mais: ${rest.slice(expected.length).join(' ')}`);
+  if (rest.length < expected.length) throw new UsageError(`${group} ${sub} precisa de ${expected.join(' ')}`);
   for (const key of Object.keys(values)) {
     if (key === 'json' || key === 'help') continue;
     if (!subs[sub]!.includes(key)) throw new UsageError(`--${key} não vale para ${group} ${sub}`);
@@ -111,7 +167,61 @@ function parse(argv: string[]): Parsed | 'help' {
     const forS = values.for === undefined ? NaN : Number(values.for);
     if (!Number.isFinite(forS) || forS <= 0) throw new UsageError('runner sever precisa de --for <segundos> (> 0)');
   }
-  return { group, sub, values };
+  if (group === 'take' && sub === 'control' && !(CONTROL_OPS as readonly string[]).includes(rest[1]!)) {
+    throw new UsageError(`take control: comando "${rest[1]}" desconhecido; use ${CONTROL_OPS.join(', ')}`);
+  }
+  if (values.scenes !== undefined && sceneList(values.scenes).length === 0) throw new UsageError('--scenes precisa de ids de cena (ex.: --scenes s02,s05)');
+  for (const key of ['from', 'until', 'voice'] as const) {
+    if (values[key] !== undefined && values[key].trim() === '') throw new UsageError(`--${key} vazio`);
+  }
+  return { group, sub, values, args: rest };
+}
+
+function sceneList(text: string): string[] {
+  return text
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => id !== '');
+}
+
+function takeRunOptions(file: string, values: Values): TakeRunOptions {
+  const options: TakeRunOptions = { file, dry: values.dry === true, prepare: values['no-prepare'] !== true, cleanup: values['no-cleanup'] !== true };
+  if (values.scenes !== undefined) options.scenes = sceneList(values.scenes);
+  if (values.from !== undefined) options.from = values.from;
+  if (values.until !== undefined) options.until = values.until;
+  if (values.voice !== undefined) options.voice = values.voice;
+  return options;
+}
+
+function takeValidateText(r: TakeValidation): string {
+  const lines: string[] = [];
+  if (r.ok) lines.push(`take validate: ok — ${r.file}: ${r.scenes} cena(s), ${r.steps} passo(s)`);
+  else {
+    lines.push(`take validate: ${r.errors.length} erro(s) em ${r.file}:`);
+    for (const e of r.errors) lines.push(`  ${e.path === '' ? '(raiz)' : e.path}: ${e.message} [${e.rule}]`);
+  }
+  for (const w of r.warnings) lines.push(`  aviso: ${w}`);
+  return lines.join('\n');
+}
+
+function takeRunText(r: TakeSummary): string {
+  const lines = [
+    `take run: ${r.status}${r.cause === undefined ? '' : ` (${r.cause})`} — ${r.takeId} (${r.mode})`,
+    `  cenas: ${r.scenes.started}/${r.scenes.planned}; passos: ${r.steps.ok} ok, ${r.steps.skipped} pulado(s), ${r.steps.failed} com falha`,
+  ];
+  if (r.recording !== null) {
+    const size = r.recording.sizeBytes === null ? '' : ` (${(r.recording.sizeBytes / 1024 ** 2).toFixed(1)} MB)`;
+    lines.push(`  gravação: ${r.recording.file ?? '(sem arquivo)'}${size}; pasta de gravação do OBS ${r.recording.directoryRestored === false ? 'NÃO devolvida' : 'devolvida'}`);
+  }
+  if (r.error !== undefined) lines.push(`  erro: ${r.error.code ?? 'erro'}: ${r.error.message}`);
+  if (r.cleanupPending) lines.push('  cleanup: pendente (não rodou)');
+  if (r.airplaneMaybeOn) lines.push('  ATENÇÃO: o modo avião pode ter ficado ligado — desligue-o no iPhone');
+  if (r.takeJson !== null) lines.push(`  take.json: ${r.takeJson}`);
+  return lines.join('\n');
+}
+
+function takeControlText(r: TakeControlResult): string {
+  return `take control: ${r.op} enviado à tomada ${r.takeId}${r.pausedAt === null ? '' : ` (pausada em ${r.pausedAt})`} — ${r.file}`;
 }
 
 function changeLine(c: ObsSetupChange): string {
@@ -152,6 +262,11 @@ function errorProgressText(data: Readonly<Record<string, unknown>>): string {
 
 function human(group: string, sub: string, result: unknown): string {
   if (group === 'obs') return obsSetupText(result as ObsSetupResult);
+  if (group === 'take') {
+    if (sub === 'validate') return takeValidateText(result as TakeValidation);
+    if (sub === 'run') return takeRunText(result as TakeSummary);
+    return takeControlText(result as TakeControlResult);
+  }
   switch (sub) {
     case 'build': {
       const r = result as BuildResult;
@@ -202,14 +317,30 @@ export async function main(argv: string[], deps: CliDeps = {}): Promise<number> 
     io.stdout(`${USAGE}\n`);
     return 0;
   }
-  const { group, sub, values } = parsed;
+  const { group, sub, values, args } = parsed;
   const json = values.json === true;
   try {
     const ctx = loadContext({ ...deps, onProgress: (line) => io.stderr(`${line}\n`) });
     let result: unknown;
-    switch (group === 'obs' ? `obs ${sub}` : sub) {
+    let failed = false;
+    switch (group === 'runner' ? sub : `${group} ${sub}`) {
       case 'obs setup':
         result = await obsSetup(ctx, deps.obs);
+        break;
+      case 'take validate': {
+        const validation = takeValidate(args[0]!);
+        failed = !validation.ok;
+        result = validation;
+        break;
+      }
+      case 'take run': {
+        const summary = await takeRun(ctx, takeRunOptions(args[0]!, values), deps.take);
+        failed = summary.status !== 'finished';
+        result = summary;
+        break;
+      }
+      case 'take control':
+        result = takeControl(ctx, args[0]!, args[1]!);
         break;
       case 'build':
         result = await runnerBuild(ctx, values.configuration === undefined ? {} : { configuration: values.configuration });
@@ -227,7 +358,7 @@ export async function main(argv: string[], deps: CliDeps = {}): Promise<number> 
         result = runnerSever(ctx, { forS: Number(values.for) });
     }
     io.stdout(json ? `${JSON.stringify(result)}\n` : `${human(group, sub, result)}\n`);
-    return 0;
+    return failed ? 1 : 0;
   } catch (error) {
     if (isContrarregraError(error)) {
       const hint = error.data?.['hint'];

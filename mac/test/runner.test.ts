@@ -1321,8 +1321,14 @@ describe('runner up (S2 item 1; P-3; S1 item 9)', () => {
     writeFileSync(env.lockFile, `${TAKE_ID}\n`);
     assert.equal((await rejectsWith(upRunner(env.config, fast(env)), 'E_BUSY')).data['takeId'], TAKE_ID);
     assert.equal((await rejectsWith(downRunner(env.config, fast(env)), 'E_BUSY')).data['takeId'], TAKE_ID);
-    writeFileSync(env.lockFile, JSON.stringify({ takeId: TAKE_ID, pid: 1 }));
-    assert.equal((await rejectsWith(upRunner(env.config, fast(env)), 'E_BUSY')).data['takeId'], TAKE_ID);
+    // Trava JSON com pid: só vale se o processo vive e a linha de comando dele tem o takeId (senão é sobra).
+    const holder = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)', TAKE_ID], { stdio: 'ignore' });
+    try {
+      writeFileSync(env.lockFile, JSON.stringify({ takeId: TAKE_ID, pid: holder.pid }));
+      assert.equal((await rejectsWith(upRunner(env.config, fast(env)), 'E_BUSY')).data['takeId'], TAKE_ID);
+    } finally {
+      holder.kill();
+    }
     assert.equal(calls(env, 'xcodebuild').length, 0);
     assert.equal(env.usbmuxd.requests.length, 0, 'recusou antes de falar com o aparelho');
   });

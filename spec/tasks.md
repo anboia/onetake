@@ -584,7 +584,7 @@ esta tomada precisa. Simplificações só desta tomada (a spec da v1 continua va
   ID/código) funcionando com o runner vivo. Registro em `spikes/SP-1.md`. **GO** (2026-10-16): 0 de 944 quadros com o aviso, que o dono viu no aparelho; toques humanos e `device.lock` ok.
 - [x] **M2 — mapa do build 7 e coreografia.** `choreographies/hagah/v8.5-review.choreo.yaml` com os
   rótulos reais das 10 cenas.
-- [ ] **M3 — `take run <coreo> [--dry]` mínimo.** `mac/src/commands/take.ts`, `mac/src/take/`,
+- [x] **M3 — `take run <coreo> [--dry]` mínimo.** `mac/src/commands/take.ts`, `mac/src/take/`,
   testes com falsos.
 - [ ] **M4 — ensaio sem gravar**, de ponta a ponta, com o dono nos pontos de controle.
 - [ ] **M5 — tomada** (1–3), conferida com `ffprobe`.
