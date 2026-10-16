@@ -195,6 +195,8 @@ describe('passo → método do runner (S0.5, S1 item 4)', () => {
         if (name === 'ruim') throw new Error('702');
         chapters.push(name);
       },
+      pause: async () => {},
+      resume: async () => {},
     };
     const h = harness(oneScene([{ do: 'mark', label: 'marca' }, { do: 'mark', label: 'ruim' }, { do: 'tap', target: A }]), { recorder });
     await runAll(h);
@@ -605,6 +607,48 @@ describe('pontos de controle (S5)', () => {
     assert.deepEqual(h.said, []);
     assert.deepEqual(h.record.steps.map((s) => s.index), ['1', '1.1', '1.2', '1.3', '1.4']);
     assert.ok(h.record.steps.every((s) => s.status === 'ok'));
+  });
+});
+
+describe('--pause-recording-at no executor', () => {
+  test('prazo estourado → pausa da tomada → retry: a gravação continua pausada (um PauseRecord, um ResumeRecord)', async () => {
+    const calls: string[] = [];
+    const recorder: TakeRecorder = {
+      outputMs: async () => 0,
+      chapter: async () => {},
+      pause: async () => void calls.push('pause'),
+      resume: async () => void calls.push('resume'),
+    };
+    // O harness só monta coreografia, relógio, runner e registro; o executor é este, com --pause-recording-at.
+    const h = harness(
+      oneScene([{ id: 's01.unlock', do: 'checkpoint', who: 'human', ask: 'Destrave.', until: { locked: false }, timeoutMs: 30_000, onTimeout: 'pause' } as Step, { do: 'tap', target: A }]),
+      { handlers: (clock) => ({ 'wait.for': waitTrueAfter(clock, 50_000) }) },
+    );
+    const executor = new TakeExecutor({
+      doc: h.doc,
+      record: h.record,
+      runner: h.runner,
+      clock: h.clock,
+      say: (text) => {
+        calls.push(`say ${text}`);
+        if (text.startsWith('Tomada pausada')) h.control.op = 'retry';
+      },
+      log: () => {},
+      control: h.control,
+      persist: () => {},
+      pads: { padBeforeMs: 0, padAfterMs: 0 },
+      controlHint: 'x',
+      pauseRecordingAt: new Set(['s01.unlock']),
+    });
+    executor.setRecorder(recorder);
+    await executor.runScenes(planScenes(h.doc));
+    assert.deepEqual(calls.filter((c) => c === 'pause' || c === 'resume'), ['pause', 'resume']);
+    assert.ok(calls.indexOf('pause') < calls.indexOf('say Destrave.'));
+    const [pause] = h.record.recordingPauses;
+    assert.equal(pause!.endedBy, 'resume');
+    assert.equal(pause!.durationMs, 50_000 + 1_000);
+    assert.equal(h.record.scenes[0]!.pausedMs, 51_000);
+    assert.deepEqual(h.record.steps[0]!.interventions, ['retry']);
   });
 });
 

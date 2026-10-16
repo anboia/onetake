@@ -10,6 +10,15 @@
 // Nada é apagado: a gravação só é renomeada para `recording.mp4` dentro da pasta da tomada (S9 item 5).
 // Nenhuma gravação fica órfã: sem `STARTED` confirmado, manda `StopRecord` por garantia; se a conexão cair
 // na hora de parar, reconecta uma vez para o `StopRecord` e para devolver a pasta.
+//
+// Pausa (`take run --pause-recording-at`, decisão do dono de 2026-10-16: o destravar com código não pode
+// aparecer no vídeo): `PauseRecord`/`ResumeRecord` passam pela guarda do perfil e são confirmados pelo
+// `RecordStateChanged` PAUSED/RESUMED ou por `GetRecordStatus.outputPaused` (≤ 5 s). Parar com a gravação
+// pausada: PARA DIRETO, sem retomar. No obs-websocket 5.x o `StopRecord` só recusa sem gravação ativa (501;
+// `obs_frontend_recording_active()` é verdadeiro pausado — só `PauseRecord`/`ResumeRecord` têm 502/503 de
+// estado), e o OBS para pela interface uma gravação pausada; retomar antes gravaria a tela do iPhone (o
+// teclado do código) no pós-rolo. Se mesmo assim o OBS continuar ativo e pausado sem `STOPPED`, aí sim
+// `ResumeRecord` de emergência (sem guarda, como o `StopRecord`) e `StopRecord` de novo.
 
 import { existsSync, readdirSync, realpathSync, renameSync, statfsSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -24,7 +33,7 @@ import type { RecordingInfo } from './manifest.ts';
 import { base64Image, decodePng, nonBlack } from './png.ts';
 
 /** O que a tomada usa do cliente (o `ObsClient` real; nos testes, um falso com a mesma forma). */
-export type TakeObs = Pick<ObsClient, 'request' | 'onEvent' | 'close' | 'assertProfile'>;
+export type TakeObs = Pick<ObsClient, 'request' | 'onEvent' | 'close' | 'assertProfile' | 'pauseRecord' | 'resumeRecord' | 'emergencyResumeRecord'>;
 
 export const GiB = 1024 ** 3;
 /** Pré-rolo e pós-rolo da gravação (trilha do demo: sem marcas de sincronia). */
@@ -32,6 +41,8 @@ export const PREROLL_MS = 2_000;
 export const POSTROLL_MS = 2_000;
 export const STARTED_TIMEOUT_MS = 5_000;
 export const STOPPED_TIMEOUT_MS = 10_000;
+/** Confirmação de `PauseRecord`/`ResumeRecord` (evento ou `GetRecordStatus.outputPaused`). */
+export const PAUSE_CONFIRM_MS = 5_000;
 /** Finalização (S9 item 5): tamanho estável por 500 ms e `ffprobe` legível, prazo 60 s. */
 export const STABLE_MS = 500;
 export const FINALIZE_TIMEOUT_MS = 60_000;
@@ -47,6 +58,8 @@ export const RECORDING_FILE = 'recording.mp4';
 
 const STATE_STARTED = 'OBS_WEBSOCKET_OUTPUT_STARTED';
 const STATE_STOPPED = 'OBS_WEBSOCKET_OUTPUT_STOPPED';
+const STATE_PAUSED = 'OBS_WEBSOCKET_OUTPUT_PAUSED';
+const STATE_RESUMED = 'OBS_WEBSOCKET_OUTPUT_RESUMED';
 
 type Json = Record<string, unknown>;
 type Log = (line: string) => void;
@@ -277,11 +290,15 @@ export interface RecordingDeps {
    * gravação ou de devolver a pasta: a gravação nunca fica órfã por causa da conexão.
    */
   reconnect?: () => Promise<TakeObs>;
+  /** Só para testes: prazos das confirmações do OBS (padrão 5 s, 10 s e 5 s). */
+  confirmMs?: { started?: number; stopped?: number; paused?: number };
 }
 
 export interface ActiveRecording extends TakeRecorder {
   /** O registro da gravação (atualizado no `stop`). */
   readonly info: RecordingInfo;
+  /** A gravação está pausada (`PauseRecord` confirmado e sem `ResumeRecord` depois). */
+  readonly paused: boolean;
   /**
    * Para (`StopRecord` → `STOPPED`), espera a finalização, renomeia para `recording.mp4` e devolve a pasta
    * de gravação anterior — esta sempre, mesmo se algo antes falhar. Idempotente.
@@ -380,7 +397,7 @@ export async function startRecording(obs: TakeObs, dir: string, deps: RecordingD
   await obs.request('SetRecordDirectory', { recordDirectory: recordDir });
   const info: RecordingInfo = { file: null, startedAt: '', startedAtMs: 0, previousDirectory: previous };
   try {
-    const started = waitRecordState(obs, STATE_STARTED, STARTED_TIMEOUT_MS);
+    const started = waitRecordState(obs, STATE_STARTED, deps.confirmMs?.started ?? STARTED_TIMEOUT_MS);
     try {
       await obs.request('StartRecord');
       await started.done;
@@ -402,9 +419,11 @@ export async function startRecording(obs: TakeObs, dir: string, deps: RecordingD
   info.startedAtMs = deps.clock.now();
   info.startedAt = new Date(info.startedAtMs).toISOString();
 
-  /** `StopRecord` → `STOPPED` → finalização → `recording.mp4`, numa conexão. */
-  const stopOn = async (conn: TakeObs): Promise<void> => {
-    const stopped = waitRecordState(conn, STATE_STOPPED, STOPPED_TIMEOUT_MS);
+  let paused = false;
+
+  /** `StopRecord` e o `STOPPED`; devolve o caminho (do evento, ou da resposta) e se o `STOPPED` veio. */
+  const stopRequest = async (conn: TakeObs): Promise<{ file: string; confirmed: boolean }> => {
+    const stopped = waitRecordState(conn, STATE_STOPPED, deps.confirmMs?.stopped ?? STOPPED_TIMEOUT_MS);
     try {
       const response = await conn.request<{ outputPath?: string }>('StopRecord');
       info.stoppedAtMs = deps.clock.now();
@@ -414,14 +433,53 @@ export async function startRecording(obs: TakeObs, dir: string, deps: RecordingD
         const event = await stopped.done;
         const path = event.eventData['outputPath'];
         if (typeof path === 'string' && path !== '') file = path;
+        return { file, confirmed: true };
       } catch (error) {
         log(`obs: ${(error as Error).message}; sigo com o caminho do StopRecord`);
+        return { file, confirmed: false };
       }
-      if (file === '') throw new ContrarregraError('E_OBS_CONFIG', 'o OBS não disse o caminho da gravação', {});
-      await settle(file);
     } finally {
       stopped.cancel();
     }
+  };
+
+  /** `StopRecord` → `STOPPED` → finalização → `recording.mp4`, numa conexão (pausada: para direto). */
+  const stopOn = async (conn: TakeObs): Promise<void> => {
+    let { file, confirmed } = await stopRequest(conn);
+    if (!confirmed && paused) {
+      const status = await get<GetRecordStatusResponse>(conn, 'GetRecordStatus').catch(() => undefined);
+      if (status?.outputActive === true && status.outputPaused) {
+        log('obs: o OBS não parou a gravação pausada; ResumeRecord de emergência e StopRecord de novo');
+        await conn.emergencyResumeRecord().catch(() => {});
+        paused = false;
+        const again = await stopRequest(conn);
+        file = again.file === '' ? file : again.file;
+      }
+    }
+    paused = false;
+    if (file === '') throw new ContrarregraError('E_OBS_CONFIG', 'o OBS não disse o caminho da gravação', {});
+    await settle(file);
+  };
+
+  /** `PauseRecord`/`ResumeRecord` confirmados (evento ou `GetRecordStatus.outputPaused`, ≤ 5 s). */
+  const setPaused = async (want: boolean): Promise<void> => {
+    const what = want ? 'pausou' : 'retomou';
+    const confirmMs = deps.confirmMs?.paused ?? PAUSE_CONFIRM_MS;
+    const changed = waitRecordState(connection, want ? STATE_PAUSED : STATE_RESUMED, confirmMs);
+    try {
+      await (want ? connection.pauseRecord() : connection.resumeRecord());
+      await changed.done;
+    } catch (error) {
+      changed.cancel();
+      const status = await get<GetRecordStatusResponse>(connection, 'GetRecordStatus').catch(() => undefined);
+      if (status?.outputActive !== true || status.outputPaused !== want) {
+        throw new ContrarregraError('E_OBS_CONFIG', `a gravação não ${what} em ${confirmMs / 1000} s (${(error as Error).message})`, {
+          want: want ? 'paused' : 'resumed',
+          status: status === undefined ? null : { outputActive: status.outputActive, outputPaused: status.outputPaused },
+        });
+      }
+    }
+    paused = want;
   };
   const settle = async (file: string): Promise<void> => {
     info.obsFile = file;
@@ -453,6 +511,11 @@ export async function startRecording(obs: TakeObs, dir: string, deps: RecordingD
 
   return {
     info,
+    get paused() {
+      return paused;
+    },
+    pause: () => setPaused(true),
+    resume: () => setPaused(false),
     outputMs: async () => (await get<GetRecordStatusResponse>(connection, 'GetRecordStatus')).outputDuration,
     chapter: async (name) => {
       await connection.request('CreateRecordChapter', { chapterName: name });

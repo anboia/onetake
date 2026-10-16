@@ -48,7 +48,7 @@ export const USAGE = `uso:
   contrarregra obs setup [--json]
   contrarregra take validate <choreo.yaml> [--json]
   contrarregra take run <choreo.yaml> [--dry] [--scenes s02,s05] [--from <stepId|sceneId>] [--until <stepId>]
-                        [--voice <voice.json>] [--no-prepare] [--no-cleanup] [--json]
+                        [--voice <voice.json>] [--pause-recording-at <checkpointId>[,…]] [--no-prepare] [--no-cleanup] [--json]
   contrarregra take control <takeDir> resume|retry|skip|abort [--json]`;
 
 export interface CliIo {
@@ -80,6 +80,7 @@ const OPTIONS = {
   voice: { type: 'string' },
   'no-prepare': { type: 'boolean' },
   'no-cleanup': { type: 'boolean' },
+  'pause-recording-at': { type: 'string' },
   help: { type: 'boolean', short: 'h' },
 } as const;
 
@@ -97,7 +98,7 @@ const ALLOWED: Record<string, Record<string, readonly string[]>> = {
   },
   take: {
     validate: [],
-    run: ['dry', 'scenes', 'from', 'until', 'voice', 'no-prepare', 'no-cleanup'],
+    run: ['dry', 'scenes', 'from', 'until', 'voice', 'no-prepare', 'no-cleanup', 'pause-recording-at'],
     control: [],
   },
 };
@@ -124,6 +125,7 @@ type Values = {
   voice?: string;
   'no-prepare'?: boolean;
   'no-cleanup'?: boolean;
+  'pause-recording-at'?: string;
   help?: boolean;
 };
 
@@ -171,6 +173,9 @@ function parse(argv: string[]): Parsed | 'help' {
     throw new UsageError(`take control: comando "${rest[1]}" desconhecido; use ${CONTROL_OPS.join(', ')}`);
   }
   if (values.scenes !== undefined && sceneList(values.scenes).length === 0) throw new UsageError('--scenes precisa de ids de cena (ex.: --scenes s02,s05)');
+  if (values['pause-recording-at'] !== undefined && sceneList(values['pause-recording-at']).length === 0) {
+    throw new UsageError('--pause-recording-at precisa de ids de checkpoint (ex.: --pause-recording-at s03.cp.unlock)');
+  }
   for (const key of ['from', 'until', 'voice'] as const) {
     if (values[key] !== undefined && values[key].trim() === '') throw new UsageError(`--${key} vazio`);
   }
@@ -190,6 +195,7 @@ function takeRunOptions(file: string, values: Values): TakeRunOptions {
   if (values.from !== undefined) options.from = values.from;
   if (values.until !== undefined) options.until = values.until;
   if (values.voice !== undefined) options.voice = values.voice;
+  if (values['pause-recording-at'] !== undefined) options.pauseRecordingAt = sceneList(values['pause-recording-at']);
   return options;
 }
 

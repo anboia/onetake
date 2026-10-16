@@ -20,7 +20,7 @@ import { readTakeLock } from '../src/runner/session.ts';
 import { readTakeRecord, type TakeRecord } from '../src/take/manifest.ts';
 import { GiB, POSTROLL_MS, PREROLL_MS } from '../src/take/obs.ts';
 import { parseSayDevices, sayArgs, type TakeRunDeps, type TakeSummary } from '../src/take/run.ts';
-import { FakeClock, FakeObs, FakeRunner, rpcError, takeEnv, type FakeObsOptions, type RunnerHandler, type TakeEnv } from './helpers/take-fakes.ts';
+import { FakeClock, FakeObs, FakeRunner, rpcError, takeEnv, waitTrueAfter, type FakeObsOptions, type RunnerHandler, type TakeEnv } from './helpers/take-fakes.ts';
 
 const CHOREO = `
 schema: contrarregra.choreography/1
@@ -85,7 +85,10 @@ function world(options: { obs?: Omit<FakeObsOptions, 'clock' | 'trace'>; handler
     },
     probeOk: async () => true,
     freeBytes: async () => (options.freeGiB ?? 100) * GiB,
-    say: (text) => void w.said.push(text),
+    say: (text) => {
+      w.said.push(text);
+      trace.push(`say ${text}`);
+    },
     clock,
     onInterrupt: (handler) => {
       w.sigint = handler;
@@ -350,6 +353,173 @@ describe('take run: revisão — sinais, ordem da saída, gravação órfã, dis
       writeFileSync(voice, JSON.stringify(body));
       await rejectsCode(takeRun(w.ctx, { file: w.file, voice }, w.deps), 'E_CONFIG');
     }
+  });
+});
+
+const PAUSE_CHOREO = `
+schema: contrarregra.choreography/1
+app: {bundleId: app.example.demo, iconLabel: "Demo", expectVersion: "1.0.0 (7)", urlPrefixes: ["demo://"]}
+device: {language: en, screenPt: {w: 390, h: 844}, textSize: large, appearance: light}
+targets: {}
+prepare:
+  - {id: p.cp, do: checkpoint, who: human, ask: "Prepare o iPhone.", until: {network: online}, timeoutMs: 1000, onTimeout: abort}
+scenes:
+  - id: s01
+    title: "Tela travada"
+    line: ["Locked.", "Unlocked."]
+    hold: {padBeforeMs: 500, padAfterMs: 500}
+    steps:
+      - {id: s01.lock, do: lock}
+      - {id: s01.unlock, do: checkpoint, who: human, ask: "Destrave o iPhone.", until: {locked: false}, timeoutMs: 90000, onTimeout: pause}
+      - {id: s01.cue, do: tap, target: {label: "Next"}, cue: 1}
+  - id: s02
+    title: "Depois"
+    line: ["After."]
+    steps:
+      - {id: s02.tap, do: tap, target: {label: "Stop"}}
+cleanup: []
+`;
+
+describe('take run --pause-recording-at (destravar fora do vídeo)', () => {
+  function pauseWorld(options: Parameters<typeof world>[0] = {}): World {
+    const w = world({ yaml: PAUSE_CHOREO, ...options });
+    w.deps.obsConfirmMs = { started: 50, stopped: 50, paused: 50 };
+    return w;
+  }
+
+  test('pausa antes do primeiro aviso, retoma 1 s depois de until; o tempo pausado não conta na cena nem no cue', async () => {
+    const w = pauseWorld();
+    // until {locked: false} fica verdadeira 30 s depois da primeira avaliação; o resto do wait.for vale na hora.
+    const unlock = waitTrueAfter(w.clock, 30_000);
+    w.runner.handlers['wait.for'] = (params, call) => ((params['condition'] as Record<string, unknown>)['locked'] === false ? unlock(params, call) : {});
+    const voice = join(w.env.root, 'voice.json');
+    writeFileSync(voice, JSON.stringify({ scenes: { s01: [{ text: 'Locked.', durMs: 20_000 }, { text: 'Unlocked.', durMs: 20_000 }], s02: [{ text: 'After.', durMs: 1_000 }] } }));
+    const summary = await takeRun(w.ctx, { file: w.file, voice, pauseRecordingAt: ['s01.unlock'] }, w.deps);
+    assert.equal(summary.status, 'finished', JSON.stringify(summary));
+    const t = w.trace;
+    const pause = at(t, 'obs PauseRecord');
+    assert.ok(pause < at(t, 'say Destrave o iPhone.'), 'PauseRecord antes do primeiro aviso');
+    assert.ok(at(t, 'obs ResumeRecord') > pause);
+    assert.ok(at(t, 'obs ResumeRecord') < at(t, 'runner ui.tap "Next"'));
+    assert.equal(t.filter((x) => x === 'obs PauseRecord').length, 1);
+    const record = readTakeRecord(summary.dir!);
+    assert.deepEqual(record.options.pauseRecordingAt, ['s01.unlock']);
+    assert.equal(record.recordingPauses.length, 1);
+    const p = record.recordingPauses[0]!;
+    assert.equal(p.stepId, 's01.unlock');
+    assert.equal(p.sceneId, 's01');
+    assert.equal(p.endedBy, 'resume');
+    assert.equal(p.durationMs, 30_000 + 1_000, 'até until + 1 s para a tela assentar');
+    assert.equal(p.videoAfterMs, p.videoBeforeMs, 'o trecho pausado não entra no vídeo');
+    const s01 = record.scenes[0]!;
+    assert.equal(s01.pausedMs, 31_000);
+    assert.equal(s01.minDurationMs, 500 + 40_250 + 500);
+    assert.equal(s01.videoEndMs! - s01.videoStartMs!, s01.minDurationMs, 'no vídeo a cena dura a permanência mínima');
+    assert.equal(s01.endMs! - s01.startMs, s01.minDurationMs + 31_000, 'no Mac, mais o tempo pausado');
+    const cue = record.steps.find((x) => x.id === 's01.cue')!;
+    assert.equal(cue.videoMs! - s01.videoStartMs!, 500 + 20_000 + 250, 'a frase 1 no tempo do vídeo');
+    assert.equal(record.scenes[1]!.pausedMs, undefined);
+  });
+
+  test('until já verdadeira na primeira avaliação: nada pausa', async () => {
+    const w = pauseWorld();
+    const summary = await takeRun(w.ctx, { file: w.file, pauseRecordingAt: ['s01.unlock'] }, w.deps);
+    assert.equal(summary.status, 'finished');
+    assert.ok(!w.trace.some((x) => x.startsWith('obs PauseRecord')));
+    assert.deepEqual(readTakeRecord(summary.dir!).recordingPauses, []);
+  });
+
+  test('saída com a gravação pausada (Ctrl-C no meio do destravar): para direto, sem ResumeRecord nem pós-rolo', async () => {
+    const w = pauseWorld();
+    w.runner.handlers['wait.for'] = (params) => {
+      if ((params['condition'] as Record<string, unknown>)['locked'] !== false) return {};
+      if (Number(params['timeoutMs']) === 0) throw rpcError('E_TIMEOUT');
+      w.sigint?.('SIGINT');
+      return new Promise(() => {});
+    };
+    const summary = await takeRun(w.ctx, { file: w.file, pauseRecordingAt: ['s01.unlock'] }, w.deps);
+    assert.equal(summary.status, 'aborted');
+    assert.ok(!w.trace.some((x) => x.startsWith('obs ResumeRecord')));
+    assert.equal(w.obs.stoppedWhilePaused, true);
+    assert.equal(w.obs.recordDirectory, w.obs.originalDirectory);
+    const record = readTakeRecord(summary.dir!);
+    assert.equal(record.recordingPauses[0]!.endedBy, 'stop');
+    assert.equal(record.recording!.stoppedAtMs, record.recordingPauses[0]!.pausedAtMs, 'sem pós-rolo');
+  });
+
+  test('OBS que não para pausado: ResumeRecord de emergência (sem guarda) e StopRecord de novo', async () => {
+    const w = pauseWorld({ obs: { stopIgnoredWhilePaused: true } });
+    w.runner.handlers['wait.for'] = (params) => {
+      if ((params['condition'] as Record<string, unknown>)['locked'] !== false) return {};
+      if (Number(params['timeoutMs']) === 0) throw rpcError('E_TIMEOUT');
+      w.sigint?.('SIGINT');
+      return new Promise(() => {});
+    };
+    const summary = await takeRun(w.ctx, { file: w.file, pauseRecordingAt: ['s01.unlock'] }, w.deps);
+    assert.equal(summary.status, 'aborted');
+    const stops = w.trace.filter((x) => x.startsWith('obs StopRecord') || x.startsWith('obs ResumeRecord'));
+    assert.deepEqual(stops, ['obs StopRecord', 'obs ResumeRecord (emergência)', 'obs StopRecord']);
+    assert.equal(w.obs.recording, false);
+    assert.ok(existsSync(summary.recording!.file!));
+  });
+
+  test('PauseRecord sem confirmação: o aviso de destravar não toca; a tomada pausa e o dono decide', async () => {
+    const w = pauseWorld({ obs: { pauseIgnored: true } });
+    w.runner.handlers['wait.for'] = (params) => {
+      if ((params['condition'] as Record<string, unknown>)['locked'] === false && Number(params['timeoutMs']) === 0) throw rpcError('E_TIMEOUT');
+      return {};
+    };
+    w.deps.say = (text) => {
+      w.said.push(text);
+      if (text.startsWith('Tomada pausada')) writeFileSync(join(w.env.takes, 'demo', takeDirs(w)[0]!, 'control.json'), JSON.stringify({ op: 'abort' }));
+    };
+    const summary = await takeRun(w.ctx, { file: w.file, pauseRecordingAt: ['s01.unlock'] }, w.deps);
+    assert.equal(summary.status, 'aborted');
+    assert.ok(!w.said.includes('Destrave o iPhone.'), 'nunca pedir para destravar com a gravação rodando');
+    assert.ok(w.said.some((x) => x.startsWith('Tomada pausada')));
+    assert.deepEqual(readTakeRecord(summary.dir!).recordingPauses, []);
+  });
+
+  test('ResumeRecord sem confirmação: aborta (recording-resume-failed) e para a gravação pausada', async () => {
+    const w = pauseWorld({ obs: { resumeIgnored: true } });
+    const unlock = waitTrueAfter(w.clock, 5_000);
+    w.runner.handlers['wait.for'] = (params, call) => ((params['condition'] as Record<string, unknown>)['locked'] === false ? unlock(params, call) : {});
+    const summary = await takeRun(w.ctx, { file: w.file, pauseRecordingAt: ['s01.unlock'] }, w.deps);
+    assert.equal(summary.status, 'aborted');
+    assert.equal(summary.cause, 'recording-resume-failed');
+    assert.equal(w.obs.stoppedWhilePaused, true);
+    assert.equal(w.runner.of('ui.tap').length, 0, 'nada mais roda sem gravar');
+  });
+
+  test('--dry: só registra que pausaria (sem OBS)', async () => {
+    const w = pauseWorld();
+    w.deps.connectObs = async () => assert.fail('--dry não conecta no OBS');
+    const unlock = waitTrueAfter(w.clock, 10_000);
+    w.runner.handlers['wait.for'] = (params, call) => ((params['condition'] as Record<string, unknown>)['locked'] === false ? unlock(params, call) : {});
+    const summary = await takeRun(w.ctx, { file: w.file, dry: true, pauseRecordingAt: ['s01.unlock'] }, w.deps);
+    assert.equal(summary.status, 'finished');
+    const [p] = readTakeRecord(summary.dir!).recordingPauses;
+    assert.equal(p!.simulated, true);
+    assert.equal(p!.videoBeforeMs, null);
+    assert.equal(p!.endedBy, 'resume');
+    assert.ok(w.lines.some((l) => l.includes('aqui a gravação pausaria')));
+  });
+
+  test('pré-voo: id que não é checkpoint das cenas → E_CHOREO_INVALID antes de conectar; a CLI repassa a opção', async () => {
+    const w = pauseWorld();
+    for (const ids of [['s01.cue'], ['p.cp'], ['nada']]) {
+      await rejectsCode(takeRun(w.ctx, { file: w.file, pauseRecordingAt: ids }, w.deps), 'E_CHOREO_INVALID');
+    }
+    assert.deepEqual(w.runner.calls, []);
+    const out: string[] = [];
+    const code = await main(['take', 'run', w.file, '--dry', '--json', '--pause-recording-at', 's01.unlock'], {
+      config: { configPath: w.env.configPath },
+      io: { stdout: (x) => void out.push(x), stderr: () => {} },
+      take: w.deps,
+    });
+    assert.equal(code, 0);
+    const summary = JSON.parse(out.join('')) as TakeSummary;
+    assert.deepEqual(readTakeRecord(summary.dir!).options.pauseRecordingAt, ['s01.unlock']);
   });
 });
 

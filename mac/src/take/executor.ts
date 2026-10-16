@@ -30,7 +30,7 @@ import type { Choreography, Condition, PointOrTarget, Scene, Step, Target } from
 import { RpcProtocolError } from '../runner/rpc.ts';
 import { looksLikeCredential } from './choreo.ts';
 import type { ControlOp } from './control.ts';
-import type { SceneRecord, StepRecord, TakeRecord, TakeSection } from './manifest.ts';
+import type { RecordingPause, SceneRecord, StepRecord, TakeRecord, TakeSection } from './manifest.ts';
 import { cueOffsetMs, narrationMs, type VoicePlan } from './voice.ts';
 
 /** Padrões de S0.4. */
@@ -50,6 +50,8 @@ export const DRAIN_POLL_MS = 1_000;
 /** Pontos de controle (S5 item 2): sondagem em fatias e aviso repetido. */
 export const CHECKPOINT_SLICE_MS = 20_000;
 export const ALERT_REPEAT_MS = 20_000;
+/** `--pause-recording-at`: depois que `until` fica verdadeira, espera a tela assentar antes do `ResumeRecord`. */
+export const RESUME_SETTLE_MS = 1_000;
 /** Pausa: prazo para o `take control` e a sondagem do `control.json`. */
 export const PAUSE_MAX_MS = 600_000;
 export const CONTROL_POLL_MS = 250;
@@ -76,6 +78,9 @@ export interface TakeRecorder {
   outputMs(): Promise<number | null>;
   /** `CreateRecordChapter {chapterName}` (702 etc. → erro, que o executor só registra). */
   chapter(name: string): Promise<void>;
+  /** `PauseRecord` / `ResumeRecord` confirmados (`--pause-recording-at`); falha → erro. */
+  pause(): Promise<void>;
+  resume(): Promise<void>;
 }
 
 /** `control.json` da pasta da tomada. */
@@ -102,6 +107,12 @@ export interface ExecutorOptions {
   pads: { padBeforeMs: number; padAfterMs: number };
   /** Como o dono responde a uma pausa, ex.: `contrarregra take control <dir>`. */
   controlHint: string;
+  /**
+   * `--pause-recording-at`: ids de `checkpoint` (em `scenes`) em que a GRAVAÇÃO pausa enquanto a pessoa age
+   * (decisão do dono de 2026-10-16: o destravar com código não pode aparecer no vídeo). Sem gravação
+   * (`--dry`), só registra que pausaria.
+   */
+  pauseRecordingAt?: ReadonlySet<string>;
 }
 
 /** A tomada foi encerrada (dono, `onFail: abort`, prazo da pausa): não é erro da ferramenta. */
@@ -451,6 +462,11 @@ interface SceneState {
   startMs: number;
   padBeforeMs: number;
   minDurationMs: number;
+  /**
+   * Tempo da cena com a gravação pausada até agora: não existe no vídeo, então não conta para a duração
+   * mínima nem para os `cue` (no Mac, eles andam esse tanto para a frente).
+   */
+  pausedMs: number;
 }
 
 interface Scope {
@@ -485,6 +501,9 @@ export class TakeExecutor {
   readonly #warnedCues = new Set<string>();
   /** O que se sabe do modo avião (para avisar se a tomada parar com ele possivelmente ligado). */
   #airplane: 'off' | 'on' | 'maybe-on' = 'off';
+  readonly #pauseRecordingAt: ReadonlySet<string>;
+  /** A pausa da gravação em curso (de um `checkpoint` de `--pause-recording-at`). */
+  #recordingPause: { entry: RecordingPause; scene: SceneState | null } | null = null;
 
   constructor(options: ExecutorOptions) {
     this.#doc = options.doc;
@@ -498,6 +517,7 @@ export class TakeExecutor {
     this.#voice = options.voice ?? null;
     this.#pads = options.pads;
     this.#controlHint = options.controlHint;
+    this.#pauseRecordingAt = options.pauseRecordingAt ?? new Set();
     this.#abortPromise = new Promise<never>((_resolve, reject) => {
       this.#rejectAbort = reject;
     });
@@ -570,14 +590,14 @@ export class TakeExecutor {
     this.#persist();
     this.#log(`[${scene.id}] ${scene.title} (mínimo ${seconds(minDurationMs)})`);
     await this.#chapter(scene.title);
-    const state: SceneState = { scene, record, startMs, padBeforeMs, minDurationMs };
+    const state: SceneState = { scene, record, startMs, padBeforeMs, minDurationMs, pausedMs: 0 };
     let complete = false;
     try {
       await this.#sleepUntil(startMs + padBeforeMs);
       const steps = scene.steps.slice(item.startAt, item.stopBefore ?? undefined);
       const scope: Scope = { section: 'scenes', scene: state, timing: { prevEndMs: startMs }, prefix: '', total: scene.steps.length, offset: item.startAt };
       await this.#runSteps(steps, scope);
-      if (item.stopBefore === null) await this.#sleepUntil(startMs + minDurationMs);
+      if (item.stopBefore === null) await this.#sleepUntil(startMs + state.pausedMs + minDurationMs);
       complete = item.stopBefore === null && item.startAt === 0;
     } finally {
       if (!complete) record.truncated = true;
@@ -608,7 +628,7 @@ export class TakeExecutor {
         }
       } else {
         cueAtMs = scope.scene.padBeforeMs + offset;
-        notBefore = Math.max(notBefore, scope.scene.startMs + cueAtMs);
+        notBefore = Math.max(notBefore, scope.scene.startMs + scope.scene.pausedMs + cueAtMs);
       }
     }
     await this.#sleepUntil(notBefore);
@@ -658,8 +678,20 @@ export class TakeExecutor {
     return `[${where} ${rec.index}/${scope.total}${id}] ${describeStep(step)} ${rec.status} ${seconds(rec.durationMs ?? 0)}${suffix}${error}`;
   }
 
-  /** Uma execução do passo com o `onFail` (S0.4, S4 item 5 simplificado). */
+  /**
+   * Uma execução do passo com o `onFail`. O ponto de controle que pausou a gravação a retoma quando termina
+   * (resolvido, `resume`, `skip`, falha com `continue`); no abort, quem sai para a gravação pausada.
+   */
   async #execute(step: Step, scope: Scope, rec: StepRecord, index: string): Promise<void> {
+    try {
+      await this.#executeWithOnFail(step, scope, rec, index);
+    } finally {
+      if (this.#recordingPause !== null && this.#recordingPause.entry.stepId === rec.id && this.#aborted === undefined) await this.#endRecordingPause();
+    }
+  }
+
+  /** Uma execução do passo com o `onFail` (S0.4, S4 item 5 simplificado). */
+  async #executeWithOnFail(step: Step, scope: Scope, rec: StepRecord, index: string): Promise<void> {
     let autoRetried = false;
     for (;;) {
       rec.attempts += 1;
@@ -721,7 +753,7 @@ export class TakeExecutor {
         await this.#sleepUntil(this.#clock.now() + step.ms);
         return OK;
       case 'hold':
-        if (scope.scene !== null) await this.#sleepUntil(scope.scene.startMs + scope.scene.minDurationMs);
+        if (scope.scene !== null) await this.#sleepUntil(scope.scene.startMs + scope.scene.pausedMs + scope.scene.minDurationMs);
         return OK;
       case 'mark':
         await this.#chapter(step.label);
@@ -783,6 +815,11 @@ export class TakeExecutor {
       if (error instanceof TakeAborted) throw error;
       this.#log(`  ${step.id}: até agora sem leitura (${errorInfo(error).code ?? 'erro'}); sigo sondando`);
     }
+    // Vai esperar a pessoa: pausa a gravação antes do primeiro aviso (`--pause-recording-at`).
+    if (scope.section === 'scenes' && this.#pauseRecordingAt.has(step.id)) {
+      const failed = await this.#beginRecordingPause(step.id, scope.scene);
+      if (failed !== undefined) return failed;
+    }
     const deadline = waitStart + step.timeoutMs;
     let nextAlert = this.#clock.now();
     let quietUntil = 0;
@@ -811,6 +848,62 @@ export class TakeExecutor {
     rec.waitedMs = this.#clock.now() - waitStart;
     if (alerts > 0) rec.alerts = alerts;
     return { ...failureAfterAction(new ContrarregraError('E_TIMEOUT', `ponto de controle ${step.id}: until não ficou verdadeira em ${step.timeoutMs} ms`, { checkpoint: step.id }), false), onFail: step.onTimeout };
+  }
+
+  /** `PauseRecord` confirmado (ou, sem gravação, só o registro de que pausaria). Falha → o passo pausa a tomada. */
+  async #beginRecordingPause(stepId: string, scene: SceneState | null): Promise<Attempt | undefined> {
+    if (this.#recordingPause !== null) return undefined;
+    const entry: RecordingPause = { stepId, sceneId: scene?.scene.id ?? null, pausedAt: '', pausedAtMs: 0, videoBeforeMs: null, videoAfterMs: null };
+    if (this.#recorder === null) {
+      entry.simulated = true;
+      this.#log(`  ${stepId}: sem gravação — aqui a gravação pausaria (--pause-recording-at)`);
+    } else {
+      entry.videoBeforeMs = await this.#videoMs();
+      try {
+        await this.#recorder.pause();
+      } catch (error) {
+        if (error instanceof TakeAborted) throw error;
+        const message = `a gravação NÃO pausou (${errorInfo(error).message}): não destrave agora; retry tenta pausar de novo`;
+        this.#log(`  ${stepId}: ${message}`);
+        return { ...failureAfterAction(new ContrarregraError('E_OBS_CONFIG', message, { stepId }), false), onFail: 'pause' };
+      }
+      this.#log(`  ${stepId}: gravação pausada (vídeo em ${entry.videoBeforeMs ?? '?'} ms)`);
+    }
+    entry.pausedAtMs = this.#clock.now();
+    entry.pausedAt = new Date(entry.pausedAtMs).toISOString();
+    this.#record.recordingPauses.push(entry);
+    this.#recordingPause = { entry, scene };
+    this.#persist();
+    return undefined;
+  }
+
+  /** A tela assenta (1 s) e `ResumeRecord` confirmado; o tempo pausado sai da conta da cena. Falha → aborta. */
+  async #endRecordingPause(): Promise<void> {
+    const pause = this.#recordingPause;
+    if (pause === null) return;
+    await this.#sleepUntil(this.#clock.now() + RESUME_SETTLE_MS);
+    const { entry, scene } = pause;
+    if (entry.simulated !== true && this.#recorder !== null) {
+      try {
+        await this.#recorder.resume();
+      } catch (error) {
+        if (error instanceof TakeAborted) throw error;
+        this.abort('recording-resume-failed', `a gravação não retomou depois de ${entry.stepId} (${errorInfo(error).message}); tomada encerrada`);
+        this.#throwIfAborted();
+      }
+      entry.videoAfterMs = await this.#videoMs();
+    }
+    entry.resumedAtMs = this.#clock.now();
+    entry.resumedAt = new Date(entry.resumedAtMs).toISOString();
+    entry.durationMs = entry.resumedAtMs - entry.pausedAtMs;
+    entry.endedBy = 'resume';
+    if (scene !== null) {
+      scene.pausedMs += entry.durationMs;
+      scene.record.pausedMs = scene.pausedMs;
+    }
+    this.#recordingPause = null;
+    this.#persist();
+    this.#log(`  ${entry.stepId}: gravação ${entry.simulated === true ? 'retomaria' : 'retomada'} depois de ${seconds(entry.durationMs)} pausada`);
   }
 
   /** Uma ação no aparelho (S0.4: espera do alvo, `expect`, `optional`). */

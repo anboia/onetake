@@ -12,7 +12,9 @@
 // gravação, finaliza, devolve a pasta (reconectando uma vez ao OBS se a conexão caiu), solta a trava, grava o
 // `take.json` e relata (nunca apaga arquivo); a `cleanup` não roda (fica `cleanupPending`). Durante a
 // gravação, um vigia confere o disco a cada 5 s e, abaixo de `disk.criticalGiB`, aborta (S9 item 4). Se a
-// tomada parar com o modo avião possivelmente ligado, avisa no resumo e com `say`. `--dry` = nada de OBS
+// tomada parar com o modo avião possivelmente ligado, avisa no resumo e com `say`. `--pause-recording-at`:
+// a gravação pausa nos pontos de controle dados enquanto a pessoa age (ver `executor.ts` e `obs.ts`); saindo
+// com ela pausada, para direto, sem pós-rolo. `--dry` = nada de OBS
 // (nem conexão), o resto igual (sem pré/pós-rolo). Falha no pré-voo (antes da pasta existir) → o erro
 // sobe com o código (`E_DISK_LOW`, `E_OBS_CONFIG`, `E_RUNNER_DOWN`…); depois disso, a tomada termina
 // `aborted`/`failed` no `take.json` e no resumo.
@@ -23,7 +25,7 @@ import { join } from 'node:path';
 
 import type { Config } from '../core/config.ts';
 import { ContrarregraError } from '../core/errors.ts';
-import type { HealthResult } from '../core/types.ts';
+import type { Choreography, HealthResult, Step } from '../core/types.ts';
 import { RunnerLink } from '../runner/link.ts';
 import { runnerPaths } from '../runner/paths.ts';
 import { processAlive } from '../runner/session.ts';
@@ -63,6 +65,8 @@ export interface TakeRunOptions {
   prepare?: boolean;
   /** `false` com `--no-cleanup`. */
   cleanup?: boolean;
+  /** `--pause-recording-at`: ids de `checkpoint` em `scenes` em que a gravação pausa enquanto a pessoa age. */
+  pauseRecordingAt?: string[];
 }
 
 export interface TakeRunnerHandle extends TakeRunner {
@@ -83,6 +87,8 @@ export interface TakeRunDeps {
   pid?: number;
   /** Intervalo do vigia de disco durante a gravação (padrão 5 s; S9 item 4). */
   diskWatchMs?: number;
+  /** Prazos das confirmações do OBS (`STARTED`, `STOPPED`, `PAUSED`/`RESUMED`). */
+  obsConfirmMs?: { started?: number; stopped?: number; paused?: number };
 }
 
 export interface TakeSummary {
@@ -191,6 +197,35 @@ async function openLinkRunner(config: Config, takeId: string, clock: TakeClock, 
   };
 }
 
+/** Ids de `checkpoint` dentro de `scenes` (inclusive aninhados em `block`). */
+function sceneCheckpointIds(doc: Choreography): Set<string> {
+  const ids = new Set<string>();
+  const walk = (steps: readonly Step[]): void => {
+    for (const step of steps) {
+      if (step.do === 'checkpoint') {
+        ids.add(step.id);
+        walk(step.steps ?? []);
+      } else if (step.do === 'block') walk(step.steps);
+    }
+  };
+  for (const scene of doc.scenes) walk(scene.steps);
+  return ids;
+}
+
+/** `--pause-recording-at`: só ids de `checkpoint` das cenas; outro id → `E_CHOREO_INVALID` antes de qualquer conexão. */
+export function checkPauseRecordingAt(doc: Choreography, ids: readonly string[]): Set<string> {
+  const known = sceneCheckpointIds(doc);
+  const unknown = ids.filter((id) => !known.has(id));
+  if (unknown.length > 0) {
+    throw new ContrarregraError(
+      'E_CHOREO_INVALID',
+      `--pause-recording-at: ${unknown.join(', ')} não é id de checkpoint das cenas (há ${known.size === 0 ? 'nenhum' : [...known].join(', ')})`,
+      { option: '--pause-recording-at', unknown },
+    );
+  }
+  return new Set(ids);
+}
+
 /**
  * Vigia de disco durante a gravação (S9 item 4): a cada `intervalMs`, o livre na pasta da tomada; abaixo de
  * `criticalGiB`, chama `onCritical` uma vez. Relógio real (não o da tomada): devolve quem desliga.
@@ -249,6 +284,7 @@ export async function runTake(config: Config, options: TakeRunOptions, deps: Tak
   if (options.from !== undefined) selection.from = options.from;
   if (options.until !== undefined) selection.until = options.until;
   const plan = planScenes(loaded.doc, selection);
+  const pauseRecordingAt = checkPauseRecordingAt(loaded.doc, options.pauseRecordingAt ?? []);
   const pads = { padBeforeMs: config.guide.padBeforeMs, padAfterMs: config.guide.padAfterMs };
   const mode: TakeMode = options.dry === true ? 'dry' : 'take';
   const paths = runnerPaths(config);
@@ -269,11 +305,13 @@ export async function runTake(config: Config, options: TakeRunOptions, deps: Tak
       from: options.from ?? null,
       until: options.until ?? null,
       voice: voice === null ? null : { path: voice.path, sha256: voice.sha256, gapMs: voice.gapMs },
+      pauseRecordingAt: [...pauseRecordingAt],
       prepare: options.prepare !== false,
       cleanup: options.cleanup !== false,
     },
     startedAt: iso(startedMs),
     recording: null,
+    recordingPauses: [],
     cleanupPending: false,
     pause: null,
     scenes: [],
@@ -373,6 +411,7 @@ export async function runTake(config: Config, options: TakeRunOptions, deps: Tak
       voice,
       pads,
       controlHint: `contrarregra take control ${dir}`,
+      pauseRecordingAt,
     });
     if (options.prepare !== false) await executor.runSection('prepare', loaded.doc.prepare);
     if (obs !== undefined) {
@@ -385,6 +424,7 @@ export async function runTake(config: Config, options: TakeRunOptions, deps: Tak
           extraObs.push(fresh);
           return fresh;
         },
+        ...(deps.obsConfirmMs === undefined ? {} : { confirmMs: deps.obsConfirmMs }),
       });
       record.status = 'recording';
       record.recording = recording.info;
@@ -444,8 +484,13 @@ export async function runTake(config: Config, options: TakeRunOptions, deps: Tak
       const active = recording;
       recording = undefined;
       try {
-        log('obs: parando a gravação (pós-rolo, finalização e pasta devolvida)');
-        await clock.sleep(POSTROLL_MS);
+        if (active.paused) {
+          // Pausada no meio de um ponto de controle (a tela pode mostrar o código): para direto, sem pós-rolo.
+          log('obs: parando a gravação pausada direto (sem retomar; finalização e pasta devolvida)');
+        } else {
+          log('obs: parando a gravação (pós-rolo, finalização e pasta devolvida)');
+          await clock.sleep(POSTROLL_MS);
+        }
         await active.stop();
         log(`obs: gravação parada — ${active.info.file ?? '?'}`);
       } catch (error) {
@@ -455,6 +500,7 @@ export async function runTake(config: Config, options: TakeRunOptions, deps: Tak
       }
       record.recording = active.info;
     }
+    for (const pause of record.recordingPauses) if (pause.resumedAtMs === undefined) pause.endedBy = 'stop';
     if (executor?.airplaneMaybeOn === true) {
       record.airplaneLeftOn = true;
       record.warnings.push(AIRPLANE_WARNING);

@@ -41,6 +41,8 @@ export interface SceneRecord {
   minDurationMs: number;
   /** A cena parou antes do fim (`--until`, abort). */
   truncated?: boolean;
+  /** Tempo do Mac com a gravação pausada dentro da cena (`--pause-recording-at`; fora do vídeo e da duração mínima). */
+  pausedMs?: number;
 }
 
 export interface StepRecord {
@@ -72,6 +74,28 @@ export interface StepRecord {
   /** Comandos do dono durante pausas deste passo (`take control`). */
   interventions?: string[];
   error?: { code: string | null; message: string };
+}
+
+/**
+ * Uma pausa da gravação (`--pause-recording-at`): o trecho não existe no vídeo. `videoBeforeMs` /
+ * `videoAfterMs` = `GetRecordStatus.outputDuration` antes do `PauseRecord` e depois do `ResumeRecord` (ficam
+ * quase iguais: o tempo pausado não entra no arquivo); `durationMs` = tempo do Mac com a gravação pausada.
+ */
+export interface RecordingPause {
+  /** O `checkpoint` que pausou. */
+  stepId: string;
+  sceneId: string | null;
+  pausedAt: string;
+  pausedAtMs: number;
+  resumedAt?: string;
+  resumedAtMs?: number;
+  durationMs?: number;
+  videoBeforeMs: number | null;
+  videoAfterMs: number | null;
+  /** `resume` = retomada depois do ponto de controle; `stop` = a tomada parou com a gravação pausada. */
+  endedBy?: 'resume' | 'stop';
+  /** `--dry`: nada foi pausado, só registrado onde pausaria. */
+  simulated?: boolean;
 }
 
 export interface RecordingInfo {
@@ -106,6 +130,7 @@ export interface TakeRecord {
     from: string | null;
     until: string | null;
     voice: { path: string; sha256: string; gapMs: number } | null;
+    pauseRecordingAt: string[];
     prepare: boolean;
     cleanup: boolean;
   };
@@ -114,6 +139,8 @@ export interface TakeRecord {
   disk?: { freeBytes: number; requiredBytes: number; estimateMs: number };
   recording: RecordingInfo | null;
   scenesStartedAt?: string;
+  /** Pausas da gravação (`--pause-recording-at`), em ordem. */
+  recordingPauses: RecordingPause[];
   /** A `cleanup` não rodou (tomada abortada ou falha depois do começo das cenas). */
   cleanupPending: boolean;
   /** O modo avião pode ter ficado ligado quando a tomada parou (S4 item 6). */

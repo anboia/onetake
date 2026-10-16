@@ -198,6 +198,12 @@ export interface FakeObsOptions {
   startFails?: boolean;
   /** A conexão cai no primeiro `StopRecord`: antes de o OBS parar (`before`) ou depois (`after`). */
   dropStop?: 'before' | 'after';
+  /** `PauseRecord` responde, mas a gravação não pausa (nem evento, nem `outputPaused`). */
+  pauseIgnored?: boolean;
+  /** `ResumeRecord` (o guardado) responde, mas a gravação não retoma. */
+  resumeIgnored?: boolean;
+  /** `StopRecord` com a gravação pausada é aceito, mas não para (sem `STOPPED`): força o `ResumeRecord` de emergência. */
+  stopIgnoredWhilePaused?: boolean;
 }
 
 /** OBS em memória com a forma de `TakeObs`; as escritas passam pela guarda do perfil, como no `ObsClient`. */
@@ -205,6 +211,10 @@ export class FakeObs implements TakeObs {
   readonly options: FakeObsOptions;
   profile: string;
   recording = false;
+  paused = false;
+  /** Instante (relógio falso) em que a pausa atual começou, e o total pausado (fora do `outputDuration`). */
+  pausedSince = 0;
+  pausedTotal = 0;
   recordDirectory = '/Users/dono/Movies/OBS';
   readonly originalDirectory = '/Users/dono/Movies/OBS';
   startedAt = 0;
@@ -216,6 +226,8 @@ export class FakeObs implements TakeObs {
   live: 'live' | 'dead' | 'black';
   closed = false;
   lastFile: string | undefined;
+  /** O `StopRecord` que parou a gravação a encontrou pausada. */
+  stoppedWhilePaused = false;
   #dropped = false;
 
   constructor(options: FakeObsOptions) {
@@ -241,6 +253,19 @@ export class FakeObs implements TakeObs {
     return () => void this.listeners.delete(listener);
   }
 
+  pauseRecord(): Promise<ObsResponse<Record<string, unknown>>> {
+    return this.request('PauseRecord');
+  }
+
+  resumeRecord(): Promise<ObsResponse<Record<string, unknown>>> {
+    return this.request('ResumeRecord');
+  }
+
+  /** Sem a guarda do perfil (como no `ObsClient`). */
+  emergencyResumeRecord(): Promise<ObsResponse<Record<string, unknown>>> {
+    return this.#handle('ResumeRecord', { emergency: true });
+  }
+
   async close(): Promise<ObsCloseInfo> {
     this.closed = true;
     return { code: 1000, reason: '' };
@@ -261,17 +286,21 @@ export class FakeObs implements TakeObs {
         throw error;
       }
     }
+    return this.#handle(type, data);
+  }
+
+  async #handle<T = Record<string, unknown>>(type: string, data?: Record<string, unknown>): Promise<ObsResponse<T>> {
     this.requests.push({ type, data });
-    this.options.trace?.push(`obs ${type}${type === 'CreateRecordChapter' ? ` ${String(data?.['chapterName'])}` : ''}`);
+    this.options.trace?.push(`obs ${type}${type === 'CreateRecordChapter' ? ` ${String(data?.['chapterName'])}` : ''}${data?.['emergency'] === true ? ' (emergência)' : ''}`);
     const out = (body: Record<string, unknown> = {}): ObsResponse<T> => ({ requestType: type, data: body as T, tSendNs: 0n, tRecvNs: 0n });
     const clock = this.options.clock;
     switch (type) {
       case 'GetRecordStatus':
         return out({
           outputActive: this.recording,
-          outputPaused: false,
+          outputPaused: this.paused,
           outputTimecode: '00:00:00.000',
-          outputDuration: this.recording ? clock.now() - this.startedAt : 0,
+          outputDuration: this.recording ? clock.now() - this.startedAt - this.pausedTotal - (this.paused ? clock.now() - this.pausedSince : 0) : 0,
           outputBytes: 0,
         });
       case 'GetRecordDirectory':
@@ -286,13 +315,32 @@ export class FakeObs implements TakeObs {
         this.startedAt = clock.now();
         this.emit('RecordStateChanged', { outputActive: true, outputState: 'OBS_WEBSOCKET_OUTPUT_STARTED', outputPath: null });
         return out();
+      case 'PauseRecord':
+        if (!this.recording) throw new ObsRequestError(type, 501, 'sem gravação');
+        if (this.paused) throw new ObsRequestError(type, 502, 'já pausada');
+        if (this.options.pauseIgnored === true) return out();
+        this.paused = true;
+        this.pausedSince = clock.now();
+        this.emit('RecordStateChanged', { outputActive: true, outputState: 'OBS_WEBSOCKET_OUTPUT_PAUSED', outputPath: null });
+        return out();
+      case 'ResumeRecord':
+        if (!this.recording) throw new ObsRequestError(type, 501, 'sem gravação');
+        if (!this.paused) throw new ObsRequestError(type, 503, 'não pausada');
+        if (this.options.resumeIgnored === true && data?.['emergency'] !== true) return out();
+        this.paused = false;
+        this.pausedTotal += clock.now() - this.pausedSince;
+        this.emit('RecordStateChanged', { outputActive: true, outputState: 'OBS_WEBSOCKET_OUTPUT_RESUMED', outputPath: null });
+        return out();
       case 'StopRecord': {
+        if (this.paused && this.options.stopIgnoredWhilePaused === true) return out({ outputPath: join(this.recordDirectory, '2026-10-16 15-00-00.mp4') });
         const drop = this.options.dropStop !== undefined && !this.#dropped;
         if (drop) this.#dropped = true;
         const lost = (): ContrarregraError => new ContrarregraError('E_OBS_UNREACHABLE', 'OBS inalcançável: a conexão fechou com StopRecord pendente (falso)', { reason: 'closed' });
         if (drop && this.options.dropStop === 'before') throw lost();
         if (!this.recording) throw new ObsRequestError(type, 501, 'sem gravação');
         this.recording = false;
+        this.stoppedWhilePaused = this.paused;
+        this.paused = false;
         const file = join(this.recordDirectory, '2026-10-16 15-00-00.mp4');
         writeFileSync(file, Buffer.alloc(4096, 1));
         this.lastFile = file;
@@ -375,9 +423,10 @@ export function newRecord(doc: Choreography): TakeRecord {
     pid: process.pid,
     choreography: { path: '/tmp/teste.choreo.yaml', sha256: '0'.repeat(64) },
     app: { bundleId: doc.app.bundleId, expectVersion: doc.app.expectVersion },
-    options: { scenes: null, from: null, until: null, voice: null, prepare: true, cleanup: true },
+    options: { scenes: null, from: null, until: null, voice: null, pauseRecordingAt: [], prepare: true, cleanup: true },
     startedAt: new Date(0).toISOString(),
     recording: null,
+    recordingPauses: [],
     cleanupPending: false,
     pause: null,
     scenes: [],

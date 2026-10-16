@@ -31,7 +31,12 @@ import {
 export const REQUIRED_REQUESTS: readonly string[] = ['CreateRecordChapter'];
 /** Saída de arquivo do modo Avançado (S9 itens 1 e 5). */
 export const ADV_FILE_OUTPUT = 'adv_file_output';
-/** Pedidos que não são `Get*` e passam sem a guarda: não escrevem (`Sleep`) ou param a gravação (`StopRecord`). */
+/**
+ * Pedidos que não são `Get*` e passam sem a guarda: não escrevem (`Sleep`) ou param a gravação (`StopRecord`).
+ * Os pedidos de gravação — `StartRecord`, `PauseRecord`, `ResumeRecord`, `CreateRecordChapter` — passam pela
+ * guarda como toda escrita; a única exceção é o `ResumeRecord` de emergência (`emergencyResumeRecord`), que
+ * só existe para conseguir parar uma gravação pausada na saída da tomada, como o `StopRecord`.
+ */
 export const UNGUARDED_REQUESTS: ReadonlySet<string> = new Set(['Sleep', 'StopRecord']);
 
 /** Escreve no OBS, logo passa pela guarda do perfil. */
@@ -262,7 +267,25 @@ export class ObsClient {
     return this.request<StopRecordResponse>('StopRecord');
   }
 
-  /** 702 (saída sem capítulos) ou 501 (sem gravação) chegam como `ObsRequestError` (E-9.4). */
+  /** Só enfileira a pausa (pesquisa F6): quem pausa espera `RecordStateChanged` PAUSED. 502 se já pausada. */
+  pauseRecord(): Promise<ObsResponse<JsonObject>> {
+    return this.request('PauseRecord');
+  }
+
+  /** Só enfileira a retomada: quem retoma espera `RecordStateChanged` RESUMED. 503 se não está pausada. */
+  resumeRecord(): Promise<ObsResponse<JsonObject>> {
+    return this.request('ResumeRecord');
+  }
+
+  /**
+   * `ResumeRecord` sem a guarda do perfil, só para a saída de uma tomada com a gravação pausada que o OBS não
+   * aceitou parar pausada: retomar para poder parar, como o `StopRecord` (que também não passa pela guarda).
+   */
+  emergencyResumeRecord(): Promise<ObsResponse<JsonObject>> {
+    return this.#socket.request('ResumeRecord');
+  }
+
+  /** 702 (saída sem capítulos ou gravação pausada) ou 501 (sem gravação) chegam como `ObsRequestError` (E-9.4). */
   createRecordChapter(chapterName: string): Promise<ObsResponse<JsonObject>> {
     return this.request('CreateRecordChapter', { chapterName });
   }

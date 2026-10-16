@@ -1101,6 +1101,20 @@ describe('guarda do perfil (S9 item 2, P-6; AC-9.9 parcial com o OBS falso)', ()
     assert.equal(fake.requests.filter((r) => r.requestType === 'GetProfileList').length, 2);
   });
 
+  test('PauseRecord e ResumeRecord passam pela guarda como o StartRecord; o ResumeRecord de emergência não', async () => {
+    const fake = await FakeObs.start({ profile: 'Untitled', collection: 'Untitled', handlers: { ResumeRecord: () => undefined } });
+    const client = await connect(fake);
+    await rejectsWithCode(client.pauseRecord(), 'E_OBS_CONFIG');
+    await rejectsWithCode(client.resumeRecord(), 'E_OBS_CONFIG');
+    assert.deepEqual(fake.writes(), [], 'nada chegou ao OBS');
+    assert.equal(isWriteRequest('PauseRecord'), true);
+    assert.equal(isWriteRequest('ResumeRecord'), true);
+    const guards = fake.requests.filter((r) => r.requestType === 'GetProfileList').length;
+    await client.emergencyResumeRecord();
+    assert.deepEqual(fake.writes(), ['ResumeRecord']);
+    assert.equal(fake.requests.filter((r) => r.requestType === 'GetProfileList').length, guards, 'sem guarda');
+  });
+
   test('leituras e StopRecord não passam pela guarda; o resto que não é Get* passa', async () => {
     const fake = await FakeObs.start({ profile: 'Untitled', collection: 'Untitled' });
     const client = await connect(fake);
