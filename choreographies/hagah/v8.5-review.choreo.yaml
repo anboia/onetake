@@ -61,11 +61,24 @@ targets:
   mirrorTurnOff: {label: "Turn off", type: button}
   # ── Foco ────────────────────────────────────────────────────────────────────────────────────────
   focusEyebrow: {labelPrefix: "Psalms 23, verse", type: staticText}   # "Psalms 23, verse 6, 6 of 6"
+  # Arrastos do Foco partem do rótulo do versículo (centro ≈ (173, 81)) com deslocamento até o palco
+  # (y ≈ 330): x = 90 (dx −83) para ir ao anterior, x = 300 (dx +127) para ir ao próximo. Cada alvo só resolve
+  # no versículo certo: é assim que o passo `optional` escolhe a direção sem `block when`.
+  focusAt5: {labelContains: "verse 5, 5 of 6", type: staticText, index: 0, offset: {dx: -83, dy: 249}}
+  focusAt6: {labelContains: "verse 6, 6 of 6", type: staticText, index: 0, offset: {dx: -83, dy: 249}}
+  focusAt1to4:
+    labelContains: "verse 1, 1 of 6"
+    type: staticText
+    index: 0
+    offset: {dx: 127, dy: 249}
+    fallback:
+      - {labelContains: "verse 2, 2 of 6", type: staticText, index: 0, offset: {dx: 127, dy: 249}}
+      - {labelContains: "verse 3, 3 of 6", type: staticText, index: 0, offset: {dx: 127, dy: 249}}
+      - {labelContains: "verse 4, 4 of 6", type: staticText, index: 0, offset: {dx: 127, dy: 249}}
   # ── Mini-player e abas ──────────────────────────────────────────────────────────────────────────
   miniPlayerInfo: {labelPrefix: "Open Now Playing", type: button}
   miniPlayerPs23: {labelPrefix: "Open Now Playing: Psalms 23", type: button}  # "…: Psalms 23, NIV · v. 3"
-  miniPlayerPs23v6: {labelContains: "Psalms 23, NIV · v. 6", type: button}  # pausado no v. 6
-  miniPlayerDay: {labelPrefix: "Open Now Playing: Day", type: button}         # (pesquisa F42, não visto)
+  miniPlayerDay: {labelContains: "Bible in a Year · Day", type: button}   # "Open Now Playing: Marcos 13 · v. 8, Bible in a Year · Day 289"
   miniPlay: {label: "Play", type: button}    # único "Play" exato com a folha fechada
   miniPause: {label: "Pause", type: button}
   tabBible: {label: "Bible", type: button, within: {type: tabBar}}
@@ -74,7 +87,9 @@ targets:
   tabJournal: {label: "Journal", type: button, within: {type: tabBar}}
   # ── Now Playing (formSheet: meia altura "Half screen" ou "Expanded") ────────────────────────────
   npGrabber: {label: "Sheet Grabber", type: button}
-  npClose: {label: "Close", type: button, below: {ref: npGrabber}}
+  # O X da folha rola com o conteúdo (some acima da alça quando a folha está rolada): âncora no transporte, que
+  # também rola, e não na alça (ensaio M4: `below` da alça não resolvia com a folha rolada).
+  npClose: {label: "Close", type: button, above: {ref: npPrevVerse}}
   # A área rolável da folha. Só com a folha em "Expanded": aí o leitor sai da árvore e este é o único
   # scrollView. Sem `within`, rolar até um alvo que saiu da árvore falha (ensaio de 2026-10-16).
   npScroll: {type: scrollView, index: 0}
@@ -122,7 +137,7 @@ targets:
   journalEntryPs23: {labelPrefix: "Psalms 23:1", type: button}   # (pesquisa F33, não visto)
   journalSignedIn: {labelPrefix: "Signed in with Apple", type: staticText}  # (pesquisa F35, não visto)
   journalSync: {label: "Sync", type: button}                 # (pesquisa F35, não visto)
-  openSettings: {label: "Open settings", type: button}       # a engrenagem do Journal
+  openSettings: {label: "Open settings", type: button}       # a engrenagem do Journal; rola com a lista (rolar para cima antes)
   # ── Settings ────────────────────────────────────────────────────────────────────────────────────
   backButton: {identifier: "BackButton", type: button}       # rótulo "(tabs)" em Settings, "Settings" nas filhas
   settingsNav: {identifier: "Settings", type: navigationBar}
@@ -155,12 +170,15 @@ targets:
     index: 0
     fallback: [{ocr: {text: "Current day", occurrence: 1}}]
   dayTitle: {label: "Bible in a Year", type: staticText}
-  dayListen: {labelPrefix: "play, ", type: button}   # "play, Listen" (ou "play, Resume at m:ss")
+  dayListen: {labelPrefix: "play, ", type: button}   # "play, Listen"; depois de ouvir um pouco, "play, Play"
   dayDownload: {label: "Download", type: button}
-  dayRemove: {label: "Remove from device", type: button}   # (pesquisa F43, não visto)
+  dayRemove: {label: "Remove from device", type: button}   # com "Saved" (o dia baixado)
+  dayRemoveAlert: {labelPrefix: "Remove Day", type: alert}   # "Remove Day 289 from this device?"
+  dayRemoveConfirm: {label: "Remove from device", type: button, within: {ref: dayRemoveAlert}}
   dayBack: {label: "Back", type: button}
   playlistMemorize: {labelPrefix: "Memorize.", type: button}   # "Memorize. 1 passage · 3 s. Pinned"
   playlistPlay: {label: "play, Play", type: button}
+  playlistsBack: {label: "Playlists", type: button, above: {ref: playlistPlay}}   # o voltar da tela da playlist
   # ── Sistema ─────────────────────────────────────────────────────────────────────────────────────
   airplaneButton: {app: springboard, identifier: "airplane-mode-button"}
 
@@ -170,116 +188,113 @@ targets:
 prepare:
   - {id: prep-activate, do: app, action: activate}
   - {id: prep-front, do: waitFor, condition: {appState: {app: target, state: foreground}}, timeoutMs: 10000}
+  # Sem `block when` no arquivo: o `when` é lido uma vez com prazo de 1 s no runner (`wait.for` com timeoutMs 0)
+  # e, com o aparelho lento (leituras de 3–5 s), vira "falso" e o bloco é pulado (ensaio M4: os dois blocos do
+  # Foco pulados). No lugar, passos `optional` que só agem quando o alvo está na tela.
   # Fecha o que estiver por cima do leitor (folha do Now Playing; pilha de Settings).
-  - id: prep-close-np
-    do: block
-    when: {element: {ref: npGrabber}, state: exists}
-    steps:
-      - {do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
-      - {do: tap, target: {ref: npClose}}
-  - {id: prep-back-1, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
-  - {id: prep-back-2, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
-  - {id: prep-back-3, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
-  - {id: prep-tab-bible, do: tap, target: {ref: tabBible}}
+  - {id: prep-np-top-0, do: scrollTo, target: {ref: npClose}, direction: up, maxSwipes: 3, optional: true, timeoutMs: 1500}
+  - {id: prep-close-np, do: tap, target: {ref: npClose}, optional: true, timeoutMs: 1500}
+  - {id: prep-back-1, do: tap, target: {ref: backButton}, optional: true, timeoutMs: 1500}
+  - {id: prep-back-2, do: tap, target: {ref: backButton}, optional: true, timeoutMs: 1500}
+  - {id: prep-back-3, do: tap, target: {ref: backButton}, optional: true, timeoutMs: 1500}
+  - {id: prep-tab-bible, do: tap, target: {ref: tabBible}, timeoutMs: 8000}
   - {id: prep-miniplayer, do: waitFor, condition: {element: {ref: miniPlayerInfo}, state: exists}, timeoutMs: 8000}
-  - {id: prep-pause, do: block, when: {element: {ref: miniPause}, state: exists}, steps: [{do: tap, target: {ref: miniPause}}]}
+  - {id: prep-pause, do: tap, target: {ref: miniPause}, optional: true, timeoutMs: 1500}
+  - {id: prep-paused, do: waitFor, condition: {element: {ref: miniPlay}, state: exists}, timeoutMs: 10000}
 
   # Now Playing: Repeat "Chapter" · "∞", pausa "0", eco "Off", velocidade "1×", timer "Off", predefinições padrão.
   # Repeat "Chapter" ∞ desde o preparo para o Salmo 23 nunca avançar ao 24 (S13 item 4).
-  - {id: prep-np-open, do: tap, target: {ref: miniPlayerInfo}, expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000}
-  - {id: prep-np-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
-  - {id: prep-repeat-chapter, do: tap, target: {ref: npRepeatChapter}, expect: {element: {ref: npRepeatChapter}, state: selected}}
-  - {id: prep-times, do: block, when: {not: {element: {ref: npTimesInfinite}, state: selected}}, steps: [{do: tap, target: {ref: npTimesInfinite}}]}
-  - {id: prep-gap, do: block, when: {not: {element: {ref: npGap0}, state: selected}}, steps: [{do: tap, target: {ref: npGap0}}]}
-  - {id: prep-echo, do: block, when: {not: {element: {ref: npEchoOff}, state: selected}}, steps: [{do: tap, target: {ref: npEchoOff}}]}
-  - {id: prep-speed, do: block, when: {not: {element: {ref: npSpeed1x}, state: selected}}, steps: [{do: tap, target: {ref: npSpeed1x}}]}
+  - {id: prep-np-open, do: tap, target: {ref: miniPlayerInfo}, expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000, timeoutMs: 8000}
+  - {id: prep-np-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}, expectTimeoutMs: 10000, timeoutMs: 8000}
+  - {id: prep-repeat-chapter, do: tap, target: {ref: npRepeatChapter}, expect: {element: {ref: npRepeatChapter}, state: selected}, expectTimeoutMs: 10000, timeoutMs: 8000}
+  # Tocar um chip já escolhido não muda nada (conferido no ensaio M4 para ∞, 0, Off do eco, 1× e Off do timer).
+  - {id: prep-times, do: tap, target: {ref: npTimesInfinite}, timeoutMs: 8000, expect: {element: {ref: npTimesInfinite}, state: selected}, expectTimeoutMs: 10000}
+  - {id: prep-gap, do: tap, target: {ref: npGap0}, timeoutMs: 8000, expect: {element: {ref: npGap0}, state: selected}, expectTimeoutMs: 10000}
+  - {id: prep-echo, do: tap, target: {ref: npEchoOff}, timeoutMs: 8000, expect: {element: {ref: npEchoOff}, state: selected}, expectTimeoutMs: 10000}
+  - {id: prep-speed, do: tap, target: {ref: npSpeed1x}, timeoutMs: 8000, expect: {element: {ref: npSpeed1x}, state: selected}, expectTimeoutMs: 10000}
   # Os presets ficam abaixo da dobra da folha: rolar antes de conferir (ensaio de 2026-10-16).
-  - {id: prep-presets-scroll, do: scrollTo, target: {ref: npPresetStudyDefault}, within: {ref: npScroll}, direction: down, maxSwipes: 3}
+  - {id: prep-presets-scroll, do: scrollTo, target: {ref: npPresetStudyDefault}, within: {ref: npScroll}, direction: down, maxSwipes: 3, timeoutMs: 8000}
   - id: prep-presets
     do: assert
-    timeoutMs: 2000
+    timeoutMs: 8000
     condition: {all: [{element: {ref: npPresetStudyDefault}, state: exists}, {element: {ref: npPresetSleepDefault}, state: exists}]}
-  - {id: prep-timer-scroll, do: scrollTo, target: {ref: npTimerOff}, within: {ref: npScroll}, direction: down, maxSwipes: 3}
-  - {id: prep-timer, do: block, when: {not: {element: {ref: npTimerOff}, state: selected}}, steps: [{do: tap, target: {ref: npTimerOff}}]}
-  - {id: prep-np-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 4}
-  - {id: prep-np-close, do: tap, target: {ref: npClose}, expect: {element: {ref: npGrabber}, state: gone}}
+  - {id: prep-timer-scroll, do: scrollTo, target: {ref: npTimerOff}, within: {ref: npScroll}, direction: down, maxSwipes: 3, timeoutMs: 8000}
+  - {id: prep-timer, do: tap, target: {ref: npTimerOff}, timeoutMs: 8000, expect: {element: {ref: npTimerOff}, state: selected}, expectTimeoutMs: 10000}
+  - {id: prep-np-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 4, timeoutMs: 8000}
+  - {id: prep-np-close, do: tap, target: {ref: npClose}, expect: {element: {ref: npGrabber}, state: gone}, expectTimeoutMs: 10000}
 
   # Parallel desligado (um link não desliga o Parallel, F51; só "Turn off"). A lente é da sessão e volta
   # a "Reading" com o app encerrado no fim do preparo.
-  - {id: prep-header, do: scrollTo, target: {ref: parallelChip}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+  - {id: prep-header, do: scrollTo, target: {ref: parallelChip}, within: {ref: readerScroll}, direction: up, maxSwipes: 5, timeoutMs: 8000}
   # Depois de uma rolagem "atrasada" a árvore ainda muda: esperar o chip antes de decidir (ensaio de 2026-10-16).
   - {id: prep-parallel-chip, do: waitFor, condition: {any: [{element: {ref: parallelChipOn}, state: exists}, {element: {ref: parallelChipOff}, state: exists}]}, timeoutMs: 15000}
-  - id: prep-parallel-off
-    do: block
-    when: {element: {ref: parallelChipOn}, state: exists}
-    steps:
-      - {do: tap, target: {ref: parallelChipOn}, expect: {element: {ref: mirrorTitle}, state: exists}}
-      - {do: tap, target: {ref: mirrorTurnOff}, expect: {element: {ref: parallelChipOff}, state: exists}}
-  - {id: prep-parallel-assert, do: assert, condition: {element: {ref: parallelChipOff}, state: exists}, timeoutMs: 5000}
+  - {id: prep-parallel-on-tap, do: tap, target: {ref: parallelChipOn}, optional: true, timeoutMs: 1500, expect: {element: {ref: mirrorTitle}, state: exists}, expectTimeoutMs: 10000}
+  - {id: prep-parallel-turn-off, do: tap, target: {ref: mirrorTurnOff}, optional: true, timeoutMs: 1500}
+  - {id: prep-parallel-assert, do: assert, condition: {element: {ref: parallelChipOff}, state: exists}, timeoutMs: 10000}
 
   # Journal: deslogado e vazio. Sair/excluir a conta é do dono (credencial e revogação na Apple).
-  - {id: prep-tab-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}}
-  - id: prep-signed-out
-    do: block
-    when: {not: {element: {ref: journalSiwa}, state: exists}}
-    steps:
-      - id: prep-signout-human
-        do: checkpoint
-        who: human
-        ask: "Exclua a conta da tomada anterior no Hagah (Journal, engrenagem, Account, Delete account, confirme com a Apple) até o Journal mostrar Sign in with Apple"
-        until: {element: {ref: journalSiwa}, state: exists}
-        timeoutMs: 600000
-        onTimeout: pause
+  - {id: prep-tab-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+  # Ponto de controle sempre presente: deslogado, resolve na primeira leitura (sem aviso); com o aparelho lento
+  # a primeira leitura pode estourar e sai um aviso falado à toa antes de resolver.
+  - id: prep-signout-human
+    do: checkpoint
+    who: human
+    ask: "Exclua a conta da tomada anterior no Hagah (Journal, engrenagem, Account, Delete account, confirme com a Apple) até o Journal mostrar Sign in with Apple"
+    until: {element: {ref: journalSiwa}, state: exists}
+    timeoutMs: 600000
+    onTimeout: pause
   # Q-15: entrada além das que a tomada cria = parar e não apagar nada.
-  - {id: prep-journal-empty, do: assert, condition: {element: {ref: journalZeroEntries}, state: exists}}
+  - {id: prep-journal-empty, do: assert, condition: {element: {ref: journalZeroEntries}, state: exists}, timeoutMs: 8000}
 
   # Settings: idioma do app, Downloads, versão.
-  - {id: prep-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}}
-  - {id: prep-english, do: assert, condition: {element: {ref: settingsEnglish}, state: value, equals: "radio button, checked"}, onFail: continue}   # pode estar no idioma do sistema (iPhone em inglês)
-  - {id: prep-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8}
-  - {id: prep-downloads, do: tap, target: {ref: settingsDownloads}, expect: {element: {ref: downloadsNav}, state: exists}}
+  - {id: prep-settings-top, do: scrollTo, target: {ref: openSettings}, direction: up, maxSwipes: 4, timeoutMs: 8000}
+  - {id: prep-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+  - {id: prep-english, do: assert, condition: {element: {ref: settingsEnglish}, state: value, equals: "radio button, checked"}, onFail: continue, timeoutMs: 8000} # pode estar no idioma do sistema (iPhone em inglês)
+  - {id: prep-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8, timeoutMs: 8000}
+  - {id: prep-downloads, do: tap, target: {ref: settingsDownloads}, expect: {element: {ref: downloadsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
   # Em 2026-10-16 as duas abaixo FALHAM: o interruptor está em "0" e o Salmo 23 NIV só tem "text · timings"
   # (85 KB no aparelho). O dono liga o interruptor e toca o Salmo 23 inteiro com rede antes da tomada.
-  - {id: prep-download-on-play, do: assert, condition: {element: {ref: downloadWhileListening}, state: value, equals: "1"}}
-  - {id: prep-ps23-audio, do: assert, condition: {element: {ref: downloadsPs23Audio}, state: exists}}
-  - {id: prep-downloads-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
-  - {id: prep-about-scroll, do: scrollTo, target: {ref: settingsAbout}, within: {ref: settingsScroll}, direction: down, maxSwipes: 4}
-  - {id: prep-about, do: tap, target: {ref: settingsAbout}, expect: {element: {ref: aboutNav}, state: exists}}
-  - {id: prep-version, do: assert, condition: {element: {ref: aboutVersion}, state: exists}, onFail: abort}
-  - {id: prep-about-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
-  - {id: prep-settings-back, do: tap, target: {ref: backButton}, expect: {element: {ref: openSettings}, state: exists}}
+  - {id: prep-download-on-play, do: assert, condition: {element: {ref: downloadWhileListening}, state: value, equals: "1"}, timeoutMs: 8000}
+  - {id: prep-ps23-audio, do: assert, condition: {element: {ref: downloadsPs23Audio}, state: exists}, timeoutMs: 8000}
+  - {id: prep-downloads-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+  - {id: prep-about-scroll, do: scrollTo, target: {ref: settingsAbout}, within: {ref: settingsScroll}, direction: down, maxSwipes: 4, timeoutMs: 8000}
+  - {id: prep-about, do: tap, target: {ref: settingsAbout}, expect: {element: {ref: aboutNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+  - {id: prep-version, do: assert, condition: {element: {ref: aboutVersion}, state: exists}, onFail: abort, timeoutMs: 8000}
+  - {id: prep-about-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+  - {id: prep-settings-back, do: tap, target: {ref: backButton}, expect: {element: {ref: openSettings}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
 
   # Plano: o dia atual NÃO baixado (a cena 8 toca "Download").
-  - {id: prep-tab-plan, do: tap, target: {ref: tabPlan}, expect: {element: {ref: planGoToCurrent}, state: exists}}
-  - {id: prep-day, do: tap, target: {ref: planCurrentDay}, expect: {element: {ref: dayTitle}, state: exists}, expectTimeoutMs: 6000}
-  - id: prep-day-not-saved
-    do: block
-    when: {element: {ref: dayRemove}, state: exists}
-    steps:
-      - id: prep-day-remove-human
-        do: checkpoint
-        who: human
-        ask: "Remova o episódio do dia do aparelho (Remove from device, confirme) até aparecer Download"
-        until: {element: {ref: dayDownload}, state: exists}
-        timeoutMs: 300000
-        onTimeout: pause
-  - {id: prep-day-download, do: assert, condition: {element: {ref: dayDownload}, state: exists}}
-  - {id: prep-day-back, do: tap, target: {ref: dayBack}, expect: {element: {ref: planGoToCurrent}, state: exists}}
+  # A cena 8 deixa a aba Plan na tela do dia e a aba Playlists na tela da playlist (as abas guardam a pilha):
+  # voltar à lista em cada uma, se for o caso (ensaio M4).
+  - {id: prep-tab-plan, do: tap, target: {ref: tabPlan}, timeoutMs: 8000}
+  - {id: prep-plan-root-top, do: scrollTo, target: {ref: dayBack}, direction: up, maxSwipes: 8, optional: true, timeoutMs: 1500}
+  - {id: prep-plan-root, do: tap, target: {ref: dayBack}, optional: true, timeoutMs: 1500}
+  - {id: prep-plan-list, do: waitFor, condition: {element: {ref: planGoToCurrent}, state: exists}, timeoutMs: 10000}
+  - {id: prep-day, do: tap, target: {ref: planCurrentDay}, expect: {element: {ref: dayTitle}, state: exists}, expectTimeoutMs: 6000, timeoutMs: 8000}
+  # Baixado (por uma tomada anterior): "Remove from device" e o alerta "Remove Day N from this device?" →
+  # "Remove from device" (medido no ensaio M4). É download da ferramenta, não dado do dono.
+  # A tela do dia abre rolada até o ponto de escuta (episódio já ouvido em parte): o cabeçalho de volta.
+  - {id: prep-day-top, do: scrollTo, target: {ref: dayListen}, direction: up, maxSwipes: 8, timeoutMs: 8000}
+  - {id: prep-day-remove, do: tap, target: {ref: dayRemove}, optional: true, timeoutMs: 1500, expect: {element: {ref: dayRemoveAlert}, state: exists}, expectTimeoutMs: 10000}
+  - {id: prep-day-remove-confirm, do: tap, target: {ref: dayRemoveConfirm}, optional: true, timeoutMs: 1500, expect: {element: {ref: dayDownload}, state: exists}, expectTimeoutMs: 15000}
+  - {id: prep-day-download, do: assert, condition: {element: {ref: dayDownload}, state: exists}, timeoutMs: 8000}
+  - {id: prep-day-back-top, do: scrollTo, target: {ref: dayBack}, direction: up, maxSwipes: 8, timeoutMs: 8000}
+  - {id: prep-day-back, do: tap, target: {ref: dayBack}, expect: {element: {ref: planGoToCurrent}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
 
   # Uma playlist com passagens (a "Memorize" fixada, 1 passagem: Salmos 23:6).
-  - {id: prep-tab-playlists, do: tap, target: {ref: tabPlaylists}}
-  - {id: prep-playlist, do: assert, condition: {element: {ref: playlistMemorize}, state: exists}, timeoutMs: 3000}
+  - {id: prep-tab-playlists, do: tap, target: {ref: tabPlaylists}, timeoutMs: 8000}
+  - {id: prep-playlists-root, do: tap, target: {ref: playlistsBack}, optional: true, timeoutMs: 1500}
+  - {id: prep-playlist, do: assert, condition: {element: {ref: playlistMemorize}, state: exists}, timeoutMs: 8000}
 
   # Última posição: Salmo 1 NIV (senão o seletor da cena 2 não muda nada). O cartão do nome continua lá
   # enquanto ninguém o fechar (em 2026-10-16 estava lá).
-  - {id: prep-tab-bible-2, do: tap, target: {ref: tabBible}}
+  - {id: prep-tab-bible-2, do: tap, target: {ref: tabBible}, timeoutMs: 8000}
   - {id: prep-psalm1, do: openURL, url: "hagah://bible/ENGNIV/PSA/1"}
   - {id: prep-psalm1-loaded, do: waitFor, condition: {element: {ref: titlePsalm1}, state: exists}, timeoutMs: 10000}
-  - {id: prep-psalm1-settle, do: wait, ms: 1500}   # a posição só é gravada quando a página carrega
-  - {id: prep-name-card, do: block, when: {element: {ref: nameCard}, state: exists}, steps: [{do: mark, label: "cartão do nome presente"}]}
+  - {id: prep-psalm1-settle, do: wait, ms: 1500} # a posição só é gravada quando a página carrega
 
   # Rede e modo avião: a cena 9 espera o avião desligado ao abrir a Central de Controle.
-  - {id: prep-online, do: assert, condition: {network: online}}
+  - {id: prep-online, do: assert, condition: {network: online}, timeoutMs: 8000}
   - {id: prep-cc-open, do: controlCenter, action: open}
   - {id: prep-airplane-off, do: waitFor, condition: {airplane: "off"}, timeoutMs: 20000}
   - {id: prep-cc-close, do: controlCenter, action: close}
@@ -304,12 +319,9 @@ scenes:
       # com a abertura animada, ≈ 3 s até o leitor (medido).
       - {id: s01-open, do: app, action: activate, cue: 0, visual: true, caption: "Abre o Hagah Bible"}
       - {id: s01-reader, do: waitFor, condition: {element: {ref: titlePsalm1}, state: hittable}, timeoutMs: 15000}
-      - id: s01-name-card
-        do: block
-        when: {element: {ref: nameCard}, state: exists}
-        steps:
-          - {id: s01-name-card-show, do: wait, ms: 6000}
-          - {id: s01-name-card-close, do: tap, target: {ref: nameCardClose}, cue: 2, caption: "Fecha o cartão do nome", expect: {element: {ref: nameCard}, state: gone}}
+      # O cartão do nome só aparece até alguém fechá-lo: a espera sempre roda (cabe na fala), o X é `optional`.
+      - {id: s01-name-card-show, do: wait, ms: 6000}
+      - {id: s01-name-card-close, do: tap, target: {ref: nameCardClose}, cue: 2, caption: "Fecha o cartão do nome", optional: true, timeoutMs: 1500, expect: {element: {ref: nameCard}, state: gone}, expectTimeoutMs: 10000}
       - {id: s01-hold, do: hold}
 
   # ── Cena 2 ───────────────────────────────────────────────────────────────────────────────────────
@@ -323,17 +335,17 @@ scenes:
       - "The point is meditation: you hear it and you see it at the same time, so the text stays with you."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s02-picker, do: tap, target: {ref: titlePsalm1}, cue: 0, visual: true, caption: "Abre o seletor de capítulo", expect: {element: {ref: pickerTitle}, state: exists}}
+      - {id: s02-picker, do: tap, target: {ref: titlePsalm1}, cue: 0, visual: true, caption: "Abre o seletor de capítulo", expect: {element: {ref: pickerTitle}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # O livro atual vem expandido, mas fora da tela (Salmos em y≈1115): um ou dois passes.
-      - {id: s02-scroll-23, do: scrollTo, target: {ref: pickerCh23}, direction: down, maxSwipes: 6, caption: "Salmos 23"}
-      - {id: s02-ch23, do: tap, target: {ref: pickerCh23}, visual: true, expect: {element: {ref: miniPlayerPs23}, state: exists}, expectTimeoutMs: 8000}
-      - {id: s02-play, do: tap, target: {ref: miniPlay}, cue: 2, visual: true, caption: "Toca a narração (NIV)", expect: {element: {ref: miniPause}, state: exists}}
+      - {id: s02-scroll-23, do: scrollTo, target: {ref: pickerCh23}, direction: down, maxSwipes: 6, caption: "Salmos 23", timeoutMs: 8000}
+      - {id: s02-ch23, do: tap, target: {ref: pickerCh23}, visual: true, expect: {element: {ref: miniPlayerPs23}, state: exists}, expectTimeoutMs: 8000, timeoutMs: 8000}
+      - {id: s02-play, do: tap, target: {ref: miniPlay}, cue: 2, visual: true, caption: "Toca a narração (NIV)", expect: {element: {ref: miniPause}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s02-listen, do: wait, ms: 15000}
       # Arrasto só vertical (> 20 pt na horizontal troca de capítulo). Depois dele a lista para de seguir
       # e aparece "Follow the narration" (sobre o título); tocar nele mostra a lista voltando sozinha.
-      - {id: s02-scroll, do: drag, from: {x: 200, y: 520}, to: {x: 200, y: 400}, velocity: 300, cue: 4, caption: "Rola de leve", expect: {element: {ref: followNarration}, state: exists}}
-      - {id: s02-follow, do: tap, target: {ref: followNarration}, afterMs: 1500, caption: "A lista volta a seguir", expect: {element: {ref: followNarration}, state: gone}}
-      - {id: s02-now-playing, do: tap, target: {ref: miniPlayerPs23}, afterMs: 3000, visual: true, caption: "Abre o Now Playing", expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000}
+      - {id: s02-scroll, do: drag, from: {x: 200, y: 520}, to: {x: 200, y: 400}, velocity: 300, cue: 4, caption: "Rola de leve", expect: {element: {ref: followNarration}, state: exists}, expectTimeoutMs: 10000}
+      - {id: s02-follow, do: tap, target: {ref: followNarration}, afterMs: 1500, caption: "A lista volta a seguir", expect: {element: {ref: followNarration}, state: gone}, expectTimeoutMs: 10000}
+      - {id: s02-now-playing, do: tap, target: {ref: miniPlayerPs23}, afterMs: 3000, visual: true, caption: "Abre o Now Playing", expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000, timeoutMs: 8000}
       - {id: s02-hold, do: hold}
 
   # ── Cena 3 ───────────────────────────────────────────────────────────────────────────────────────
@@ -345,21 +357,31 @@ scenes:
       - "It never plays silent audio or runs anything else."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s03-sheet, do: assert, condition: {all: [{element: {ref: npKindChapter}, state: exists}, {element: {ref: npTitlePs23}, state: exists}]}}
+      # Prazo folgado: com o áudio tocando, uma leitura pode passar de vários segundos (ensaio M4).
+      - {id: s03-sheet, do: assert, timeoutMs: 10000, condition: {all: [{element: {ref: npKindChapter}, state: exists}, {element: {ref: npTitlePs23}, state: exists}]}}
       # `waitFor {locked: true}` não confirma o travamento (SP-1): confia-se no lock e numa espera fixa.
       - {id: s03-lock, do: lock, cue: 0, visual: true, caption: "Trava a tela; o áudio segue"}
       - {id: s03-locked-wait, do: wait, ms: 5000}
-      # O dono NÃO olha para o iPhone aqui, senão o Face ID destrava.
       - {id: s03-wake, do: wake, visual: true, caption: "Controles da tela travada"}
       - {id: s03-show-controls, do: wait, ms: 4000}
+      # O dono destrava com o código (sem Face ID); a gravação fica pausada só durante este ponto de controle
+      # (`take run --pause-recording-at s03-unlock`; o id não pode mudar). O que vem depois já aparece no vídeo.
       - id: s03-unlock
         do: checkpoint
         who: human
-        ask: "Destrave o iPhone (Face ID) e arraste para cima"
-        until: {all: [{locked: false}, {element: {ref: npPrevVerse}, state: hittable}]}
+        ask: "Destrave o iPhone com o código e deixe o Hagah na tela; se cair na tela de início, abra o Hagah pelo ícone"
+        until: {all: [{locked: false}, {appState: {app: target, state: foreground}}]}
         timeoutMs: 120000
         onTimeout: pause
         cue: 2
+      # Reserva: o normal é o dono já voltar ao Hagah durante a pausa. `activate` com o app à frente não faz nada.
+      - {id: s03-activate, do: app, action: activate}
+      - {id: s03-front-wait, do: waitFor, condition: {appState: {app: target, state: foreground}}, timeoutMs: 10000}
+      # A tela do Hagah legível (folha aberta ou mini-player) antes de decidir se reabre a folha.
+      - {id: s03-ui-back, do: waitFor, condition: {any: [{element: {ref: npGrabber}, state: exists}, {element: {ref: miniPlayerPs23}, state: exists}]}, timeoutMs: 15000}
+      # A cena 4 começa com a folha do Now Playing aberta: com ela aberta o mini-player some da árvore e o passo
+      # é pulado; fechada, ele a reabre.
+      - {id: s03-np-reopen, do: tap, target: {ref: miniPlayerPs23}, optional: true, timeoutMs: 1500, expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 10000}
       - {id: s03-hold, do: hold}
 
   # ── Cena 4 ───────────────────────────────────────────────────────────────────────────────────────
@@ -373,22 +395,22 @@ scenes:
       - "That's the use case."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s04-sheet, do: assert, condition: {all: [{element: {ref: npKindChapter}, state: exists}, {element: {ref: npTitlePs23}, state: exists}]}}
+      - {id: s04-sheet, do: assert, timeoutMs: 10000, condition: {all: [{element: {ref: npKindChapter}, state: exists}, {element: {ref: npTitlePs23}, state: exists}]}}
       # Diferente de S13 item 4: pausa já aqui. "Sleep" põe Repeat "Book"; se o Salmo 23 acabar entre o
       # "Sleep" e o "Chapter" (≈ 10 s de 46 s), o player vai ao Salmo 24 (AC-13.9). Pausado, não há risco.
-      - {id: s04-pause, do: tap, target: {ref: npPause}, cue: 0, caption: "Pausa para mexer no Repeat", expect: {element: {ref: npPlay}, state: exists}}
-      - {id: s04-expand, do: tap, target: {ref: npGrabber}, visual: true, caption: "Folha inteira", expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
+      - {id: s04-pause, do: tap, target: {ref: npPause}, cue: 0, caption: "Pausa para mexer no Repeat", expect: {element: {ref: npPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s04-expand, do: tap, target: {ref: npGrabber}, visual: true, caption: "Folha inteira", expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # "Book" fica atrás de "⋯" (só mostra; o modo continua "Chapter").
-      - {id: s04-more, do: tap, target: {ref: npRepeatMore}, cue: 1, caption: "Modos: … Chapter, Book", expect: {element: {ref: npRepeatBook}, state: exists}}
-      - {id: s04-scroll-presets, do: scrollTo, target: {ref: npPresetSleep}, within: {ref: npScroll}, direction: down, maxSwipes: 3}
-      - {id: s04-sleep, do: tap, target: {ref: npPresetSleep}, cue: 2, visual: true, caption: "Predefinição Sleep", expect: {element: {ref: npPresetSleep}, state: selected}}
-      - {id: s04-scroll-timer, do: scrollTo, target: {ref: npTimerEndOfChapter}, within: {ref: npScroll}, direction: down, maxSwipes: 2}
-      - {id: s04-end-of-chapter, do: tap, target: {ref: npTimerEndOfChapter}, visual: true, caption: "Timer: fim do capítulo", expect: {element: {ref: npTimerStatus}, state: exists}}
+      - {id: s04-more, do: tap, target: {ref: npRepeatMore}, cue: 1, caption: "Modos: … Chapter, Book", expect: {element: {ref: npRepeatBook}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s04-scroll-presets, do: scrollTo, target: {ref: npPresetSleep}, within: {ref: npScroll}, direction: down, maxSwipes: 3, timeoutMs: 8000}
+      - {id: s04-sleep, do: tap, target: {ref: npPresetSleep}, cue: 2, visual: true, caption: "Predefinição Sleep", expect: {element: {ref: npPresetSleep}, state: selected}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s04-scroll-timer, do: scrollTo, target: {ref: npTimerEndOfChapter}, within: {ref: npScroll}, direction: down, maxSwipes: 2, timeoutMs: 8000}
+      - {id: s04-end-of-chapter, do: tap, target: {ref: npTimerEndOfChapter}, visual: true, caption: "Timer: fim do capítulo", expect: {element: {ref: npTimerStatus}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s04-timer-show, do: wait, ms: 2500}
       # Timeline de S13 item 4: timer "Off" e Repeat "Chapter" de volta.
-      - {id: s04-timer-off, do: tap, target: {ref: npTimerOff}, caption: "Desliga o timer", expect: {element: {ref: npTimerOff}, state: selected}}
-      - {id: s04-scroll-repeat, do: scrollTo, target: {ref: npRepeatChapter}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
-      - {id: s04-chapter, do: tap, target: {ref: npRepeatChapter}, caption: "Repeat Chapter de novo", expect: {element: {ref: npRepeatChapter}, state: selected}}
+      - {id: s04-timer-off, do: tap, target: {ref: npTimerOff}, caption: "Desliga o timer", expect: {element: {ref: npTimerOff}, state: selected}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s04-scroll-repeat, do: scrollTo, target: {ref: npRepeatChapter}, within: {ref: npScroll}, direction: up, maxSwipes: 3, timeoutMs: 8000}
+      - {id: s04-chapter, do: tap, target: {ref: npRepeatChapter}, caption: "Repeat Chapter de novo", expect: {element: {ref: npRepeatChapter}, state: selected}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s04-hold, do: hold}
 
   # ── Cena 5 ───────────────────────────────────────────────────────────────────────────────────────
@@ -407,49 +429,40 @@ scenes:
       - "There's no chat, no prompt and no text generation in the app — the dictionary entries are displayed only when they already exist; the app never asks for one to be written, and the Bible text is never altered."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s05-np-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
-      - {id: s05-close-np, do: tap, target: {ref: npClose}, cue: 0, expect: {element: {ref: npGrabber}, state: gone}}
-      - {id: s05-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}}
+      - {id: s05-np-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3, timeoutMs: 8000}
+      - {id: s05-close-np, do: tap, target: {ref: npClose}, cue: 0, expect: {element: {ref: npGrabber}, state: gone}, expectTimeoutMs: 10000}
+      - {id: s05-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}, timeoutMs: 8000}
       # O cabeçalho rola junto com a lista: de volta ao topo antes do chip.
-      - {id: s05-header, do: scrollTo, target: {ref: parallelChipOff}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
-      - {id: s05-parallel, do: tap, target: {ref: parallelChipOff}, visual: true, caption: "Leitura paralela", expect: {element: {ref: mirrorTitle}, state: exists}}
+      - {id: s05-header, do: scrollTo, target: {ref: parallelChipOff}, within: {ref: readerScroll}, direction: up, maxSwipes: 5, timeoutMs: 8000}
+      - {id: s05-parallel, do: tap, target: {ref: parallelChipOff}, visual: true, caption: "Leitura paralela", expect: {element: {ref: mirrorTitle}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # Escolher a versão fecha o seletor e a lista pula para o versículo do player.
-      - {id: s05-nvi, do: tap, target: {ref: mirrorNVI}, visual: true, caption: "Paralela: NVI", expect: {element: {ref: lensPassages}, state: exists}}
-      - {id: s05-lens-reading, do: tap, target: {ref: lensReading}, cue: 2, caption: "Lente Reading"}
-      - {id: s05-lens-passages, do: tap, target: {ref: lensPassages}, cue: 3, visual: true, caption: "Lente Passages", expect: {element: {ref: followBlocks}, state: exists}}
-      - {id: s05-lens-word, do: tap, target: {ref: lensWord}, cue: 4, visual: true, caption: "Lente Word"}
+      - {id: s05-nvi, do: tap, target: {ref: mirrorNVI}, visual: true, caption: "Paralela: NVI", expect: {element: {ref: lensPassages}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s05-lens-reading, do: tap, target: {ref: lensReading}, cue: 2, caption: "Lente Reading", timeoutMs: 8000}
+      - {id: s05-lens-passages, do: tap, target: {ref: lensPassages}, cue: 3, visual: true, caption: "Lente Passages", expect: {element: {ref: followBlocks}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s05-lens-word, do: tap, target: {ref: lensWord}, cue: 4, visual: true, caption: "Lente Word", timeoutMs: 8000}
       # Na lente Word o rótulo do versículo vira "The , Lord , is , …"; o "Verse 1" segue igual.
-      - {id: s05-verse1, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+      - {id: s05-verse1, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5, timeoutMs: 8000}
       # Toque numa palavra: OCR (palavras não são elementos). Áudio pausado desde a cena 4.
-      - {id: s05-word, do: tap, target: {ref: wordShepherd}, visual: true, caption: "Toca a palavra shepherd", expect: {element: {ref: wordPopover}, state: exists}, expectTimeoutMs: 4000}
+      - {id: s05-word, do: tap, target: {ref: wordShepherd}, visual: true, caption: "Toca a palavra shepherd", expect: {element: {ref: wordPopover}, state: exists}, expectTimeoutMs: 4000, timeoutMs: 8000}
       - {id: s05-word-show, do: wait, ms: 4000}
-      - {id: s05-word-close, do: tap, target: {ref: wordPopoverClose}, expect: {element: {ref: wordPopover}, state: gone}}
-      # O Foco abre no versículo do player (pausado em qualquer um). No v. 6 não há "próximo": desliza
-      # para o anterior. A condição é lida no mini-player ANTES de abrir o Foco (o Foco o esconde, então o
-      # segundo bloco não dispara depois do primeiro).
-      - id: s05-focus-last
-        do: block
-        when: {element: {ref: miniPlayerPs23v6}, state: exists}
-        steps:
-          - {id: s05-focus-open-a, do: tap, target: {ref: focusChip}, cue: 6, visual: true, caption: "Foco: um versículo por tela", expect: {element: {ref: focusEyebrow}, state: exists}}
-          - {id: s05-focus-swipe-prev, do: drag, from: {x: 90, y: 330}, to: {x: 300, y: 330}, velocity: 800, afterMs: 1500, caption: "Desliza para o lado"}
-      - id: s05-focus-other
-        do: block
-        when: {all: [{element: {ref: miniPlayerPs23}, state: exists}, {not: {element: {ref: miniPlayerPs23v6}, state: exists}}]}
-        steps:
-          - {id: s05-focus-open-b, do: tap, target: {ref: focusChip}, cue: 6, visual: true, caption: "Foco: um versículo por tela", expect: {element: {ref: focusEyebrow}, state: exists}}
-          - {id: s05-focus-swipe-next, do: drag, from: {x: 300, y: 330}, to: {x: 90, y: 330}, velocity: 800, afterMs: 1500, caption: "Desliza para o lado"}
+      - {id: s05-word-close, do: tap, target: {ref: wordPopoverClose}, expect: {element: {ref: wordPopover}, state: gone}, expectTimeoutMs: 10000}
+      # O Foco abre no versículo em que o player parou (qualquer um). Os três arrastos são `optional` e partem do
+      # rótulo do versículo: v5 → anterior e depois próximo (dois deslizes); v6 → anterior; v1–v4 → próximo.
+      - {id: s05-focus-open, do: tap, target: {ref: focusChip}, cue: 6, visual: true, caption: "Foco: um versículo por tela", timeoutMs: 8000, expect: {element: {ref: focusEyebrow}, state: exists}, expectTimeoutMs: 10000}
+      - {id: s05-focus-swipe-from5, do: drag, from: {ref: focusAt5}, to: {x: 300, y: 330}, velocity: 800, optional: true, timeoutMs: 1500, afterMs: 1500, caption: "Desliza para o lado"}
+      - {id: s05-focus-swipe-from6, do: drag, from: {ref: focusAt6}, to: {x: 300, y: 330}, velocity: 800, optional: true, timeoutMs: 1500, afterMs: 1500, caption: "Desliza para o lado"}
+      - {id: s05-focus-swipe-next, do: drag, from: {ref: focusAt1to4}, to: {x: 90, y: 330}, velocity: 800, optional: true, timeoutMs: 1500, afterMs: 1500, caption: "Desliza para o lado"}
       # Puxar ≥ 140 pt para baixo fecha o Foco (medido: 240 pt a 700 pt/s).
-      - {id: s05-focus-pull, do: drag, from: {x: 195, y: 200}, to: {x: 195, y: 440}, velocity: 700, afterMs: 1500, caption: "Puxa para baixo e volta", expect: {element: {ref: focusEyebrow}, state: gone}}
+      - {id: s05-focus-pull, do: drag, from: {x: 195, y: 200}, to: {x: 195, y: 440}, velocity: 700, afterMs: 1500, caption: "Puxa para baixo e volta", expect: {element: {ref: focusEyebrow}, state: gone}, expectTimeoutMs: 10000}
       # Eco: linha "Bilingual echo" do Now Playing; o mini-player mostra "NIV · v. N" e depois "NVI · v. N"
       # e o chip "Bilingual echo on, chapter".
-      - {id: s05-echo-np, do: tap, target: {ref: miniPlayerPs23}, cue: 7, expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000}
-      - {id: s05-echo-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
-      - {id: s05-echo-scroll, do: scrollTo, target: {ref: npEchoNivNvi}, within: {ref: npScroll}, direction: down, maxSwipes: 2}
-      - {id: s05-echo-on, do: tap, target: {ref: npEchoNivNvi}, visual: true, caption: "Eco NIV → NVI", expect: {element: {ref: npEchoNivNvi}, state: selected}}
-      - {id: s05-echo-play, do: tap, target: {ref: npPlay}, caption: "Cada versículo nas duas línguas", expect: {element: {ref: npPause}, state: exists}}
-      - {id: s05-echo-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
-      - {id: s05-echo-close, do: tap, target: {ref: npClose}, afterMs: 1500, expect: {element: {ref: npGrabber}, state: gone}}
+      - {id: s05-echo-np, do: tap, target: {ref: miniPlayerPs23}, cue: 7, expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000, timeoutMs: 8000}
+      - {id: s05-echo-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s05-echo-scroll, do: scrollTo, target: {ref: npEchoNivNvi}, within: {ref: npScroll}, direction: down, maxSwipes: 2, timeoutMs: 8000}
+      - {id: s05-echo-on, do: tap, target: {ref: npEchoNivNvi}, visual: true, caption: "Eco NIV → NVI", expect: {element: {ref: npEchoNivNvi}, state: selected}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s05-echo-play, do: tap, target: {ref: npPlay}, caption: "Cada versículo nas duas línguas", expect: {element: {ref: npPause}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s05-echo-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3, timeoutMs: 8000}
+      - {id: s05-echo-close, do: tap, target: {ref: npClose}, afterMs: 1500, expect: {element: {ref: npGrabber}, state: gone}, expectTimeoutMs: 10000}
       - {id: s05-hold, do: hold}
 
   # ── Cena 6 ───────────────────────────────────────────────────────────────────────────────────────
@@ -462,27 +475,28 @@ scenes:
       - "The Journal tab is just your own highlights and notes, filterable and searchable."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s06-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}}
+      - {id: s06-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}, timeoutMs: 8000}
+      # Pausa já no começo (S13 item 4 pausava no fim): tocando, a lista segue a narração e volta ao versículo
+      # lido entre a rolagem e o toque em "Verse 1" (ensaio M4: o toque caiu fora e a barra não abriu).
+      - {id: s06-pause, do: tap, target: {ref: miniPause}, cue: 0, caption: "Pausa o áudio", expect: {element: {ref: miniPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # A marcação só aparece na lente Reading.
-      - {id: s06-reading, do: tap, target: {ref: lensReading}, cue: 0, caption: "Lente Reading"}
-      - {id: s06-verse1-scroll, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+      - {id: s06-reading, do: tap, target: {ref: lensReading}, caption: "Lente Reading", timeoutMs: 8000}
+      - {id: s06-verse1-scroll, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5, timeoutMs: 8000}
       # Roteiro "· Passage actions"/"HIGHLIGHT VERSE"/"PERSONAL NOTE"/"Save note" → barra de seleção.
-      - {id: s06-select, do: tap, target: {ref: verse1Number}, visual: true, caption: "Seleciona o versículo 1", expect: {element: {ref: selBar}, state: exists}}
-      - {id: s06-highlight, do: tap, target: {ref: selHighlight}, caption: "Marcar", expect: {element: {ref: selGold}, state: exists}}
+      - {id: s06-select, do: tap, target: {ref: verse1Number}, visual: true, caption: "Seleciona o versículo 1", expect: {element: {ref: selBar}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s06-highlight, do: tap, target: {ref: selHighlight}, caption: "Marcar", expect: {element: {ref: selGold}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # Se o versículo já estiver em Gold, este toque DESMARCA (o preparo exige o diário vazio).
-      - {id: s06-gold, do: tap, target: {ref: selGold}, visual: true, caption: "Cor: Gold"}
-      - {id: s06-back-actions, do: tap, target: {ref: selBackToActions}, expect: {element: {ref: selNote}, state: exists}}
-      - {id: s06-note, do: tap, target: {ref: selNote}, cue: 1, caption: "Nota pessoal", expect: {element: {ref: noteTextView}, state: exists}}
+      - {id: s06-gold, do: tap, target: {ref: selGold}, visual: true, caption: "Cor: Gold", timeoutMs: 8000}
+      - {id: s06-back-actions, do: tap, target: {ref: selBackToActions}, expect: {element: {ref: selNote}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s06-note, do: tap, target: {ref: selNote}, cue: 1, caption: "Nota pessoal", expect: {element: {ref: noteTextView}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s06-type, do: type, target: {ref: noteTextView}, text: "Meditate on this tonight", caption: "Escreve a nota"}
-      - {id: s06-save, do: tap, target: {ref: noteSave}, caption: "Salva a nota", expect: {element: {ref: noteTextView}, state: gone}}
+      - {id: s06-save, do: tap, target: {ref: noteSave}, caption: "Salva a nota", expect: {element: {ref: noteTextView}, state: gone}, expectTimeoutMs: 10000}
       - {id: s06-clear, do: tap, target: {ref: selClear}, optional: true}
-      - {id: s06-journal, do: tap, target: {ref: tabJournal}, cue: 3, visual: true, caption: "Aba Journal", expect: {element: {ref: journalTitle}, state: exists}}
-      - {id: s06-entry, do: waitFor, condition: {element: {ref: journalEntryPs23}, state: exists}, timeoutMs: 5000, onFail: continue}
-      - {id: s06-filter-notes, do: tap, target: {ref: journalFilterNotes}, caption: "Filtro: Notes"}
-      - {id: s06-filter-highlights, do: tap, target: {ref: journalFilterHighlights}, afterMs: 1200, caption: "Filtro: Highlights"}
-      - {id: s06-filter-all, do: tap, target: {ref: journalFilterAll}, afterMs: 1200, caption: "Filtro: All"}
-      # S13 item 4: pausa no fim da cena 6.
-      - {id: s06-pause, do: tap, target: {ref: miniPause}, caption: "Pausa o áudio", expect: {element: {ref: miniPlay}, state: exists}}
+      - {id: s06-journal, do: tap, target: {ref: tabJournal}, cue: 3, visual: true, caption: "Aba Journal", expect: {element: {ref: journalTitle}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s06-entry, do: waitFor, condition: {element: {ref: journalEntryPs23}, state: exists}, timeoutMs: 10000, onFail: continue}
+      - {id: s06-filter-notes, do: tap, target: {ref: journalFilterNotes}, caption: "Filtro: Notes", timeoutMs: 8000}
+      - {id: s06-filter-highlights, do: tap, target: {ref: journalFilterHighlights}, afterMs: 1200, caption: "Filtro: Highlights", timeoutMs: 8000}
+      - {id: s06-filter-all, do: tap, target: {ref: journalFilterAll}, afterMs: 1200, caption: "Filtro: All", timeoutMs: 8000}
       - {id: s06-hold, do: hold}
 
   # ── Cena 7 ───────────────────────────────────────────────────────────────────────────────────────
@@ -502,8 +516,8 @@ scenes:
       - "If I sign in again with the same Apple ID, the journal comes back empty: nothing was kept on the server."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s07-signed-out, do: assert, condition: {all: [{element: {ref: journalSiwy}, state: exists}, {element: {ref: journalSiwa}, state: exists}]}}
-      - {id: s07-siwa-tap, do: tap, target: {ref: journalSiwa}, cue: 2, visual: true, caption: "Sign in with Apple"}
+      - {id: s07-signed-out, do: assert, condition: {all: [{element: {ref: journalSiwy}, state: exists}, {element: {ref: journalSiwa}, state: exists}]}, timeoutMs: 8000}
+      - {id: s07-siwa-tap, do: tap, target: {ref: journalSiwa}, cue: 2, visual: true, caption: "Sign in with Apple", timeoutMs: 8000}
       - id: s07-siwa-sheet
         do: checkpoint
         who: human
@@ -512,10 +526,11 @@ scenes:
         timeoutMs: 180000
         onTimeout: pause
       - {id: s07-sync, do: tap, target: {ref: journalSync}, cue: 3, caption: "Sincroniza", optional: true}
-      - {id: s07-gear, do: tap, target: {ref: openSettings}, cue: 4, caption: "Engrenagem: Settings", expect: {element: {ref: settingsNav}, state: exists}}
-      - {id: s07-scroll-account, do: scrollTo, target: {ref: settingsDeleteAccount}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8, caption: "Seção Account"}
-      - {id: s07-delete-tap, do: tap, target: {ref: settingsDeleteAccount}, cue: 5, visual: true, caption: "Delete account", expect: {element: {ref: alertDelete}, state: exists}}
-      - {id: s07-delete-confirm, do: tap, target: {ref: alertPermanentlyDelete}, caption: "Exclui de vez"}
+      - {id: s07-gear-top, do: scrollTo, target: {ref: openSettings}, direction: up, maxSwipes: 4, timeoutMs: 8000}
+      - {id: s07-gear, do: tap, target: {ref: openSettings}, cue: 4, caption: "Engrenagem: Settings", expect: {element: {ref: settingsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s07-scroll-account, do: scrollTo, target: {ref: settingsDeleteAccount}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8, caption: "Seção Account", timeoutMs: 8000}
+      - {id: s07-delete-tap, do: tap, target: {ref: settingsDeleteAccount}, cue: 5, visual: true, caption: "Delete account", expect: {element: {ref: alertDelete}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s07-delete-confirm, do: tap, target: {ref: alertPermanentlyDelete}, caption: "Exclui de vez", timeoutMs: 8000}
       # A folha da Apple pede nova autorização (revogação do token). Se ela for cancelada aparece
       # "Delete without confirming with Apple?" e o `until` não vale: prazo e pausa.
       - id: s07-revoke
@@ -525,9 +540,9 @@ scenes:
         until: {element: {ref: alertAccountDeleted}, state: exists}
         timeoutMs: 180000
         onTimeout: pause
-      - {id: s07-deleted-ok, do: tap, target: {ref: alertOk}, cue: 7, caption: "Conta excluída", expect: {element: {ref: alertAccountDeleted}, state: gone}}
-      - {id: s07-back-journal, do: tap, target: {ref: backButton}, caption: "Volta ao Journal", expect: {element: {ref: journalSiwa}, state: exists}}
-      - {id: s07-siwa-again-tap, do: tap, target: {ref: journalSiwa}, cue: 8, caption: "Entra de novo com a Apple"}
+      - {id: s07-deleted-ok, do: tap, target: {ref: alertOk}, cue: 7, caption: "Conta excluída", expect: {element: {ref: alertAccountDeleted}, state: gone}, expectTimeoutMs: 10000}
+      - {id: s07-back-journal, do: tap, target: {ref: backButton}, caption: "Volta ao Journal", expect: {element: {ref: journalSiwa}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s07-siwa-again-tap, do: tap, target: {ref: journalSiwa}, cue: 8, caption: "Entra de novo com a Apple", timeoutMs: 8000}
       - id: s07-siwa-again
         do: checkpoint
         who: human
@@ -547,19 +562,23 @@ scenes:
       - "Nothing in the app is paid: there's no in-app purchase, no subscription tier and no locked content."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s08-plan, do: tap, target: {ref: tabPlan}, cue: 0, visual: true, caption: "Aba Plan", expect: {element: {ref: planGoToCurrent}, state: exists}}
+      - {id: s08-plan, do: tap, target: {ref: tabPlan}, cue: 0, visual: true, caption: "Aba Plan", expect: {element: {ref: planGoToCurrent}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # A linha do dia não tem play (o ícone de download da linha não está na árvore): abre-se o dia.
-      - {id: s08-day, do: tap, target: {ref: planCurrentDay}, visual: true, caption: "Dia atual do plano", expect: {element: {ref: dayListen}, state: exists}, expectTimeoutMs: 6000}
-      - {id: s08-listen, do: tap, target: {ref: dayListen}, caption: "Ouve o episódio do dia"}
-      - {id: s08-miniplayer-day, do: waitFor, condition: {element: {ref: miniPlayerDay}, state: exists}, timeoutMs: 10000, onFail: continue}
-      - {id: s08-download, do: tap, target: {ref: dayDownload}, afterMs: 3000, caption: "Baixa o dia (15 MB)"}
-      - {id: s08-pause-day, do: tap, target: {ref: miniPause}, afterMs: 2000, caption: "Pausa o episódio"}
-      - {id: s08-playlists, do: tap, target: {ref: tabPlaylists}, cue: 1, visual: true, caption: "Aba Playlists", expect: {element: {ref: playlistMemorize}, state: exists}}
-      - {id: s08-playlist, do: tap, target: {ref: playlistMemorize}, caption: "Abre a playlist", expect: {element: {ref: playlistPlay}, state: exists}}
+      - {id: s08-day, do: tap, target: {ref: planCurrentDay}, visual: true, caption: "Dia atual do plano", expect: {element: {ref: dayListen}, state: exists}, expectTimeoutMs: 6000, timeoutMs: 8000}
+      # "Download" ANTES de "Listen": tocando, a tela do dia segue o texto lido e o cabeçalho (com "Download" e
+      # "Back") sai da árvore (ensaio M4: E_TARGET_NOT_FOUND no "Download" depois do "Listen").
+      # Ao abrir (e depois do "Download") a tela do dia rola sozinha até o ponto de escuta: de volta ao topo.
+      - {id: s08-day-top, do: scrollTo, target: {ref: dayDownload}, direction: up, maxSwipes: 8, timeoutMs: 8000}
+      - {id: s08-download, do: tap, target: {ref: dayDownload}, caption: "Baixa o dia (15 MB)", timeoutMs: 8000, expect: {element: {ref: dayDownload}, state: gone}, expectTimeoutMs: 10000}
+      - {id: s08-listen-top, do: scrollTo, target: {ref: dayListen}, direction: up, maxSwipes: 8, timeoutMs: 8000}
+      - {id: s08-listen, do: tap, target: {ref: dayListen}, afterMs: 1500, caption: "Ouve o episódio do dia", timeoutMs: 8000, expect: {element: {ref: miniPlayerDay}, state: exists}, expectTimeoutMs: 15000}
+      - {id: s08-pause-day, do: tap, target: {ref: miniPause}, afterMs: 3000, caption: "Pausa o episódio", timeoutMs: 8000, expect: {element: {ref: miniPlay}, state: exists}, expectTimeoutMs: 10000}
+      - {id: s08-playlists, do: tap, target: {ref: tabPlaylists}, cue: 1, visual: true, caption: "Aba Playlists", expect: {element: {ref: playlistMemorize}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s08-playlist, do: tap, target: {ref: playlistMemorize}, caption: "Abre a playlist", expect: {element: {ref: playlistPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # Roteiro "▶ Play" → rótulo "play, Play". A Memorize toca Salmos 23:6 em repetição de passagem.
-      - {id: s08-playlist-play, do: tap, target: {ref: playlistPlay}, caption: "Toca a playlist", expect: {element: {ref: miniPause}, state: exists}, expectTimeoutMs: 5000}
+      - {id: s08-playlist-play, do: tap, target: {ref: playlistPlay}, caption: "Toca a playlist", expect: {element: {ref: miniPause}, state: exists}, expectTimeoutMs: 5000, timeoutMs: 8000}
       # S13 item 4: pausa no fim da cena 8.
-      - {id: s08-pause, do: tap, target: {ref: miniPause}, cue: 2, afterMs: 3000, caption: "Pausa", expect: {element: {ref: miniPlay}, state: exists}}
+      - {id: s08-pause, do: tap, target: {ref: miniPause}, cue: 2, afterMs: 3000, caption: "Pausa", expect: {element: {ref: miniPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s08-hold, do: hold}
 
   # ── Cena 9 ───────────────────────────────────────────────────────────────────────────────────────
@@ -572,11 +591,12 @@ scenes:
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
       # Settings só se abre pela engrenagem do Journal.
-      - {id: s09-journal, do: tap, target: {ref: tabJournal}, cue: 0, expect: {element: {ref: openSettings}, state: exists}}
-      - {id: s09-settings, do: tap, target: {ref: openSettings}, caption: "Settings", expect: {element: {ref: settingsNav}, state: exists}}
-      - {id: s09-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8}
+      - {id: s09-journal, do: tap, target: {ref: tabJournal}, cue: 0, expect: {element: {ref: openSettings}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s09-settings-top, do: scrollTo, target: {ref: openSettings}, direction: up, maxSwipes: 4, timeoutMs: 8000}
+      - {id: s09-settings, do: tap, target: {ref: openSettings}, caption: "Settings", expect: {element: {ref: settingsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s09-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8, timeoutMs: 8000}
       # Roteiro "{size} on this device" → é o rótulo da linha de Settings ("Downloads, 85 KB on this device").
-      - {id: s09-downloads, do: tap, target: {ref: settingsDownloads}, cue: 1, visual: true, caption: "Settings › Downloads", expect: {element: {ref: downloadWhileListening}, state: exists}}
+      - {id: s09-downloads, do: tap, target: {ref: settingsDownloads}, cue: 1, visual: true, caption: "Settings › Downloads", expect: {element: {ref: downloadWhileListening}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s09-downloads-show, do: wait, ms: 3000}
       # Modo avião pelo runner (SP-1: 2 trocas ok). Com a Central aberta cada leitura passa de 10 s.
       - {id: s09-cc-open, do: controlCenter, action: open, cue: 2, caption: "Central de Controle"}
@@ -587,20 +607,20 @@ scenes:
       - {id: s09-cc-close, do: controlCenter, action: close}
       - {id: s09-offline, do: waitFor, condition: {network: offline}, timeoutMs: 60000}
       - {id: s09-back-hagah, do: app, action: activate}
-      - {id: s09-back-settings, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
-      - {id: s09-back-journal, do: tap, target: {ref: backButton}, expect: {element: {ref: openSettings}, state: exists}}
-      - {id: s09-bible, do: tap, target: {ref: tabBible}, caption: "Abre o Salmo 23 baixado", expect: {element: {ref: titlePsalm23}, state: exists}}
-      - {id: s09-verse1-scroll, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+      - {id: s09-back-settings, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s09-back-journal, do: tap, target: {ref: backButton}, expect: {element: {ref: openSettings}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s09-bible, do: tap, target: {ref: tabBible}, caption: "Abre o Salmo 23 baixado", expect: {element: {ref: titlePsalm23}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s09-verse1-scroll, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5, timeoutMs: 8000}
       # S13 pede toque duplo no versículo; pelo runner ele não toca no build 7. "Verse 1" → "Listen" toca
       # o capítulo a partir do v. 1 (medido) e põe o Salmo 23 no player no lugar da playlist da cena 8.
-      - {id: s09-select, do: tap, target: {ref: verse1Number}, expect: {element: {ref: selListen}, state: exists}}
+      - {id: s09-select, do: tap, target: {ref: verse1Number}, expect: {element: {ref: selListen}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - id: s09-play-offline
         do: tap
         target: {ref: selListen}
         visual: true
         caption: "Toca sem rede"
         expect: {all: [{element: {ref: miniPlayerPs23}, state: exists}, {element: {ref: miniPause}, state: exists}]}
-        expectTimeoutMs: 3000
+        expectTimeoutMs: 10000
       - {id: s09-clear, do: tap, target: {ref: selClear}, afterMs: 2000, optional: true}
       - {id: s09-hold, do: hold}
 
@@ -617,7 +637,7 @@ scenes:
     hold: {padBeforeMs: 1000, padAfterMs: 2000}
     steps:
       # A narração do Salmo não deve tocar por baixo da fala do About.
-      - {id: s10-pause, do: tap, target: {ref: miniPause}, cue: 0, expect: {element: {ref: miniPlay}, state: exists}}
+      - {id: s10-pause, do: tap, target: {ref: miniPause}, cue: 0, expect: {element: {ref: miniPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s10-cc-open, do: controlCenter, action: open, caption: "Desliga o modo avião"}
       - {id: s10-airplane-was-on, do: waitFor, condition: {airplane: "on"}, timeoutMs: 20000}
       - {id: s10-airplane-tap, do: tap, target: {ref: airplaneButton}, timeoutMs: 15000, visual: true}
@@ -625,15 +645,16 @@ scenes:
       - {id: s10-cc-close, do: controlCenter, action: close}
       - {id: s10-online, do: waitFor, condition: {network: online}, timeoutMs: 60000}
       - {id: s10-back-hagah, do: app, action: activate}
-      - {id: s10-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}}
-      - {id: s10-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}}
-      - {id: s10-about-scroll, do: scrollTo, target: {ref: settingsAbout}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8}
-      - {id: s10-about, do: tap, target: {ref: settingsAbout}, visual: true, caption: "Settings › About", expect: {element: {ref: aboutVersion}, state: exists}}
+      - {id: s10-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s10-settings-top, do: scrollTo, target: {ref: openSettings}, direction: up, maxSwipes: 4, timeoutMs: 8000}
+      - {id: s10-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s10-about-scroll, do: scrollTo, target: {ref: settingsAbout}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8, timeoutMs: 8000}
+      - {id: s10-about, do: tap, target: {ref: settingsAbout}, visual: true, caption: "Settings › About", expect: {element: {ref: aboutVersion}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # Topo: o nome desenhado, הָגָה · hāgâ, Salmos 1:2-3 (NIV), "Version 1.0.0 (7)", "An app by Kingdom
       # Ideas Factory". Dois arrastos lentos (≈ 330 pt cada, quase sem inércia) chegam ao fim da página.
-      - {id: s10-scroll-1, do: drag, from: {x: 195, y: 700}, to: {x: 195, y: 350}, velocity: 150, holdMs: 200, cue: 2, caption: "Licenças e atribuições", expect: {element: {ref: aboutLicenses}, state: hittable}}
-      - {id: s10-scroll-2, do: drag, from: {x: 195, y: 700}, to: {x: 195, y: 350}, velocity: 150, holdMs: 200, cue: 3, caption: "Privacidade e exclusão de conta", expect: {element: {ref: aboutDeleteHowTo}, state: hittable}}
-      - {id: s10-links, do: assert, condition: {all: [{element: {ref: aboutPrivacy}, state: hittable}, {element: {ref: aboutDeleteHowTo}, state: hittable}]}, onFail: continue}
+      - {id: s10-scroll-1, do: drag, from: {x: 195, y: 700}, to: {x: 195, y: 350}, velocity: 150, holdMs: 200, cue: 2, caption: "Licenças e atribuições", expect: {element: {ref: aboutLicenses}, state: hittable}, expectTimeoutMs: 10000}
+      - {id: s10-scroll-2, do: drag, from: {x: 195, y: 700}, to: {x: 195, y: 350}, velocity: 150, holdMs: 200, cue: 3, caption: "Privacidade e exclusão de conta", expect: {element: {ref: aboutDeleteHowTo}, state: hittable}, expectTimeoutMs: 10000}
+      - {id: s10-links, do: assert, condition: {all: [{element: {ref: aboutPrivacy}, state: hittable}, {element: {ref: aboutDeleteHowTo}, state: hittable}]}, onFail: continue, timeoutMs: 8000}
       - {id: s10-hold, do: hold}
 
 # ── Limpeza (depois de parar a gravação) ─────────────────────────────────────────────────────────
@@ -641,8 +662,8 @@ scenes:
 # nota e a marcação apagadas com a conta, o episódio baixado do dia: o próximo preparo confere/pede.
 cleanup:
   - {id: clean-front, do: app, action: activate}
-  - {id: clean-pause, do: block, when: {element: {ref: miniPause}, state: exists}, steps: [{do: tap, target: {ref: miniPause}}]}
-  - {id: clean-back-1, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
-  - {id: clean-back-2, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
-  - {id: clean-bible, do: tap, target: {ref: tabBible}}
+  - {id: clean-pause, do: tap, target: {ref: miniPause}, optional: true, timeoutMs: 1500}
+  - {id: clean-back-1, do: tap, target: {ref: backButton}, optional: true, timeoutMs: 1500}
+  - {id: clean-back-2, do: tap, target: {ref: backButton}, optional: true, timeoutMs: 1500}
+  - {id: clean-bible, do: tap, target: {ref: tabBible}, timeoutMs: 8000}
   - {id: clean-reader, do: waitFor, condition: {element: {ref: miniPlay}, state: exists}, timeoutMs: 5000}
