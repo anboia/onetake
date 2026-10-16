@@ -75,6 +75,9 @@ targets:
   # ── Now Playing (formSheet: meia altura "Half screen" ou "Expanded") ────────────────────────────
   npGrabber: {label: "Sheet Grabber", type: button}
   npClose: {label: "Close", type: button, below: {ref: npGrabber}}
+  # A área rolável da folha. Só com a folha em "Expanded": aí o leitor sai da árvore e este é o único
+  # scrollView. Sem `within`, rolar até um alvo que saiu da árvore falha (ensaio de 2026-10-16).
+  npScroll: {type: scrollView, index: 0}
   npKindChapter: {label: "CHAPTER", type: staticText}   # cabeçalho da folha com Repeat Chapter
   npTitlePs23: {label: "Psalms 23", type: staticText}
   npPrevVerse: {label: "Previous verse", type: button}
@@ -123,6 +126,9 @@ targets:
   # ── Settings ────────────────────────────────────────────────────────────────────────────────────
   backButton: {identifier: "BackButton", type: button}       # rótulo "(tabs)" em Settings, "Settings" nas filhas
   settingsNav: {identifier: "Settings", type: navigationBar}
+  # A lista de Settings carrega só o que aparece: rolar até uma linha fora da árvore exige `within`
+  # (ensaio de 2026-10-16). Em Settings há um só scrollView.
+  settingsScroll: {type: scrollView, index: 0}
   settingsEnglish: {label: "English", type: other, below: {label: "Interface language", type: staticText, index: 0}}
   settingsDownloads: {labelPrefix: "Downloads,", type: button}   # "Downloads, 85 KB on this device"
   settingsAbout: {label: "About", type: button}
@@ -169,7 +175,7 @@ prepare:
     do: block
     when: {element: {ref: npGrabber}, state: exists}
     steps:
-      - {do: scrollTo, target: {ref: npClose}, direction: up, maxSwipes: 3}
+      - {do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
       - {do: tap, target: {ref: npClose}}
   - {id: prep-back-1, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
   - {id: prep-back-2, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
@@ -180,31 +186,36 @@ prepare:
 
   # Now Playing: Repeat "Chapter" · "∞", pausa "0", eco "Off", velocidade "1×", timer "Off", predefinições padrão.
   # Repeat "Chapter" ∞ desde o preparo para o Salmo 23 nunca avançar ao 24 (S13 item 4).
-  - {id: prep-np-open, do: tap, target: {ref: miniPlayerInfo}, expect: {element: {ref: npGrabber}, state: exists}}
+  - {id: prep-np-open, do: tap, target: {ref: miniPlayerInfo}, expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000}
   - {id: prep-np-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
   - {id: prep-repeat-chapter, do: tap, target: {ref: npRepeatChapter}, expect: {element: {ref: npRepeatChapter}, state: selected}}
   - {id: prep-times, do: block, when: {not: {element: {ref: npTimesInfinite}, state: selected}}, steps: [{do: tap, target: {ref: npTimesInfinite}}]}
   - {id: prep-gap, do: block, when: {not: {element: {ref: npGap0}, state: selected}}, steps: [{do: tap, target: {ref: npGap0}}]}
   - {id: prep-echo, do: block, when: {not: {element: {ref: npEchoOff}, state: selected}}, steps: [{do: tap, target: {ref: npEchoOff}}]}
   - {id: prep-speed, do: block, when: {not: {element: {ref: npSpeed1x}, state: selected}}, steps: [{do: tap, target: {ref: npSpeed1x}}]}
+  # Os presets ficam abaixo da dobra da folha: rolar antes de conferir (ensaio de 2026-10-16).
+  - {id: prep-presets-scroll, do: scrollTo, target: {ref: npPresetStudyDefault}, within: {ref: npScroll}, direction: down, maxSwipes: 3}
   - id: prep-presets
     do: assert
+    timeoutMs: 2000
     condition: {all: [{element: {ref: npPresetStudyDefault}, state: exists}, {element: {ref: npPresetSleepDefault}, state: exists}]}
-  - {id: prep-timer-scroll, do: scrollTo, target: {ref: npTimerOff}, direction: down, maxSwipes: 3}
+  - {id: prep-timer-scroll, do: scrollTo, target: {ref: npTimerOff}, within: {ref: npScroll}, direction: down, maxSwipes: 3}
   - {id: prep-timer, do: block, when: {not: {element: {ref: npTimerOff}, state: selected}}, steps: [{do: tap, target: {ref: npTimerOff}}]}
-  - {id: prep-np-top, do: scrollTo, target: {ref: npClose}, direction: up, maxSwipes: 4}
+  - {id: prep-np-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 4}
   - {id: prep-np-close, do: tap, target: {ref: npClose}, expect: {element: {ref: npGrabber}, state: gone}}
 
   # Parallel desligado (um link não desliga o Parallel, F51; só "Turn off"). A lente é da sessão e volta
   # a "Reading" com o app encerrado no fim do preparo.
   - {id: prep-header, do: scrollTo, target: {ref: parallelChip}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+  # Depois de uma rolagem "atrasada" a árvore ainda muda: esperar o chip antes de decidir (ensaio de 2026-10-16).
+  - {id: prep-parallel-chip, do: waitFor, condition: {any: [{element: {ref: parallelChipOn}, state: exists}, {element: {ref: parallelChipOff}, state: exists}]}, timeoutMs: 15000}
   - id: prep-parallel-off
     do: block
     when: {element: {ref: parallelChipOn}, state: exists}
     steps:
       - {do: tap, target: {ref: parallelChipOn}, expect: {element: {ref: mirrorTitle}, state: exists}}
       - {do: tap, target: {ref: mirrorTurnOff}, expect: {element: {ref: parallelChipOff}, state: exists}}
-  - {id: prep-parallel-assert, do: assert, condition: {element: {ref: parallelChipOff}, state: exists}}
+  - {id: prep-parallel-assert, do: assert, condition: {element: {ref: parallelChipOff}, state: exists}, timeoutMs: 5000}
 
   # Journal: deslogado e vazio. Sair/excluir a conta é do dono (credencial e revogação na Apple).
   - {id: prep-tab-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}}
@@ -224,15 +235,15 @@ prepare:
 
   # Settings: idioma do app, Downloads, versão.
   - {id: prep-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}}
-  - {id: prep-english, do: assert, condition: {element: {ref: settingsEnglish}, state: value, equals: "radio button, checked"}}
-  - {id: prep-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, direction: down, maxSwipes: 8}
+  - {id: prep-english, do: assert, condition: {element: {ref: settingsEnglish}, state: value, equals: "radio button, checked"}, onFail: continue}   # pode estar no idioma do sistema (iPhone em inglês)
+  - {id: prep-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8}
   - {id: prep-downloads, do: tap, target: {ref: settingsDownloads}, expect: {element: {ref: downloadsNav}, state: exists}}
   # Em 2026-10-16 as duas abaixo FALHAM: o interruptor está em "0" e o Salmo 23 NIV só tem "text · timings"
   # (85 KB no aparelho). O dono liga o interruptor e toca o Salmo 23 inteiro com rede antes da tomada.
   - {id: prep-download-on-play, do: assert, condition: {element: {ref: downloadWhileListening}, state: value, equals: "1"}}
   - {id: prep-ps23-audio, do: assert, condition: {element: {ref: downloadsPs23Audio}, state: exists}}
   - {id: prep-downloads-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
-  - {id: prep-about-scroll, do: scrollTo, target: {ref: settingsAbout}, direction: down, maxSwipes: 4}
+  - {id: prep-about-scroll, do: scrollTo, target: {ref: settingsAbout}, within: {ref: settingsScroll}, direction: down, maxSwipes: 4}
   - {id: prep-about, do: tap, target: {ref: settingsAbout}, expect: {element: {ref: aboutNav}, state: exists}}
   - {id: prep-version, do: assert, condition: {element: {ref: aboutVersion}, state: exists}, onFail: abort}
   - {id: prep-about-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
@@ -322,7 +333,7 @@ scenes:
       # e aparece "Follow the narration" (sobre o título); tocar nele mostra a lista voltando sozinha.
       - {id: s02-scroll, do: drag, from: {x: 200, y: 520}, to: {x: 200, y: 400}, velocity: 300, cue: 4, caption: "Rola de leve", expect: {element: {ref: followNarration}, state: exists}}
       - {id: s02-follow, do: tap, target: {ref: followNarration}, afterMs: 1500, caption: "A lista volta a seguir", expect: {element: {ref: followNarration}, state: gone}}
-      - {id: s02-now-playing, do: tap, target: {ref: miniPlayerPs23}, afterMs: 3000, visual: true, caption: "Abre o Now Playing", expect: {element: {ref: npGrabber}, state: exists}}
+      - {id: s02-now-playing, do: tap, target: {ref: miniPlayerPs23}, afterMs: 3000, visual: true, caption: "Abre o Now Playing", expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000}
       - {id: s02-hold, do: hold}
 
   # ── Cena 3 ───────────────────────────────────────────────────────────────────────────────────────
@@ -369,14 +380,14 @@ scenes:
       - {id: s04-expand, do: tap, target: {ref: npGrabber}, visual: true, caption: "Folha inteira", expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
       # "Book" fica atrás de "⋯" (só mostra; o modo continua "Chapter").
       - {id: s04-more, do: tap, target: {ref: npRepeatMore}, cue: 1, caption: "Modos: … Chapter, Book", expect: {element: {ref: npRepeatBook}, state: exists}}
-      - {id: s04-scroll-presets, do: scrollTo, target: {ref: npPresetSleep}, direction: down, maxSwipes: 3}
+      - {id: s04-scroll-presets, do: scrollTo, target: {ref: npPresetSleep}, within: {ref: npScroll}, direction: down, maxSwipes: 3}
       - {id: s04-sleep, do: tap, target: {ref: npPresetSleep}, cue: 2, visual: true, caption: "Predefinição Sleep", expect: {element: {ref: npPresetSleep}, state: selected}}
-      - {id: s04-scroll-timer, do: scrollTo, target: {ref: npTimerEndOfChapter}, direction: down, maxSwipes: 2}
+      - {id: s04-scroll-timer, do: scrollTo, target: {ref: npTimerEndOfChapter}, within: {ref: npScroll}, direction: down, maxSwipes: 2}
       - {id: s04-end-of-chapter, do: tap, target: {ref: npTimerEndOfChapter}, visual: true, caption: "Timer: fim do capítulo", expect: {element: {ref: npTimerStatus}, state: exists}}
       - {id: s04-timer-show, do: wait, ms: 2500}
       # Timeline de S13 item 4: timer "Off" e Repeat "Chapter" de volta.
       - {id: s04-timer-off, do: tap, target: {ref: npTimerOff}, caption: "Desliga o timer", expect: {element: {ref: npTimerOff}, state: selected}}
-      - {id: s04-scroll-repeat, do: scrollTo, target: {ref: npRepeatChapter}, direction: up, maxSwipes: 3}
+      - {id: s04-scroll-repeat, do: scrollTo, target: {ref: npRepeatChapter}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
       - {id: s04-chapter, do: tap, target: {ref: npRepeatChapter}, caption: "Repeat Chapter de novo", expect: {element: {ref: npRepeatChapter}, state: selected}}
       - {id: s04-hold, do: hold}
 
@@ -396,7 +407,7 @@ scenes:
       - "There's no chat, no prompt and no text generation in the app — the dictionary entries are displayed only when they already exist; the app never asks for one to be written, and the Bible text is never altered."
     hold: {padBeforeMs: 1000, padAfterMs: 1500}
     steps:
-      - {id: s05-np-top, do: scrollTo, target: {ref: npClose}, direction: up, maxSwipes: 3}
+      - {id: s05-np-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
       - {id: s05-close-np, do: tap, target: {ref: npClose}, cue: 0, expect: {element: {ref: npGrabber}, state: gone}}
       - {id: s05-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}}
       # O cabeçalho rola junto com a lista: de volta ao topo antes do chip.
@@ -432,11 +443,12 @@ scenes:
       - {id: s05-focus-pull, do: drag, from: {x: 195, y: 200}, to: {x: 195, y: 440}, velocity: 700, afterMs: 1500, caption: "Puxa para baixo e volta", expect: {element: {ref: focusEyebrow}, state: gone}}
       # Eco: linha "Bilingual echo" do Now Playing; o mini-player mostra "NIV · v. N" e depois "NVI · v. N"
       # e o chip "Bilingual echo on, chapter".
-      - {id: s05-echo-np, do: tap, target: {ref: miniPlayerPs23}, cue: 7, expect: {element: {ref: npGrabber}, state: exists}}
+      - {id: s05-echo-np, do: tap, target: {ref: miniPlayerPs23}, cue: 7, expect: {element: {ref: npGrabber}, state: exists}, expectTimeoutMs: 8000}
       - {id: s05-echo-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
-      - {id: s05-echo-scroll, do: scrollTo, target: {ref: npEchoNivNvi}, direction: down, maxSwipes: 2}
+      - {id: s05-echo-scroll, do: scrollTo, target: {ref: npEchoNivNvi}, within: {ref: npScroll}, direction: down, maxSwipes: 2}
       - {id: s05-echo-on, do: tap, target: {ref: npEchoNivNvi}, visual: true, caption: "Eco NIV → NVI", expect: {element: {ref: npEchoNivNvi}, state: selected}}
       - {id: s05-echo-play, do: tap, target: {ref: npPlay}, caption: "Cada versículo nas duas línguas", expect: {element: {ref: npPause}, state: exists}}
+      - {id: s05-echo-top, do: scrollTo, target: {ref: npClose}, within: {ref: npScroll}, direction: up, maxSwipes: 3}
       - {id: s05-echo-close, do: tap, target: {ref: npClose}, afterMs: 1500, expect: {element: {ref: npGrabber}, state: gone}}
       - {id: s05-hold, do: hold}
 
@@ -501,7 +513,7 @@ scenes:
         onTimeout: pause
       - {id: s07-sync, do: tap, target: {ref: journalSync}, cue: 3, caption: "Sincroniza", optional: true}
       - {id: s07-gear, do: tap, target: {ref: openSettings}, cue: 4, caption: "Engrenagem: Settings", expect: {element: {ref: settingsNav}, state: exists}}
-      - {id: s07-scroll-account, do: scrollTo, target: {ref: settingsDeleteAccount}, direction: down, maxSwipes: 8, caption: "Seção Account"}
+      - {id: s07-scroll-account, do: scrollTo, target: {ref: settingsDeleteAccount}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8, caption: "Seção Account"}
       - {id: s07-delete-tap, do: tap, target: {ref: settingsDeleteAccount}, cue: 5, visual: true, caption: "Delete account", expect: {element: {ref: alertDelete}, state: exists}}
       - {id: s07-delete-confirm, do: tap, target: {ref: alertPermanentlyDelete}, caption: "Exclui de vez"}
       # A folha da Apple pede nova autorização (revogação do token). Se ela for cancelada aparece
@@ -562,7 +574,7 @@ scenes:
       # Settings só se abre pela engrenagem do Journal.
       - {id: s09-journal, do: tap, target: {ref: tabJournal}, cue: 0, expect: {element: {ref: openSettings}, state: exists}}
       - {id: s09-settings, do: tap, target: {ref: openSettings}, caption: "Settings", expect: {element: {ref: settingsNav}, state: exists}}
-      - {id: s09-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, direction: down, maxSwipes: 8}
+      - {id: s09-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8}
       # Roteiro "{size} on this device" → é o rótulo da linha de Settings ("Downloads, 85 KB on this device").
       - {id: s09-downloads, do: tap, target: {ref: settingsDownloads}, cue: 1, visual: true, caption: "Settings › Downloads", expect: {element: {ref: downloadWhileListening}, state: exists}}
       - {id: s09-downloads-show, do: wait, ms: 3000}
@@ -615,7 +627,7 @@ scenes:
       - {id: s10-back-hagah, do: app, action: activate}
       - {id: s10-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}}
       - {id: s10-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}}
-      - {id: s10-about-scroll, do: scrollTo, target: {ref: settingsAbout}, direction: down, maxSwipes: 8}
+      - {id: s10-about-scroll, do: scrollTo, target: {ref: settingsAbout}, within: {ref: settingsScroll}, direction: down, maxSwipes: 8}
       - {id: s10-about, do: tap, target: {ref: settingsAbout}, visual: true, caption: "Settings › About", expect: {element: {ref: aboutVersion}, state: exists}}
       # Topo: o nome desenhado, הָגָה · hāgâ, Salmos 1:2-3 (NIV), "Version 1.0.0 (7)", "An app by Kingdom
       # Ideas Factory". Dois arrastos lentos (≈ 330 pt cada, quase sem inércia) chegam ao fim da página.

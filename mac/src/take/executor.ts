@@ -358,6 +358,9 @@ type Attempt = { status: 'ok' | 'skipped' } | Failure;
 const OK: Attempt = { status: 'ok' };
 const SKIPPED: Attempt = { status: 'skipped' };
 
+/** Novas leituras de uma condição cuja avaliação estourou o prazo do runner sem terminar (aparelho lento). */
+const SLOW_READ_RETRIES = 3;
+
 /** O que um erro diz sobre a ação do passo (S0.5; SP-2: `phase` do `E_TIMEOUT`). */
 export function classifyActionError(error: unknown, action?: Step['do']): Omit<Failure, 'status' | 'error'> {
   if (isContrarregraError(error, 'E_TIMEOUT')) {
@@ -923,13 +926,23 @@ export class TakeExecutor {
 
   /** `wait.for`: `true` se a condição ficou verdadeira no prazo; `E_TIMEOUT` (qualquer fase) = `false`. */
   async #waitCondition(condition: Condition, timeoutMs: number): Promise<boolean> {
-    try {
-      await this.#call('wait.for', { condition, timeoutMs }, timeoutMs + WAIT_FOR_LANE_EXTRA_MS + RPC_SLACK_MS);
-      this.#observeAirplane(condition);
-      return true;
-    } catch (error) {
-      if (isContrarregraError(error, 'E_TIMEOUT')) return false;
-      throw error;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await this.#call('wait.for', { condition, timeoutMs: attempt === 0 ? timeoutMs : 0 }, timeoutMs + WAIT_FOR_LANE_EXTRA_MS + RPC_SLACK_MS);
+        this.#observeAirplane(condition);
+        return true;
+      } catch (error) {
+        if (!isContrarregraError(error, 'E_TIMEOUT')) throw error;
+        // `phase` = o prazo do runner estourou com a leitura ainda na fila ou rodando (aparelho lento: a avaliação
+        // única de `when`/`assert` ganha ~1 s): não é "falso". Espera a fila esvaziar e avalia de novo (é só leitura;
+        // ensaio de 2026-10-16). Sem `phase`, a condição foi lida e não ficou verdadeira.
+        const phase = error.data?.['phase'];
+        if ((phase === 'running' || phase === 'queued') && attempt < SLOW_READ_RETRIES) {
+          await this.#drain();
+          continue;
+        }
+        return false;
+      }
     }
   }
 

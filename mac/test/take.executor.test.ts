@@ -609,6 +609,17 @@ describe('pontos de controle (S5)', () => {
 });
 
 describe('block (S0.4)', () => {
+  test('when cuja leitura estourou o prazo do runner (phase running) é lida de novo, não vira falso (ensaio de 2026-10-16)', async () => {
+    const h = harness(
+      oneScene([{ do: 'block', when: { locked: false }, steps: [{ do: 'tap', target: B }] }]),
+      { handlers: () => ({ 'wait.for': [() => { throw rpcError('E_TIMEOUT', { phase: 'running', method: 'wait.for', deadlineMs: 1000 }); }, () => ({})] }) },
+    );
+    await runAll(h);
+    assert.deepEqual(h.runner.of('wait.for').map((c) => c.params['timeoutMs']), [0, 0]);
+    assert.deepEqual(h.runner.of('ui.tap').map((c) => c.params['target']), [B]);
+    assert.deepEqual(h.record.steps.map((s) => [s.index, s.status]), [['1', 'ok'], ['1.1', 'ok']]);
+  });
+
   test('when falsa (avaliada uma vez): o bloco fica skipped e nada dentro roda (AC-4.9); verdadeira: roda', async () => {
     const h = harness(
       oneScene([
