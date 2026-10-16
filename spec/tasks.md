@@ -566,6 +566,33 @@ Regras comuns:
   `spec/constitution.md`, `spec/spec.md` e `spec/requirements.md` (só via G1). AC: —. Done: todo
   spike aplicável com decisão; G1 respondidos. Deps: T-0.16…T-0.38. Implements: P-6.
 
+## Trilha do demo — vídeo do Hagah 1.0.0 (7) (G1 em 2026-10-16)
+
+Decisão do dono (2026-10-14): o Contrarregra grava o vídeo da App Review do Hagah; só se faz o que
+esta tomada precisa. Simplificações só desta tomada (a spec da v1 continua valendo para as Fases 1–9):
+- o Mac manda um passo por vez ao runner (sem o executor com prazos absolutos de S4, sem faixa-guia
+  ao vivo, sem supervisor destacado nem `take_*` no MCP);
+- sem `events.json`/`sync.json`/`.srt`/`review.mp4` (S7, S10): sai o MP4 do OBS aparado, com a
+  narração misturada por cena; a sincronia SM-2 (P-5) **não é medida** nesta tomada (sim do dono no
+  G1);
+- pré-voo reduzido: disco, OBS no perfil "Contrarregra", runner vivo, versão do app;
+- build do vídeo: 1.0.0 (7) (Q-1 dizia 5; trocado pelo dono em 2026-10-14);
+- narração: TTS do Google Cloud, voz masculina em inglês escolhida pelo dono (2026-10-16; o sim do
+  dono para TTS pago de P-2/Q-7), no projeto e com as credenciais que o dono já usa.
+
+- [ ] **M1 — go/no-go.** O aviso "Automation Running" fora da captura do OBS e o toque humano (Face
+  ID/código) funcionando com o runner vivo. Registro em `spikes/SP-1.md`.
+- [ ] **M2 — mapa do build 7 e coreografia.** `choreographies/hagah/v8.5-review.choreo.yaml` com os
+  rótulos reais das 10 cenas.
+- [ ] **M3 — `take run <coreo> [--dry]` mínimo.** `mac/src/commands/take.ts`, `mac/src/take/`,
+  testes com falsos.
+- [ ] **M4 — ensaio sem gravar**, de ponta a ponta, com o dono nos pontos de controle.
+- [ ] **M5 — tomada** (1–3), conferida com `ffprobe`.
+- [ ] **M6 — pós e entrega**: aparar, narração, ≤ ~200 MB; publicar só com o sim do dono a cada passo.
+
+Adiado, sem data: o resto da Fase 0 (T-0.16, T-0.20, T-0.21, T-0.23…T-0.33, T-0.35, T-0.36, T-0.38,
+T-0.39 e os portões do SP-5, SP-9 e SP-17) e as Fases 1–9.
+
 ## Fase 1 — Esqueleto ambulante
 **Objetivo:** a fatia mais fina por todas as camadas: coreografia de uma cena (cena 1 do Hagah: tela
 de início → toque no ícone → abertura) compilada, carregada e executada no aparelho; OBS grava com
