@@ -1,0 +1,636 @@
+# Vídeo de demonstração do Hagah Bible 1.0.0 (7) para a App Review (roteiro v8.5, 10 cenas).
+# Fonte das cenas e falas: hagah/plans/mobile/notes/v8.5-roteiro-video.md (as falas em `line` são literais,
+# uma frase por item). Alvos medidos no iPhone 12 (iOS 26.7.1, inglês, 390×844 pt) pelo runner em 2026-10-16
+# (M2 da trilha do demo), contra o build 7 do TestFlight. Onde a tela difere do roteiro ou de S13 (escrito
+# contra o build 5), vale a tela; os alvos marcados "(pesquisa, não visto)" vêm de spec/research/
+# hagah-targets.md e não puderam ser vistos sem entrar na conta ou sem tocar a playlist/o plano.
+#
+# Regras de alvo que valem para o arquivo todo:
+# - `below` = minY do candidato ≥ maxY da âncora; `above` = minY do candidato < minY da âncora
+#   (TargetResolver.swift). A âncora tem de resolver para um só nó: todo staticText do Hagah aparece em
+#   dobro na árvore (mesmo frame), daí o `index: 0` nas âncoras de texto.
+# - O build 7 tem 0 identificadores no app; só "BackButton" e os navigationBar ("Settings", "Downloads",
+#   "About") têm `identifier`.
+# - Toque duplo pelo runner NÃO toca o versículo no build 7 (ui.doubleTap no corpo do versículo não fez
+#   nada, 2 de 2): para tocar a partir de um versículo, "Verse N" → barra de seleção → "Listen".
+
+schema: contrarregra.choreography/1
+app:
+  bundleId: app.kifactory.hagah
+  iconLabel: "Hagah Bible"
+  expectVersion: "1.0.0 (7)"
+  urlPrefixes: ["hagah://"]
+device: {language: en, screenPt: {w: 390, h: 844}, textSize: large, appearance: dark}
+
+confirm:
+  - "O Hagah não está em Ajustes › [nome] › Sign-In & Security › Sign in with Apple (a cena 7 precisa da folha de primeiro cadastro)."
+  - "Modo avião DESLIGADO, e o Wi-Fi foi desligado uma vez com o avião ligado (senão a cena 9 fica com rede; SP-1)."
+  - "Não Perturbe ligado; Reduzir Movimento desligado (a abertura animada da cena 1)."
+  - "Teclado do iPhone em inglês para a nota da cena 6 (hoje o teclado ativo é o português: aparece no vídeo)."
+  - "Download while listening ligado e o Salmo 23 NIV tocado inteiro com rede (áudio baixado para a cena 9)."
+  - "O ícone \"Hagah Bible\" na primeira página da tela de início (a tela de início aparece na cena 1)."
+
+targets:
+  # ── Leitor ──────────────────────────────────────────────────────────────────────────────────────
+  readerScroll: {type: scrollView, index: 0}            # a lista do leitor (0,47 390×797)
+  titlePsalm1: {labelPrefix: "Psalms 1,", type: button}   # rótulo real: "Psalms 1, go down"
+  titlePsalm23: {labelPrefix: "Psalms 23,", type: button} # "Psalms 23, go down"
+  focusChip: {label: "Focus", type: button}
+  parallelChip: {labelPrefix: "rectangle.split.2x1", type: button}
+  parallelChipOff: {label: "rectangle.split.2x1, Parallel", type: button}
+  parallelChipOn: {label: "rectangle.split.2x1, NVI", type: button}
+  followNarration: {label: "Follow the narration", type: button}  # aparece depois de qualquer arrasto
+  lensReading: {label: "Reading", type: other}          # as lentes são `other`, não `button`
+  lensPassages: {label: "Passages", type: other}
+  lensWord: {label: "Word", type: other}
+  followBlocks: {label: "Follow blocks", type: switch}  # só existe na lente Passages
+  nameCard: {label: "The name Hagah", type: other}      # cartão do nome no Salmo 1 (ainda não fechado)
+  nameCardClose: {label: "Close the card about the name", type: button}
+  verse1Number: {label: "Verse 1", type: button}
+  verse1TextWord: {labelPrefix: "The , Lord , is , my , shepherd", type: other}  # rótulo na lente Word
+  wordShepherd: {ocr: {text: "shepherd", within: {ref: verse1TextWord}}}
+  wordPopover: {labelPrefix: "Word “shepherd", type: other}   # "Word “shepherd,”"
+  wordPopoverClose: {label: "Close", type: button, within: {ref: wordPopover}}
+  # ── Seletor de capítulo ─────────────────────────────────────────────────────────────────────────
+  pickerTitle: {label: "Choose a reading", type: staticText}
+  pickerPsalms: {label: "Psalms", type: button}
+  pickerCh23: {label: "23", type: button, below: {ref: pickerPsalms}}
+  # ── Seletor da versão paralela ──────────────────────────────────────────────────────────────────
+  mirrorTitle: {label: "Parallel reading", type: staticText}
+  mirrorNVI: {labelContains: "Nova Versão Internacional", type: button}
+  mirrorTurnOff: {label: "Turn off", type: button}
+  # ── Foco ────────────────────────────────────────────────────────────────────────────────────────
+  focusEyebrow: {labelPrefix: "Psalms 23, verse", type: staticText}   # "Psalms 23, verse 6, 6 of 6"
+  # ── Mini-player e abas ──────────────────────────────────────────────────────────────────────────
+  miniPlayerInfo: {labelPrefix: "Open Now Playing", type: button}
+  miniPlayerPs23: {labelPrefix: "Open Now Playing: Psalms 23", type: button}  # "…: Psalms 23, NIV · v. 3"
+  miniPlayerPs23v6: {labelContains: "Psalms 23, NIV · v. 6", type: button}  # pausado no v. 6
+  miniPlayerDay: {labelPrefix: "Open Now Playing: Day", type: button}         # (pesquisa F42, não visto)
+  miniPlay: {label: "Play", type: button}    # único "Play" exato com a folha fechada
+  miniPause: {label: "Pause", type: button}
+  tabBible: {label: "Bible", type: button, within: {type: tabBar}}
+  tabPlan: {label: "Plan", type: button, within: {type: tabBar}}
+  tabPlaylists: {label: "Playlists", type: button, within: {type: tabBar}}
+  tabJournal: {label: "Journal", type: button, within: {type: tabBar}}
+  # ── Now Playing (formSheet: meia altura "Half screen" ou "Expanded") ────────────────────────────
+  npGrabber: {label: "Sheet Grabber", type: button}
+  npClose: {label: "Close", type: button, below: {ref: npGrabber}}
+  npKindChapter: {label: "CHAPTER", type: staticText}   # cabeçalho da folha com Repeat Chapter
+  npTitlePs23: {label: "Psalms 23", type: staticText}
+  npPrevVerse: {label: "Previous verse", type: button}
+  npRepeatTitle: {label: "Repeat", type: staticText, index: 0}
+  npPlay: {label: "Play", type: button, above: {ref: npRepeatTitle}}
+  npPause: {label: "Pause", type: button, above: {ref: npRepeatTitle}}
+  npRepeatVerse: {label: "Verse", type: button}
+  npRepeatChapter: {label: "Chapter", type: button}
+  npRepeatMore: {label: "⋯", type: button}
+  npRepeatBook: {label: "Book", type: button}
+  npTimesInfinite: {label: "∞", type: button}
+  npGap0: {label: "0", type: button}
+  npEchoTitle: {label: "Bilingual echo", type: staticText, index: 0}
+  npEchoOff: {label: "Off", type: button, below: {ref: npEchoTitle}, index: 0}
+  npEchoNivNvi: {label: "NIV → NVI", type: button}      # com Parallel desligado: "NIV → Parallel" (desabilitado)
+  npSpeed1x: {label: "1×", type: button}
+  npPresetStudyDefault: {label: "Study: Verse · 3× · same as the verse · 0.85×", type: button}
+  npPresetSleep: {labelPrefix: "Sleep:", type: button}
+  npPresetSleepDefault: {label: "Sleep: Book · ∞ · 1×", type: button}
+  npTimerTitle: {label: "Sleep timer", type: staticText, index: 0}
+  npTimerOff: {label: "Off", type: button, below: {ref: npTimerTitle}}
+  npTimerEndOfChapter: {label: "End of chapter", type: button}
+  npTimerStatus: {label: "Pauses at the end of the chapter", type: staticText}
+  # ── Barra de seleção, nota ──────────────────────────────────────────────────────────────────────
+  selBar: {label: "Actions for Psalms 23:1", type: other}
+  selListen: {label: "Listen", type: button, within: {ref: selBar}}
+  selHighlight: {label: "Highlight", type: button, within: {ref: selBar}}
+  selNote: {label: "Note", type: button, within: {ref: selBar}}
+  selGold: {label: "Gold", type: button}
+  selBackToActions: {label: "Back to actions", type: button}
+  selClear: {label: "Clear selection", type: button}
+  noteTextView: {type: textView}                          # rótulo = "Write your reflection or prayer…"
+  noteSave: {label: "Save", type: button}
+  # ── Journal e conta ─────────────────────────────────────────────────────────────────────────────
+  journalTitle: {label: "Journal", type: staticText}
+  journalZeroEntries: {label: "0 entries", type: staticText}
+  journalSiwy: {label: "Sign in with YouVersion", type: button}
+  journalSiwa: {label: "Sign in with Apple", type: button}   # há também um `other` com o mesmo rótulo
+  journalFilterAll: {label: "All", type: other}
+  journalFilterNotes: {label: "Notes", type: other}
+  journalFilterHighlights: {label: "Highlights", type: other}
+  journalEntryPs23: {labelPrefix: "Psalms 23:1", type: button}   # (pesquisa F33, não visto)
+  journalSignedIn: {labelPrefix: "Signed in with Apple", type: staticText}  # (pesquisa F35, não visto)
+  journalSync: {label: "Sync", type: button}                 # (pesquisa F35, não visto)
+  openSettings: {label: "Open settings", type: button}       # a engrenagem do Journal
+  # ── Settings ────────────────────────────────────────────────────────────────────────────────────
+  backButton: {identifier: "BackButton", type: button}       # rótulo "(tabs)" em Settings, "Settings" nas filhas
+  settingsNav: {identifier: "Settings", type: navigationBar}
+  settingsEnglish: {label: "English", type: other, below: {label: "Interface language", type: staticText, index: 0}}
+  settingsDownloads: {labelPrefix: "Downloads,", type: button}   # "Downloads, 85 KB on this device"
+  settingsAbout: {label: "About", type: button}
+  settingsDeleteAccount: {label: "Delete account", type: button}   # (pesquisa F36, não visto: só logado)
+  alertDelete: {label: "Delete account?", type: alert}             # (pesquisa F37, não visto)
+  alertPermanentlyDelete: {label: "Permanently delete account", type: button}
+  alertAccountDeleted: {label: "Account deleted", type: alert}     # (pesquisa F38, não visto)
+  alertOk: {label: "OK", type: button, within: {ref: alertAccountDeleted}}
+  downloadsNav: {identifier: "Downloads", type: navigationBar}
+  downloadWhileListening: {label: "Download while listening", type: switch}
+  downloadsPs23Audio: {labelPrefix: "Psalms 23 · NIV, text · timings · audio", type: other}  # formato F46; hoje só "text · timings"
+  aboutNav: {identifier: "About", type: navigationBar}
+  aboutVersion: {label: "Version 1.0.0 (7)", type: staticText}
+  aboutLicenses: {label: "LICENSES AND ATTRIBUTIONS", type: staticText, index: 0}   # staticText em dobro: `hittable` pede um só
+  aboutPrivacy: {label: "Privacy policy", type: link, index: 0}
+  aboutDeleteHowTo: {label: "How to delete your account", type: link, index: 0}
+  # ── Plano e playlists ───────────────────────────────────────────────────────────────────────────
+  planGoToCurrent: {label: "Go to the current day", type: button}
+  # A lista do build 7 é do mais novo ao mais velho e o dia atual (marcado "Current day") é o primeiro
+  # "Day N: …"; reserva por OCR do "Current day" da linha (a ocorrência 0 é o botão do topo).
+  planCurrentDay:
+    labelPrefix: "Day "
+    type: button
+    index: 0
+    fallback: [{ocr: {text: "Current day", occurrence: 1}}]
+  dayTitle: {label: "Bible in a Year", type: staticText}
+  dayListen: {labelPrefix: "play, ", type: button}   # "play, Listen" (ou "play, Resume at m:ss")
+  dayDownload: {label: "Download", type: button}
+  dayRemove: {label: "Remove from device", type: button}   # (pesquisa F43, não visto)
+  dayBack: {label: "Back", type: button}
+  playlistMemorize: {labelPrefix: "Memorize.", type: button}   # "Memorize. 1 passage · 3 s. Pinned"
+  playlistPlay: {label: "play, Play", type: button}
+  # ── Sistema ─────────────────────────────────────────────────────────────────────────────────────
+  airplaneButton: {app: springboard, identifier: "airplane-mode-button"}
+
+# ── Preparo (fora do vídeo) ──────────────────────────────────────────────────────────────────────
+# Estado inicial de S13 item 3 adaptado ao build 7. Termina na tela de início com o Hagah encerrado
+# (a cena 1 abre a frio e mostra a abertura animada).
+prepare:
+  - {id: prep-activate, do: app, action: activate}
+  - {id: prep-front, do: waitFor, condition: {appState: {app: target, state: foreground}}, timeoutMs: 10000}
+  # Fecha o que estiver por cima do leitor (folha do Now Playing; pilha de Settings).
+  - id: prep-close-np
+    do: block
+    when: {element: {ref: npGrabber}, state: exists}
+    steps:
+      - {do: scrollTo, target: {ref: npClose}, direction: up, maxSwipes: 3}
+      - {do: tap, target: {ref: npClose}}
+  - {id: prep-back-1, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
+  - {id: prep-back-2, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
+  - {id: prep-back-3, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
+  - {id: prep-tab-bible, do: tap, target: {ref: tabBible}}
+  - {id: prep-miniplayer, do: waitFor, condition: {element: {ref: miniPlayerInfo}, state: exists}, timeoutMs: 8000}
+  - {id: prep-pause, do: block, when: {element: {ref: miniPause}, state: exists}, steps: [{do: tap, target: {ref: miniPause}}]}
+
+  # Now Playing: Repeat "Chapter" · "∞", pausa "0", eco "Off", velocidade "1×", timer "Off", predefinições padrão.
+  # Repeat "Chapter" ∞ desde o preparo para o Salmo 23 nunca avançar ao 24 (S13 item 4).
+  - {id: prep-np-open, do: tap, target: {ref: miniPlayerInfo}, expect: {element: {ref: npGrabber}, state: exists}}
+  - {id: prep-np-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
+  - {id: prep-repeat-chapter, do: tap, target: {ref: npRepeatChapter}, expect: {element: {ref: npRepeatChapter}, state: selected}}
+  - {id: prep-times, do: block, when: {not: {element: {ref: npTimesInfinite}, state: selected}}, steps: [{do: tap, target: {ref: npTimesInfinite}}]}
+  - {id: prep-gap, do: block, when: {not: {element: {ref: npGap0}, state: selected}}, steps: [{do: tap, target: {ref: npGap0}}]}
+  - {id: prep-echo, do: block, when: {not: {element: {ref: npEchoOff}, state: selected}}, steps: [{do: tap, target: {ref: npEchoOff}}]}
+  - {id: prep-speed, do: block, when: {not: {element: {ref: npSpeed1x}, state: selected}}, steps: [{do: tap, target: {ref: npSpeed1x}}]}
+  - id: prep-presets
+    do: assert
+    condition: {all: [{element: {ref: npPresetStudyDefault}, state: exists}, {element: {ref: npPresetSleepDefault}, state: exists}]}
+  - {id: prep-timer-scroll, do: scrollTo, target: {ref: npTimerOff}, direction: down, maxSwipes: 3}
+  - {id: prep-timer, do: block, when: {not: {element: {ref: npTimerOff}, state: selected}}, steps: [{do: tap, target: {ref: npTimerOff}}]}
+  - {id: prep-np-top, do: scrollTo, target: {ref: npClose}, direction: up, maxSwipes: 4}
+  - {id: prep-np-close, do: tap, target: {ref: npClose}, expect: {element: {ref: npGrabber}, state: gone}}
+
+  # Parallel desligado (um link não desliga o Parallel, F51; só "Turn off"). A lente é da sessão e volta
+  # a "Reading" com o app encerrado no fim do preparo.
+  - {id: prep-header, do: scrollTo, target: {ref: parallelChip}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+  - id: prep-parallel-off
+    do: block
+    when: {element: {ref: parallelChipOn}, state: exists}
+    steps:
+      - {do: tap, target: {ref: parallelChipOn}, expect: {element: {ref: mirrorTitle}, state: exists}}
+      - {do: tap, target: {ref: mirrorTurnOff}, expect: {element: {ref: parallelChipOff}, state: exists}}
+  - {id: prep-parallel-assert, do: assert, condition: {element: {ref: parallelChipOff}, state: exists}}
+
+  # Journal: deslogado e vazio. Sair/excluir a conta é do dono (credencial e revogação na Apple).
+  - {id: prep-tab-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}}
+  - id: prep-signed-out
+    do: block
+    when: {not: {element: {ref: journalSiwa}, state: exists}}
+    steps:
+      - id: prep-signout-human
+        do: checkpoint
+        who: human
+        ask: "Exclua a conta da tomada anterior no Hagah (Journal, engrenagem, Account, Delete account, confirme com a Apple) até o Journal mostrar Sign in with Apple"
+        until: {element: {ref: journalSiwa}, state: exists}
+        timeoutMs: 600000
+        onTimeout: pause
+  # Q-15: entrada além das que a tomada cria = parar e não apagar nada.
+  - {id: prep-journal-empty, do: assert, condition: {element: {ref: journalZeroEntries}, state: exists}}
+
+  # Settings: idioma do app, Downloads, versão.
+  - {id: prep-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}}
+  - {id: prep-english, do: assert, condition: {element: {ref: settingsEnglish}, state: value, equals: "radio button, checked"}}
+  - {id: prep-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, direction: down, maxSwipes: 8}
+  - {id: prep-downloads, do: tap, target: {ref: settingsDownloads}, expect: {element: {ref: downloadsNav}, state: exists}}
+  # Em 2026-10-16 as duas abaixo FALHAM: o interruptor está em "0" e o Salmo 23 NIV só tem "text · timings"
+  # (85 KB no aparelho). O dono liga o interruptor e toca o Salmo 23 inteiro com rede antes da tomada.
+  - {id: prep-download-on-play, do: assert, condition: {element: {ref: downloadWhileListening}, state: value, equals: "1"}}
+  - {id: prep-ps23-audio, do: assert, condition: {element: {ref: downloadsPs23Audio}, state: exists}}
+  - {id: prep-downloads-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
+  - {id: prep-about-scroll, do: scrollTo, target: {ref: settingsAbout}, direction: down, maxSwipes: 4}
+  - {id: prep-about, do: tap, target: {ref: settingsAbout}, expect: {element: {ref: aboutNav}, state: exists}}
+  - {id: prep-version, do: assert, condition: {element: {ref: aboutVersion}, state: exists}, onFail: abort}
+  - {id: prep-about-back, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
+  - {id: prep-settings-back, do: tap, target: {ref: backButton}, expect: {element: {ref: openSettings}, state: exists}}
+
+  # Plano: o dia atual NÃO baixado (a cena 8 toca "Download").
+  - {id: prep-tab-plan, do: tap, target: {ref: tabPlan}, expect: {element: {ref: planGoToCurrent}, state: exists}}
+  - {id: prep-day, do: tap, target: {ref: planCurrentDay}, expect: {element: {ref: dayTitle}, state: exists}, expectTimeoutMs: 6000}
+  - id: prep-day-not-saved
+    do: block
+    when: {element: {ref: dayRemove}, state: exists}
+    steps:
+      - id: prep-day-remove-human
+        do: checkpoint
+        who: human
+        ask: "Remova o episódio do dia do aparelho (Remove from device, confirme) até aparecer Download"
+        until: {element: {ref: dayDownload}, state: exists}
+        timeoutMs: 300000
+        onTimeout: pause
+  - {id: prep-day-download, do: assert, condition: {element: {ref: dayDownload}, state: exists}}
+  - {id: prep-day-back, do: tap, target: {ref: dayBack}, expect: {element: {ref: planGoToCurrent}, state: exists}}
+
+  # Uma playlist com passagens (a "Memorize" fixada, 1 passagem: Salmos 23:6).
+  - {id: prep-tab-playlists, do: tap, target: {ref: tabPlaylists}}
+  - {id: prep-playlist, do: assert, condition: {element: {ref: playlistMemorize}, state: exists}, timeoutMs: 3000}
+
+  # Última posição: Salmo 1 NIV (senão o seletor da cena 2 não muda nada). O cartão do nome continua lá
+  # enquanto ninguém o fechar (em 2026-10-16 estava lá).
+  - {id: prep-tab-bible-2, do: tap, target: {ref: tabBible}}
+  - {id: prep-psalm1, do: openURL, url: "hagah://bible/ENGNIV/PSA/1"}
+  - {id: prep-psalm1-loaded, do: waitFor, condition: {element: {ref: titlePsalm1}, state: exists}, timeoutMs: 10000}
+  - {id: prep-psalm1-settle, do: wait, ms: 1500}   # a posição só é gravada quando a página carrega
+  - {id: prep-name-card, do: block, when: {element: {ref: nameCard}, state: exists}, steps: [{do: mark, label: "cartão do nome presente"}]}
+
+  # Rede e modo avião: a cena 9 espera o avião desligado ao abrir a Central de Controle.
+  - {id: prep-online, do: assert, condition: {network: online}}
+  - {id: prep-cc-open, do: controlCenter, action: open}
+  - {id: prep-airplane-off, do: waitFor, condition: {airplane: "off"}, timeoutMs: 20000}
+  - {id: prep-cc-close, do: controlCenter, action: close}
+  - {id: prep-front-2, do: waitFor, condition: {appState: {app: target, state: foreground}}, timeoutMs: 10000}
+
+  # Fim: tela de início, Hagah encerrado (AC-13.2).
+  - {id: prep-home, do: home}
+  - {id: prep-terminate, do: app, action: terminate}
+  - {id: prep-not-running, do: assert, condition: {appState: {app: target, state: notRunning}}, timeoutMs: 5000}
+
+scenes:
+  # ── Cena 1 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s01
+    title: "Abertura"
+    line:
+      - "This is Hagah Bible, by Kingdom Ideas Factory."
+      - "It's a free app to listen to and read the Bible, with no ads, no purchases and no subscriptions."
+      - "It opens straight into the text — no account is needed for anything you're about to see."
+    hold: {padBeforeMs: 1500, padAfterMs: 1000}
+    steps:
+      # Sem choreo.load o runner não toca o ícone (a SpringBoard recusa a busca): `activate` abre a frio,
+      # com a abertura animada, ≈ 3 s até o leitor (medido).
+      - {id: s01-open, do: app, action: activate, cue: 0, visual: true, caption: "Abre o Hagah Bible"}
+      - {id: s01-reader, do: waitFor, condition: {element: {ref: titlePsalm1}, state: hittable}, timeoutMs: 15000}
+      - id: s01-name-card
+        do: block
+        when: {element: {ref: nameCard}, state: exists}
+        steps:
+          - {id: s01-name-card-show, do: wait, ms: 6000}
+          - {id: s01-name-card-close, do: tap, target: {ref: nameCardClose}, cue: 2, caption: "Fecha o cartão do nome", expect: {element: {ref: nameCard}, state: gone}}
+      - {id: s01-hold, do: hold}
+
+  # ── Cena 2 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s02
+    title: "Áudio e texto juntos"
+    line:
+      - "Here's what makes Hagah different."
+      - "Most Bible audio is a separate recording you listen to away from the text."
+      - "In Hagah the two are one thing: as the narration plays, the verse being read is highlighted — and inside it, the exact word being spoken."
+      - "These timings come from our own alignment pipeline, not from a text-to-speech engine; this is a human narration of the New International Version."
+      - "The point is meditation: you hear it and you see it at the same time, so the text stays with you."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      - {id: s02-picker, do: tap, target: {ref: titlePsalm1}, cue: 0, visual: true, caption: "Abre o seletor de capítulo", expect: {element: {ref: pickerTitle}, state: exists}}
+      # O livro atual vem expandido, mas fora da tela (Salmos em y≈1115): um ou dois passes.
+      - {id: s02-scroll-23, do: scrollTo, target: {ref: pickerCh23}, direction: down, maxSwipes: 6, caption: "Salmos 23"}
+      - {id: s02-ch23, do: tap, target: {ref: pickerCh23}, visual: true, expect: {element: {ref: miniPlayerPs23}, state: exists}, expectTimeoutMs: 8000}
+      - {id: s02-play, do: tap, target: {ref: miniPlay}, cue: 2, visual: true, caption: "Toca a narração (NIV)", expect: {element: {ref: miniPause}, state: exists}}
+      - {id: s02-listen, do: wait, ms: 15000}
+      # Arrasto só vertical (> 20 pt na horizontal troca de capítulo). Depois dele a lista para de seguir
+      # e aparece "Follow the narration" (sobre o título); tocar nele mostra a lista voltando sozinha.
+      - {id: s02-scroll, do: drag, from: {x: 200, y: 520}, to: {x: 200, y: 400}, velocity: 300, cue: 4, caption: "Rola de leve", expect: {element: {ref: followNarration}, state: exists}}
+      - {id: s02-follow, do: tap, target: {ref: followNarration}, afterMs: 1500, caption: "A lista volta a seguir", expect: {element: {ref: followNarration}, state: gone}}
+      - {id: s02-now-playing, do: tap, target: {ref: miniPlayerPs23}, afterMs: 3000, visual: true, caption: "Abre o Now Playing", expect: {element: {ref: npGrabber}, state: exists}}
+      - {id: s02-hold, do: hold}
+
+  # ── Cena 3 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s03
+    title: "Tela travada e áudio em segundo plano"
+    line:
+      - "The narration keeps playing with the screen locked, with the standard lock-screen controls."
+      - "That's the only thing the app does in the background: it plays the audio you started."
+      - "It never plays silent audio or runs anything else."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      - {id: s03-sheet, do: assert, condition: {all: [{element: {ref: npKindChapter}, state: exists}, {element: {ref: npTitlePs23}, state: exists}]}}
+      # `waitFor {locked: true}` não confirma o travamento (SP-1): confia-se no lock e numa espera fixa.
+      - {id: s03-lock, do: lock, cue: 0, visual: true, caption: "Trava a tela; o áudio segue"}
+      - {id: s03-locked-wait, do: wait, ms: 5000}
+      # O dono NÃO olha para o iPhone aqui, senão o Face ID destrava.
+      - {id: s03-wake, do: wake, visual: true, caption: "Controles da tela travada"}
+      - {id: s03-show-controls, do: wait, ms: 4000}
+      - id: s03-unlock
+        do: checkpoint
+        who: human
+        ask: "Destrave o iPhone (Face ID) e arraste para cima"
+        until: {all: [{locked: false}, {element: {ref: npPrevVerse}, state: hittable}]}
+        timeoutMs: 120000
+        onTimeout: pause
+        cue: 2
+      - {id: s03-hold, do: hold}
+
+  # ── Cena 4 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s04
+    title: "Repetição e timer"
+    line:
+      - "Hagah is built for long listening — including overnight."
+      - "You can repeat a verse, a passage, a chapter or a whole book, as many times as you want or endlessly, with a pause between repeats and your own speed."
+      - "There are two presets, Study and Sleep, and a sleep timer that pauses at the end of the chapter or after a countdown."
+      - "Hagah is the Hebrew word for 'meditate' in Psalm 1 — saying the text under your breath, over and over."
+      - "That's the use case."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      - {id: s04-sheet, do: assert, condition: {all: [{element: {ref: npKindChapter}, state: exists}, {element: {ref: npTitlePs23}, state: exists}]}}
+      # Diferente de S13 item 4: pausa já aqui. "Sleep" põe Repeat "Book"; se o Salmo 23 acabar entre o
+      # "Sleep" e o "Chapter" (≈ 10 s de 46 s), o player vai ao Salmo 24 (AC-13.9). Pausado, não há risco.
+      - {id: s04-pause, do: tap, target: {ref: npPause}, cue: 0, caption: "Pausa para mexer no Repeat", expect: {element: {ref: npPlay}, state: exists}}
+      - {id: s04-expand, do: tap, target: {ref: npGrabber}, visual: true, caption: "Folha inteira", expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
+      # "Book" fica atrás de "⋯" (só mostra; o modo continua "Chapter").
+      - {id: s04-more, do: tap, target: {ref: npRepeatMore}, cue: 1, caption: "Modos: … Chapter, Book", expect: {element: {ref: npRepeatBook}, state: exists}}
+      - {id: s04-scroll-presets, do: scrollTo, target: {ref: npPresetSleep}, direction: down, maxSwipes: 3}
+      - {id: s04-sleep, do: tap, target: {ref: npPresetSleep}, cue: 2, visual: true, caption: "Predefinição Sleep", expect: {element: {ref: npPresetSleep}, state: selected}}
+      - {id: s04-scroll-timer, do: scrollTo, target: {ref: npTimerEndOfChapter}, direction: down, maxSwipes: 2}
+      - {id: s04-end-of-chapter, do: tap, target: {ref: npTimerEndOfChapter}, visual: true, caption: "Timer: fim do capítulo", expect: {element: {ref: npTimerStatus}, state: exists}}
+      - {id: s04-timer-show, do: wait, ms: 2500}
+      # Timeline de S13 item 4: timer "Off" e Repeat "Chapter" de volta.
+      - {id: s04-timer-off, do: tap, target: {ref: npTimerOff}, caption: "Desliga o timer", expect: {element: {ref: npTimerOff}, state: selected}}
+      - {id: s04-scroll-repeat, do: scrollTo, target: {ref: npRepeatChapter}, direction: up, maxSwipes: 3}
+      - {id: s04-chapter, do: tap, target: {ref: npRepeatChapter}, caption: "Repeat Chapter de novo", expect: {element: {ref: npRepeatChapter}, state: selected}}
+      - {id: s04-hold, do: hold}
+
+  # ── Cena 5 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s05
+    title: "Leitura paralela, lentes, Foco e eco"
+    line:
+      - "The second big idea is parallel reading: Portuguese and English side by side, verse by verse."
+      - "Three lenses."
+      - "'Reading' is just the two texts."
+      - "'Passages' colors the corresponding blocks in both languages."
+      - "'Word' — when I tap a word, its counterpart lights up in the other language, and I see the original-language data and a short dictionary entry."
+      - "Tapping a word never moves the audio."
+      - "'Focus' gives me one verse per screen with its translation."
+      - "And the bilingual echo plays each verse in one language, then right away in the other."
+      - "All of these correspondences are precomputed data files."
+      - "There's no chat, no prompt and no text generation in the app — the dictionary entries are displayed only when they already exist; the app never asks for one to be written, and the Bible text is never altered."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      - {id: s05-np-top, do: scrollTo, target: {ref: npClose}, direction: up, maxSwipes: 3}
+      - {id: s05-close-np, do: tap, target: {ref: npClose}, cue: 0, expect: {element: {ref: npGrabber}, state: gone}}
+      - {id: s05-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}}
+      # O cabeçalho rola junto com a lista: de volta ao topo antes do chip.
+      - {id: s05-header, do: scrollTo, target: {ref: parallelChipOff}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+      - {id: s05-parallel, do: tap, target: {ref: parallelChipOff}, visual: true, caption: "Leitura paralela", expect: {element: {ref: mirrorTitle}, state: exists}}
+      # Escolher a versão fecha o seletor e a lista pula para o versículo do player.
+      - {id: s05-nvi, do: tap, target: {ref: mirrorNVI}, visual: true, caption: "Paralela: NVI", expect: {element: {ref: lensPassages}, state: exists}}
+      - {id: s05-lens-reading, do: tap, target: {ref: lensReading}, cue: 2, caption: "Lente Reading"}
+      - {id: s05-lens-passages, do: tap, target: {ref: lensPassages}, cue: 3, visual: true, caption: "Lente Passages", expect: {element: {ref: followBlocks}, state: exists}}
+      - {id: s05-lens-word, do: tap, target: {ref: lensWord}, cue: 4, visual: true, caption: "Lente Word"}
+      # Na lente Word o rótulo do versículo vira "The , Lord , is , …"; o "Verse 1" segue igual.
+      - {id: s05-verse1, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+      # Toque numa palavra: OCR (palavras não são elementos). Áudio pausado desde a cena 4.
+      - {id: s05-word, do: tap, target: {ref: wordShepherd}, visual: true, caption: "Toca a palavra shepherd", expect: {element: {ref: wordPopover}, state: exists}, expectTimeoutMs: 4000}
+      - {id: s05-word-show, do: wait, ms: 4000}
+      - {id: s05-word-close, do: tap, target: {ref: wordPopoverClose}, expect: {element: {ref: wordPopover}, state: gone}}
+      # O Foco abre no versículo do player (pausado em qualquer um). No v. 6 não há "próximo": desliza
+      # para o anterior. A condição é lida no mini-player ANTES de abrir o Foco (o Foco o esconde, então o
+      # segundo bloco não dispara depois do primeiro).
+      - id: s05-focus-last
+        do: block
+        when: {element: {ref: miniPlayerPs23v6}, state: exists}
+        steps:
+          - {id: s05-focus-open-a, do: tap, target: {ref: focusChip}, cue: 6, visual: true, caption: "Foco: um versículo por tela", expect: {element: {ref: focusEyebrow}, state: exists}}
+          - {id: s05-focus-swipe-prev, do: drag, from: {x: 90, y: 330}, to: {x: 300, y: 330}, velocity: 800, afterMs: 1500, caption: "Desliza para o lado"}
+      - id: s05-focus-other
+        do: block
+        when: {all: [{element: {ref: miniPlayerPs23}, state: exists}, {not: {element: {ref: miniPlayerPs23v6}, state: exists}}]}
+        steps:
+          - {id: s05-focus-open-b, do: tap, target: {ref: focusChip}, cue: 6, visual: true, caption: "Foco: um versículo por tela", expect: {element: {ref: focusEyebrow}, state: exists}}
+          - {id: s05-focus-swipe-next, do: drag, from: {x: 300, y: 330}, to: {x: 90, y: 330}, velocity: 800, afterMs: 1500, caption: "Desliza para o lado"}
+      # Puxar ≥ 140 pt para baixo fecha o Foco (medido: 240 pt a 700 pt/s).
+      - {id: s05-focus-pull, do: drag, from: {x: 195, y: 200}, to: {x: 195, y: 440}, velocity: 700, afterMs: 1500, caption: "Puxa para baixo e volta", expect: {element: {ref: focusEyebrow}, state: gone}}
+      # Eco: linha "Bilingual echo" do Now Playing; o mini-player mostra "NIV · v. N" e depois "NVI · v. N"
+      # e o chip "Bilingual echo on, chapter".
+      - {id: s05-echo-np, do: tap, target: {ref: miniPlayerPs23}, cue: 7, expect: {element: {ref: npGrabber}, state: exists}}
+      - {id: s05-echo-expand, do: tap, target: {ref: npGrabber}, expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}}
+      - {id: s05-echo-scroll, do: scrollTo, target: {ref: npEchoNivNvi}, direction: down, maxSwipes: 2}
+      - {id: s05-echo-on, do: tap, target: {ref: npEchoNivNvi}, visual: true, caption: "Eco NIV → NVI", expect: {element: {ref: npEchoNivNvi}, state: selected}}
+      - {id: s05-echo-play, do: tap, target: {ref: npPlay}, caption: "Cada versículo nas duas línguas", expect: {element: {ref: npPause}, state: exists}}
+      - {id: s05-echo-close, do: tap, target: {ref: npClose}, afterMs: 1500, expect: {element: {ref: npGrabber}, state: gone}}
+      - {id: s05-hold, do: hold}
+
+  # ── Cena 6 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s06
+    title: "Marcações e notas"
+    line:
+      - "Highlights and notes are the only content a user creates."
+      - "They're private to that person: they are never published, there's no feed, no comments, no messaging, no profile anyone else can see."
+      - "Because nothing is ever shown to another user, there's no public content to report or block."
+      - "The Journal tab is just your own highlights and notes, filterable and searchable."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      - {id: s06-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}}
+      # A marcação só aparece na lente Reading.
+      - {id: s06-reading, do: tap, target: {ref: lensReading}, cue: 0, caption: "Lente Reading"}
+      - {id: s06-verse1-scroll, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+      # Roteiro "· Passage actions"/"HIGHLIGHT VERSE"/"PERSONAL NOTE"/"Save note" → barra de seleção.
+      - {id: s06-select, do: tap, target: {ref: verse1Number}, visual: true, caption: "Seleciona o versículo 1", expect: {element: {ref: selBar}, state: exists}}
+      - {id: s06-highlight, do: tap, target: {ref: selHighlight}, caption: "Marcar", expect: {element: {ref: selGold}, state: exists}}
+      # Se o versículo já estiver em Gold, este toque DESMARCA (o preparo exige o diário vazio).
+      - {id: s06-gold, do: tap, target: {ref: selGold}, visual: true, caption: "Cor: Gold"}
+      - {id: s06-back-actions, do: tap, target: {ref: selBackToActions}, expect: {element: {ref: selNote}, state: exists}}
+      - {id: s06-note, do: tap, target: {ref: selNote}, cue: 1, caption: "Nota pessoal", expect: {element: {ref: noteTextView}, state: exists}}
+      - {id: s06-type, do: type, target: {ref: noteTextView}, text: "Meditate on this tonight", caption: "Escreve a nota"}
+      - {id: s06-save, do: tap, target: {ref: noteSave}, caption: "Salva a nota", expect: {element: {ref: noteTextView}, state: gone}}
+      - {id: s06-clear, do: tap, target: {ref: selClear}, optional: true}
+      - {id: s06-journal, do: tap, target: {ref: tabJournal}, cue: 3, visual: true, caption: "Aba Journal", expect: {element: {ref: journalTitle}, state: exists}}
+      - {id: s06-entry, do: waitFor, condition: {element: {ref: journalEntryPs23}, state: exists}, timeoutMs: 5000, onFail: continue}
+      - {id: s06-filter-notes, do: tap, target: {ref: journalFilterNotes}, caption: "Filtro: Notes"}
+      - {id: s06-filter-highlights, do: tap, target: {ref: journalFilterHighlights}, afterMs: 1200, caption: "Filtro: Highlights"}
+      - {id: s06-filter-all, do: tap, target: {ref: journalFilterAll}, afterMs: 1200, caption: "Filtro: All"}
+      # S13 item 4: pausa no fim da cena 6.
+      - {id: s06-pause, do: tap, target: {ref: miniPause}, caption: "Pausa o áudio", expect: {element: {ref: miniPlay}, state: exists}}
+      - {id: s06-hold, do: hold}
+
+  # ── Cena 7 ───────────────────────────────────────────────────────────────────────────────────────
+  # O ensaio para antes de s07-siwa-tap. Rótulos depois do login vêm da pesquisa (F35–F39): no
+  # mapeamento o app estava deslogado e nada foi tocado aqui além da leitura.
+  - id: s07
+    title: "Conta: cadastro, login e exclusão"
+    line:
+      - "Signing in is optional; it only syncs highlights, notes and plan progress between devices."
+      - "There are two ways in — Sign in with YouVersion, and Sign in with Apple right next to it."
+      - "I'll use Sign in with Apple; that creates the account, and the app asks only for my name, never my e-mail."
+      - "Now it's synced."
+      - "Account deletion is inside the app: Journal, gear icon, Settings, Account, Delete account."
+      - "It tells me exactly what happens: the synced journal on our server is erased immediately, sessions on other devices stop working, and the device is signed out."
+      - "Apple asks me to confirm so the app can revoke its token with Apple as well."
+      - "Done — account deleted."
+      - "If I sign in again with the same Apple ID, the journal comes back empty: nothing was kept on the server."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      - {id: s07-signed-out, do: assert, condition: {all: [{element: {ref: journalSiwy}, state: exists}, {element: {ref: journalSiwa}, state: exists}]}}
+      - {id: s07-siwa-tap, do: tap, target: {ref: journalSiwa}, cue: 2, visual: true, caption: "Sign in with Apple"}
+      - id: s07-siwa-sheet
+        do: checkpoint
+        who: human
+        ask: "Conclua o Sign in with Apple (compartilhe o nome, Continuar, Face ID)"
+        until: {element: {ref: journalSignedIn}, state: exists}
+        timeoutMs: 180000
+        onTimeout: pause
+      - {id: s07-sync, do: tap, target: {ref: journalSync}, cue: 3, caption: "Sincroniza", optional: true}
+      - {id: s07-gear, do: tap, target: {ref: openSettings}, cue: 4, caption: "Engrenagem: Settings", expect: {element: {ref: settingsNav}, state: exists}}
+      - {id: s07-scroll-account, do: scrollTo, target: {ref: settingsDeleteAccount}, direction: down, maxSwipes: 8, caption: "Seção Account"}
+      - {id: s07-delete-tap, do: tap, target: {ref: settingsDeleteAccount}, cue: 5, visual: true, caption: "Delete account", expect: {element: {ref: alertDelete}, state: exists}}
+      - {id: s07-delete-confirm, do: tap, target: {ref: alertPermanentlyDelete}, caption: "Exclui de vez"}
+      # A folha da Apple pede nova autorização (revogação do token). Se ela for cancelada aparece
+      # "Delete without confirming with Apple?" e o `until` não vale: prazo e pausa.
+      - id: s07-revoke
+        do: checkpoint
+        who: human
+        ask: "Confirme com a Apple (Face ID) para revogar o vínculo"
+        until: {element: {ref: alertAccountDeleted}, state: exists}
+        timeoutMs: 180000
+        onTimeout: pause
+      - {id: s07-deleted-ok, do: tap, target: {ref: alertOk}, cue: 7, caption: "Conta excluída", expect: {element: {ref: alertAccountDeleted}, state: gone}}
+      - {id: s07-back-journal, do: tap, target: {ref: backButton}, caption: "Volta ao Journal", expect: {element: {ref: journalSiwa}, state: exists}}
+      - {id: s07-siwa-again-tap, do: tap, target: {ref: journalSiwa}, cue: 8, caption: "Entra de novo com a Apple"}
+      - id: s07-siwa-again
+        do: checkpoint
+        who: human
+        ask: "Conclua de novo o Sign in with Apple (Face ID)"
+        until: {element: {ref: journalSignedIn}, state: exists}
+        timeoutMs: 180000
+        onTimeout: pause
+      - {id: s07-empty, do: waitFor, condition: {element: {ref: journalZeroEntries}, state: exists}, timeoutMs: 15000}
+      - {id: s07-hold, do: hold}
+
+  # ── Cena 8 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s08
+    title: "Plano e playlists"
+    line:
+      - "The Plan tab is a Bible-in-a-year plan: one day per episode of the podcast 'Bíblia em um ano' by 4Ventos, used with the producer's permission, with each day downloadable."
+      - "Playlists are passages you save to listen to in sequence."
+      - "Nothing in the app is paid: there's no in-app purchase, no subscription tier and no locked content."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      - {id: s08-plan, do: tap, target: {ref: tabPlan}, cue: 0, visual: true, caption: "Aba Plan", expect: {element: {ref: planGoToCurrent}, state: exists}}
+      # A linha do dia não tem play (o ícone de download da linha não está na árvore): abre-se o dia.
+      - {id: s08-day, do: tap, target: {ref: planCurrentDay}, visual: true, caption: "Dia atual do plano", expect: {element: {ref: dayListen}, state: exists}, expectTimeoutMs: 6000}
+      - {id: s08-listen, do: tap, target: {ref: dayListen}, caption: "Ouve o episódio do dia"}
+      - {id: s08-miniplayer-day, do: waitFor, condition: {element: {ref: miniPlayerDay}, state: exists}, timeoutMs: 10000, onFail: continue}
+      - {id: s08-download, do: tap, target: {ref: dayDownload}, afterMs: 3000, caption: "Baixa o dia (15 MB)"}
+      - {id: s08-pause-day, do: tap, target: {ref: miniPause}, afterMs: 2000, caption: "Pausa o episódio"}
+      - {id: s08-playlists, do: tap, target: {ref: tabPlaylists}, cue: 1, visual: true, caption: "Aba Playlists", expect: {element: {ref: playlistMemorize}, state: exists}}
+      - {id: s08-playlist, do: tap, target: {ref: playlistMemorize}, caption: "Abre a playlist", expect: {element: {ref: playlistPlay}, state: exists}}
+      # Roteiro "▶ Play" → rótulo "play, Play". A Memorize toca Salmos 23:6 em repetição de passagem.
+      - {id: s08-playlist-play, do: tap, target: {ref: playlistPlay}, caption: "Toca a playlist", expect: {element: {ref: miniPause}, state: exists}, expectTimeoutMs: 5000}
+      # S13 item 4: pausa no fim da cena 8.
+      - {id: s08-pause, do: tap, target: {ref: miniPause}, cue: 2, afterMs: 3000, caption: "Pausa", expect: {element: {ref: miniPlay}, state: exists}}
+      - {id: s08-hold, do: hold}
+
+  # ── Cena 9 ───────────────────────────────────────────────────────────────────────────────────────
+  - id: s09
+    title: "Offline"
+    line:
+      - "Everything is designed to work offline."
+      - "Settings › Downloads shows what's on the device, and 'Download while listening' keeps the audio of every chapter you play."
+      - "With airplane mode on, the downloaded chapter opens and plays exactly the same — text, timings and audio are all local."
+    hold: {padBeforeMs: 1000, padAfterMs: 1500}
+    steps:
+      # Settings só se abre pela engrenagem do Journal.
+      - {id: s09-journal, do: tap, target: {ref: tabJournal}, cue: 0, expect: {element: {ref: openSettings}, state: exists}}
+      - {id: s09-settings, do: tap, target: {ref: openSettings}, caption: "Settings", expect: {element: {ref: settingsNav}, state: exists}}
+      - {id: s09-downloads-scroll, do: scrollTo, target: {ref: settingsDownloads}, direction: down, maxSwipes: 8}
+      # Roteiro "{size} on this device" → é o rótulo da linha de Settings ("Downloads, 85 KB on this device").
+      - {id: s09-downloads, do: tap, target: {ref: settingsDownloads}, cue: 1, visual: true, caption: "Settings › Downloads", expect: {element: {ref: downloadWhileListening}, state: exists}}
+      - {id: s09-downloads-show, do: wait, ms: 3000}
+      # Modo avião pelo runner (SP-1: 2 trocas ok). Com a Central aberta cada leitura passa de 10 s.
+      - {id: s09-cc-open, do: controlCenter, action: open, cue: 2, caption: "Central de Controle"}
+      - {id: s09-airplane-was-off, do: waitFor, condition: {airplane: "off"}, timeoutMs: 20000}
+      - {id: s09-airplane-tap, do: tap, target: {ref: airplaneButton}, timeoutMs: 15000, visual: true, caption: "Liga o modo avião"}
+      - {id: s09-airplane-on, do: waitFor, condition: {airplane: "on"}, timeoutMs: 20000}
+      - {id: s09-cc-show, do: wait, ms: 2000}
+      - {id: s09-cc-close, do: controlCenter, action: close}
+      - {id: s09-offline, do: waitFor, condition: {network: offline}, timeoutMs: 60000}
+      - {id: s09-back-hagah, do: app, action: activate}
+      - {id: s09-back-settings, do: tap, target: {ref: backButton}, expect: {element: {ref: settingsNav}, state: exists}}
+      - {id: s09-back-journal, do: tap, target: {ref: backButton}, expect: {element: {ref: openSettings}, state: exists}}
+      - {id: s09-bible, do: tap, target: {ref: tabBible}, caption: "Abre o Salmo 23 baixado", expect: {element: {ref: titlePsalm23}, state: exists}}
+      - {id: s09-verse1-scroll, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5}
+      # S13 pede toque duplo no versículo; pelo runner ele não toca no build 7. "Verse 1" → "Listen" toca
+      # o capítulo a partir do v. 1 (medido) e põe o Salmo 23 no player no lugar da playlist da cena 8.
+      - {id: s09-select, do: tap, target: {ref: verse1Number}, expect: {element: {ref: selListen}, state: exists}}
+      - id: s09-play-offline
+        do: tap
+        target: {ref: selListen}
+        visual: true
+        caption: "Toca sem rede"
+        expect: {all: [{element: {ref: miniPlayerPs23}, state: exists}, {element: {ref: miniPause}, state: exists}]}
+        expectTimeoutMs: 3000
+      - {id: s09-clear, do: tap, target: {ref: selClear}, afterMs: 2000, optional: true}
+      - {id: s09-hold, do: hold}
+
+  # ── Cena 10 ──────────────────────────────────────────────────────────────────────────────────────
+  - id: s10
+    title: "Sobre e créditos"
+    line:
+      - "Finally, About."
+      - "The name, Hagah, is the Hebrew verb in Psalm 1:2 — to meditate on the text by saying it under your breath, day and night."
+      - "The Bible text — NVI in Portuguese and NIV in English — is licensed from Biblica through the YouVersion Platform for non-commercial use, and the required notice is shown under every chapter and here."
+      - "The plan audio is credited to its producer."
+      - "Privacy policy and the account deletion page are linked."
+      - "That's Hagah Bible — thank you for reviewing it."
+    hold: {padBeforeMs: 1000, padAfterMs: 2000}
+    steps:
+      # A narração do Salmo não deve tocar por baixo da fala do About.
+      - {id: s10-pause, do: tap, target: {ref: miniPause}, cue: 0, expect: {element: {ref: miniPlay}, state: exists}}
+      - {id: s10-cc-open, do: controlCenter, action: open, caption: "Desliga o modo avião"}
+      - {id: s10-airplane-was-on, do: waitFor, condition: {airplane: "on"}, timeoutMs: 20000}
+      - {id: s10-airplane-tap, do: tap, target: {ref: airplaneButton}, timeoutMs: 15000, visual: true}
+      - {id: s10-airplane-off, do: waitFor, condition: {airplane: "off"}, timeoutMs: 20000}
+      - {id: s10-cc-close, do: controlCenter, action: close}
+      - {id: s10-online, do: waitFor, condition: {network: online}, timeoutMs: 60000}
+      - {id: s10-back-hagah, do: app, action: activate}
+      - {id: s10-journal, do: tap, target: {ref: tabJournal}, expect: {element: {ref: openSettings}, state: exists}}
+      - {id: s10-settings, do: tap, target: {ref: openSettings}, expect: {element: {ref: settingsNav}, state: exists}}
+      - {id: s10-about-scroll, do: scrollTo, target: {ref: settingsAbout}, direction: down, maxSwipes: 8}
+      - {id: s10-about, do: tap, target: {ref: settingsAbout}, visual: true, caption: "Settings › About", expect: {element: {ref: aboutVersion}, state: exists}}
+      # Topo: o nome desenhado, הָגָה · hāgâ, Salmos 1:2-3 (NIV), "Version 1.0.0 (7)", "An app by Kingdom
+      # Ideas Factory". Dois arrastos lentos (≈ 330 pt cada, quase sem inércia) chegam ao fim da página.
+      - {id: s10-scroll-1, do: drag, from: {x: 195, y: 700}, to: {x: 195, y: 350}, velocity: 150, holdMs: 200, cue: 2, caption: "Licenças e atribuições", expect: {element: {ref: aboutLicenses}, state: hittable}}
+      - {id: s10-scroll-2, do: drag, from: {x: 195, y: 700}, to: {x: 195, y: 350}, velocity: 150, holdMs: 200, cue: 3, caption: "Privacidade e exclusão de conta", expect: {element: {ref: aboutDeleteHowTo}, state: hittable}}
+      - {id: s10-links, do: assert, condition: {all: [{element: {ref: aboutPrivacy}, state: hittable}, {element: {ref: aboutDeleteHowTo}, state: hittable}]}, onFail: continue}
+      - {id: s10-hold, do: hold}
+
+# ── Limpeza (depois de parar a gravação) ─────────────────────────────────────────────────────────
+# Só deixa o app pausado e no leitor. A conta recriada na cena 7, o Parallel NVI, o eco "NIV → NVI", a
+# nota e a marcação apagadas com a conta, o episódio baixado do dia: o próximo preparo confere/pede.
+cleanup:
+  - {id: clean-front, do: app, action: activate}
+  - {id: clean-pause, do: block, when: {element: {ref: miniPause}, state: exists}, steps: [{do: tap, target: {ref: miniPause}}]}
+  - {id: clean-back-1, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
+  - {id: clean-back-2, do: block, when: {element: {ref: backButton}, state: exists}, steps: [{do: tap, target: {ref: backButton}}]}
+  - {id: clean-bible, do: tap, target: {ref: tabBible}}
+  - {id: clean-reader, do: waitFor, condition: {element: {ref: miniPlay}, state: exists}, timeoutMs: 5000}
