@@ -580,8 +580,8 @@ esta tomada precisa. Simplificações só desta tomada (a spec da v1 continua va
 - narração: TTS do Google Cloud, voz masculina em inglês escolhida pelo dono (2026-10-16; o sim do
   dono para TTS pago de P-2/Q-7), no projeto e com as credenciais que o dono já usa.
 
-- [ ] **M1 — go/no-go.** O aviso "Automation Running" fora da captura do OBS e o toque humano (Face
-  ID/código) funcionando com o runner vivo. Registro em `spikes/SP-1.md`.
+- [x] **M1 — go/no-go.** O aviso "Automation Running" fora da captura do OBS e o toque humano (Face
+  ID/código) funcionando com o runner vivo. Registro em `spikes/SP-1.md`. **GO** (2026-10-16): 0 de 944 quadros com o aviso, que o dono viu no aparelho; toques humanos e `device.lock` ok.
 - [ ] **M2 — mapa do build 7 e coreografia.** `choreographies/hagah/v8.5-review.choreo.yaml` com os
   rótulos reais das 10 cenas.
 - [ ] **M3 — `take run <coreo> [--dry]` mínimo.** `mac/src/commands/take.ts`, `mac/src/take/`,
