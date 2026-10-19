@@ -590,7 +590,10 @@ esta tomada precisa. Simplificações só desta tomada (a spec da v1 continua va
   folha da Apple e 8–10, 0 falhas). Sem Face ID, a gravação pausa no destravamento (cena 3) e nas três folhas da Apple (cena 7).
 - [x] **M5 — tomada** (1–3), conferida com `ffprobe`. Tomada 1 completa (12,8 min, cena 4 parada ~55 s); tomada 2 com as cenas
   1–8 limpas (o runner caiu na cena 9: "connection invalidated") + gravação só das cenas 9–10; o vídeo junta as duas.
-- [ ] **M6 — pós e entrega**: aparar, narração, ≤ ~200 MB; publicar só com o sim do dono a cada passo.
+- [~] **M6 — pós e entrega**: aparar, narração, ≤ ~200 MB; publicar só com o sim do dono a cada passo. Vídeo **aprovado pelo
+  dono em 2026-10-19**: `~/Movies/contrarregra/hagah/hagah-1.0.0-7-review.mp4` (9 min 03 s, 42 MB, 1168×2532, narração
+  Charon; tomada 2 cenas 1–8 + gravação das cenas 9–10; seletor de capítulos encurtado a pedido do dono — corte dentro da
+  cena 2; a folha da Apple mostra e-mail e foto ~2,5 s, mantida pelo dono). Falta publicar.
 
 Adiado, sem data: o resto da Fase 0 (T-0.16, T-0.20, T-0.21, T-0.23…T-0.33, T-0.35, T-0.36, T-0.38,
 T-0.39 e os portões do SP-5, SP-9 e SP-17) e as Fases 1–9.
