@@ -410,7 +410,8 @@ scenes:
       - {id: s04-sheet, do: assert, timeoutMs: 10000, condition: {all: [{element: {ref: npKindChapter}, state: exists}, {element: {ref: npTitlePs23}, state: exists}]}}
       # Diferente de S13 item 4: pausa já aqui. "Sleep" põe Repeat "Book"; se o Salmo 23 acabar entre o
       # "Sleep" e o "Chapter" (≈ 10 s de 46 s), o player vai ao Salmo 24 (AC-13.9). Pausado, não há risco.
-      - {id: s04-pause, do: tap, target: {ref: npPause}, cue: 0, caption: "Pausa para mexer no Repeat", expect: {element: {ref: npPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      # Só se estiver tocando (tomada 1: o áudio já estava pausado e o passo parou a cena ~55 s).
+      - {id: s04-pause, do: tap, target: {ref: npPause}, cue: 0, caption: "Pausa para mexer no Repeat", optional: true, timeoutMs: 1500, onFail: continue}
       - {id: s04-expand, do: tap, target: {ref: npGrabber}, visual: true, caption: "Folha inteira", expect: {element: {ref: npGrabber}, state: value, equals: "Expanded"}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # "Book" fica atrás de "⋯" (só mostra; o modo continua "Chapter").
       - {id: s04-more, do: tap, target: {ref: npRepeatMore}, cue: 1, caption: "Modos: … Chapter, Book", expect: {element: {ref: npRepeatBook}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
@@ -490,7 +491,7 @@ scenes:
       - {id: s06-assert-ps23, do: assert, condition: {element: {ref: miniPlayerPs23}, state: exists}, timeoutMs: 8000}
       # Pausa já no começo (S13 item 4 pausava no fim): tocando, a lista segue a narração e volta ao versículo
       # lido entre a rolagem e o toque em "Verse 1" (ensaio M4: o toque caiu fora e a barra não abriu).
-      - {id: s06-pause, do: tap, target: {ref: miniPause}, cue: 0, caption: "Pausa o áudio", expect: {element: {ref: miniPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s06-pause, do: tap, target: {ref: miniPause}, cue: 0, caption: "Pausa o áudio", optional: true, timeoutMs: 1500, onFail: continue}
       # A marcação só aparece na lente Reading.
       - {id: s06-reading, do: tap, target: {ref: lensReading}, caption: "Lente Reading", timeoutMs: 8000}
       - {id: s06-verse1-scroll, do: scrollTo, target: {ref: verse1Number}, within: {ref: readerScroll}, direction: up, maxSwipes: 5, timeoutMs: 8000}
@@ -640,6 +641,9 @@ scenes:
         expect: {all: [{element: {ref: miniPlayerPs23}, state: exists}, {element: {ref: miniPause}, state: exists}]}
         expectTimeoutMs: 10000
       - {id: s09-clear, do: tap, target: {ref: selClear}, afterMs: 2000, optional: true}
+      # O áudio offline toca ~6 s e pausa: com áudio tocando o aparelho fica lento e a cena 10 levou 143 s na tomada 1.
+      - {id: s09-listen-offline, do: wait, ms: 6000}
+      - {id: s09-pause, do: tap, target: {ref: miniPause}, optional: true, timeoutMs: 3000, onFail: continue}
       - {id: s09-hold, do: hold}
 
   # ── Cena 10 ──────────────────────────────────────────────────────────────────────────────────────
@@ -655,7 +659,7 @@ scenes:
     hold: {padBeforeMs: 1000, padAfterMs: 2000}
     steps:
       # A narração do Salmo não deve tocar por baixo da fala do About.
-      - {id: s10-pause, do: tap, target: {ref: miniPause}, cue: 0, expect: {element: {ref: miniPlay}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
+      - {id: s10-pause, do: tap, target: {ref: miniPause}, cue: 0, optional: true, timeoutMs: 1500, onFail: continue}
       - {id: s10-cc-open, do: controlCenter, action: open, caption: "Desliga o modo avião"}
       - {id: s10-airplane-was-on, do: waitFor, condition: {airplane: "on"}, timeoutMs: 20000}
       - {id: s10-airplane-tap, do: tap, target: {ref: airplaneButton}, timeoutMs: 15000, visual: true}

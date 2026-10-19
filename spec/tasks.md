@@ -586,8 +586,10 @@ esta tomada precisa. Simplificações só desta tomada (a spec da v1 continua va
   rótulos reais das 10 cenas.
 - [x] **M3 — `take run <coreo> [--dry]` mínimo.** `mac/src/commands/take.ts`, `mac/src/take/`,
   testes com falsos.
-- [ ] **M4 — ensaio sem gravar**, de ponta a ponta, com o dono nos pontos de controle.
-- [ ] **M5 — tomada** (1–3), conferida com `ffprobe`.
+- [x] **M4 — ensaio sem gravar**, de ponta a ponta, com o dono nos pontos de controle. Feito em 2026-10-19 (cenas 1–7 até a
+  folha da Apple e 8–10, 0 falhas). Sem Face ID, a gravação pausa no destravamento (cena 3) e nas três folhas da Apple (cena 7).
+- [x] **M5 — tomada** (1–3), conferida com `ffprobe`. Tomada 1 completa (12,8 min, cena 4 parada ~55 s); tomada 2 com as cenas
+  1–8 limpas (o runner caiu na cena 9: "connection invalidated") + gravação só das cenas 9–10; o vídeo junta as duas.
 - [ ] **M6 — pós e entrega**: aparar, narração, ≤ ~200 MB; publicar só com o sim do dono a cada passo.
 
 Adiado, sem data: o resto da Fase 0 (T-0.16, T-0.20, T-0.21, T-0.23…T-0.33, T-0.35, T-0.36, T-0.38,
