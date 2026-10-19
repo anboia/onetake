@@ -78,9 +78,21 @@ function probeDurationMs(file: string): number {
 }
 
 /** Um trecho de uma gravação: as cenas `from`…`to` de uma tomada (`--take <pasta>[@s01-s08]`). */
-interface Segment { dir: string; take: Take; recording: string; startMs: number; endMs: number; outOffsetMs: number }
+/** Pedaço contínuo da gravação que entra no vídeo (um trecho menos as janelas de `--drop`). */
+interface Piece { startMs: number; endMs: number; outOffsetMs: number }
+interface Segment { dir: string; take: Take; recording: string; startMs: number; endMs: number; outOffsetMs: number; pieces: Piece[] }
 
-function segments(specs: string[]): Segment[] {
+/** Tempo da gravação do trecho → tempo do vídeo final (dentro de uma janela cortada: o fim dela). */
+function toOut(g: Segment, t: number): number {
+  for (const p of g.pieces) {
+    if (t < p.startMs) return p.outOffsetMs;
+    if (t < p.endMs) return p.outOffsetMs + t - p.startMs;
+  }
+  const last = g.pieces[g.pieces.length - 1]!;
+  return last.outOffsetMs + last.endMs - last.startMs;
+}
+
+function segments(specs: string[], drops: { dir: string; fromMs: number; toMs: number }[] = []): Segment[] {
   const out: Segment[] = [];
   let offset = 0;
   specs.forEach((spec, k) => {
@@ -102,8 +114,20 @@ function segments(specs: string[]): Segment[] {
     // cenas). O último termina TAIL_MS depois; os do meio, no fim exato da última cena.
     const startMs = Math.max(0, first.videoStartMs - (k === 0 ? LEAD_MS : 0));
     const endMs = Math.min(durationMs, (last.videoEndMs ?? durationMs) + (k === specs.length - 1 ? TAIL_MS : 0));
-    out.push({ dir, take: { ...take, scenes, steps: take.steps.filter((x) => x.sceneId !== null && ids.has(x.sceneId)) }, recording, startMs, endMs, outOffsetMs: offset });
-    offset += endMs - startMs;
+    // `--drop <pasta>:<de>-<até>` (ms da gravação): janela tirada do trecho (pedido do dono, 2026-10-19: tela parada).
+    const cuts = drops.filter((d) => d.dir === dir && d.toMs > startMs && d.fromMs < endMs).sort((a, b) => a.fromMs - b.fromMs);
+    const pieces: Piece[] = [];
+    let cursor = startMs;
+    const segOffset = offset;
+    for (const c of [...cuts, { fromMs: endMs, toMs: endMs }]) {
+      const pieceEnd = Math.min(c.fromMs, endMs);
+      if (pieceEnd > cursor) {
+        pieces.push({ startMs: cursor, endMs: pieceEnd, outOffsetMs: offset });
+        offset += pieceEnd - cursor;
+      }
+      cursor = Math.max(cursor, c.toMs);
+    }
+    out.push({ dir, take: { ...take, scenes, steps: take.steps.filter((x) => x.sceneId !== null && ids.has(x.sceneId)) }, recording, startMs, endMs, outOffsetMs: segOffset, pieces });
   });
   return out;
 }
@@ -117,22 +141,30 @@ function main(): void {
   const outFile = opt(args, 'out');
   if (takes.length === 0 || voicePath === undefined || outFile === undefined) throw new Error('uso: mix.ts (<pasta> | --take <pasta>[@sA-sB] …) --voice <voice.json> --out <mp4> [--no-narration] [--plan]');
   const voice = JSON.parse(readFileSync(voicePath, 'utf8')) as Voice;
-  const segs = segments(takes);
-  const totalMs = segs.reduce((n, g) => n + g.endMs - g.startMs, 0);
-  const narration = args.includes('--no-narration') ? [] : segs.flatMap((g) => place(g.take, voice).map((p) => ({ ...p, outMs: g.outOffsetMs + p.atMs - g.startMs })));
+  const drops: { dir: string; fromMs: number; toMs: number }[] = [];
+  args.forEach((a, i) => {
+    if (a !== '--drop' || args[i + 1] === undefined) return;
+    const m = /^(.*):(\d+)-(\d+)$/.exec(args[i + 1]!);
+    if (m === null) throw new Error(`--drop ${args[i + 1]}: use <pasta>:<de_ms>-<até_ms>`);
+    drops.push({ dir: m[1]!, fromMs: Number(m[2]), toMs: Number(m[3]) });
+  });
+  const segs = segments(takes.map((t) => t), drops);
+  const pieces = segs.flatMap((g) => g.pieces.map((p) => ({ ...p, recording: g.recording })));
+  const totalMs = pieces.reduce((n, p) => n + p.endMs - p.startMs, 0);
+  const narration = args.includes('--no-narration') ? [] : segs.flatMap((g) => place(g.take, voice).map((p) => ({ ...p, outMs: toOut(g, p.atMs) })));
   const overrun = narration.filter((p) => p.outMs + p.durMs > totalMs);
-  console.log(JSON.stringify({ segments: segs.map((g) => ({ recording: g.recording, startMs: g.startMs, endMs: g.endMs, outOffsetMs: g.outOffsetMs })), outMs: totalMs, sentences: narration.length, overrun: overrun.map((p) => `${p.scene}#${p.i}`) }));
+  console.log(JSON.stringify({ pieces: pieces.map((p) => ({ recording: p.recording.slice(-40), startMs: p.startMs, endMs: p.endMs, outOffsetMs: p.outOffsetMs })), outMs: totalMs, sentences: narration.length, overrun: overrun.map((p) => `${p.scene}#${p.i}`) }));
   if (args.includes('--plan')) {
     for (const p of narration) console.log(`${p.scene}#${p.i} at ${(p.outMs / 1000).toFixed(2)}s (+${((p.atMs - p.planned) / 1000).toFixed(2)}s vs plano${p.cue === null ? '' : ', cue'}) dur ${(p.durMs / 1000).toFixed(2)}s`);
     return;
   }
 
   const ff = ['-hide_banner', '-nostdin', '-loglevel', 'error', '-y'];
-  for (const g of segs) ff.push('-ss', (g.startMs / 1000).toFixed(3), '-to', (g.endMs / 1000).toFixed(3), '-i', g.recording);
+  for (const g of pieces) ff.push('-ss', (g.startMs / 1000).toFixed(3), '-to', (g.endMs / 1000).toFixed(3), '-i', g.recording);
   for (const p of narration) ff.push('-i', p.file);
-  const n = segs.length;
+  const n = pieces.length;
   const parts: string[] = [];
-  parts.push(segs.map((_, k) => `[${k}:v:0][${k}:a:0]`).join('') + `concat=n=${n}:v=1:a=1[v][rec]`);
+  parts.push(pieces.map((_, k) => `[${k}:v:0][${k}:a:0]`).join('') + `concat=n=${n}:v=1:a=1[v][rec]`);
   if (narration.length === 0) {
     parts.push('[rec]anull[aout]');
   } else {
@@ -145,7 +177,7 @@ function main(): void {
   }
   ff.push('-filter_complex', parts.join(';'), '-map', '[v]', '-map', '[aout]',
     '-c:v', 'libx264', '-crf', '23', '-preset', 'slow', '-pix_fmt', 'yuv420p',
-    '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', outFile);
+    '-c:a', 'aac', '-b:a', '128k', '-map_chapters', '-1', '-map_metadata', '-1', '-movflags', '+faststart', outFile);
   execFileSync(FFMPEG, ff, { stdio: 'inherit' });
   const probe = execFileSync(FFPROBE, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height:format=duration', '-of', 'json', outFile], { encoding: 'utf8' });
   console.log(JSON.stringify({ out: outFile, sizeMB: Math.round(statSync(outFile).size / 1e5) / 10, probe: JSON.parse(probe) }));
