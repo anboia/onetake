@@ -274,6 +274,9 @@ prepare:
   - {id: prep-tab-plan, do: tap, target: {ref: tabPlan}, timeoutMs: 8000}
   - {id: prep-plan-root-top, do: scrollTo, target: {ref: dayBack}, direction: up, maxSwipes: 8, optional: true, timeoutMs: 1500}
   - {id: prep-plan-root, do: tap, target: {ref: dayBack}, optional: true, timeoutMs: 1500}
+  # Depois da cena 8 o Plano reabre na tela do dia (ensaio de 2026-10-19): voltar à lista.
+  - {id: prep-plan-ui, do: waitFor, condition: {any: [{element: {ref: planGoToCurrent}, state: exists}, {element: {ref: dayBack}, state: exists}]}, timeoutMs: 10000}
+  - {id: prep-plan-day-back, do: block, when: {element: {ref: dayBack}, state: exists}, steps: [{do: tap, target: {ref: dayBack}}]}
   - {id: prep-plan-list, do: waitFor, condition: {element: {ref: planGoToCurrent}, state: exists}, timeoutMs: 10000}
   # A lista pode estar rolada (ensaio de 2026-10-19; até o botão "Go to the current day" sai da tela):
   # rolar para cima até o dia atual, o primeiro da lista.
@@ -527,10 +530,13 @@ scenes:
     steps:
       - {id: s07-signed-out, do: assert, condition: {all: [{element: {ref: journalSiwy}, state: exists}, {element: {ref: journalSiwa}, state: exists}]}, timeoutMs: 8000}
       - {id: s07-siwa-tap, do: tap, target: {ref: journalSiwa}, cue: 2, visual: true, caption: "Sign in with Apple", timeoutMs: 8000}
+      # A folha da Apple fica ~2,5 s no vídeo; depois a gravação pausa (--pause-recording-at) e o dono a completa
+      # com o código (sem Face ID; decisão do dono de 2026-10-19).
+      - {id: s07-siwa-sheet-show, do: wait, ms: 2500}
       - id: s07-siwa-sheet
         do: checkpoint
         who: human
-        ask: "Conclua o Sign in with Apple (compartilhe o nome, Continuar, Face ID)"
+        ask: "Pode concluir agora: Sign in with Apple, compartilhe o nome, Continuar e o código"
         until: {element: {ref: journalSignedIn}, state: exists}
         timeoutMs: 180000
         onTimeout: pause
@@ -542,20 +548,22 @@ scenes:
       - {id: s07-delete-confirm, do: tap, target: {ref: alertPermanentlyDelete}, caption: "Exclui de vez", timeoutMs: 8000}
       # A folha da Apple pede nova autorização (revogação do token). Se ela for cancelada aparece
       # "Delete without confirming with Apple?" e o `until` não vale: prazo e pausa.
+      - {id: s07-revoke-show, do: wait, ms: 2500}
       - id: s07-revoke
         do: checkpoint
         who: human
-        ask: "Confirme com a Apple (Face ID) para revogar o vínculo"
+        ask: "Pode confirmar agora com a Apple, usando o código, para revogar o vínculo"
         until: {element: {ref: alertAccountDeleted}, state: exists}
         timeoutMs: 180000
         onTimeout: pause
       - {id: s07-deleted-ok, do: tap, target: {ref: alertOk}, cue: 7, caption: "Conta excluída", expect: {element: {ref: alertAccountDeleted}, state: gone}, expectTimeoutMs: 10000}
       - {id: s07-back-journal, do: tap, target: {ref: backButton}, caption: "Volta ao Journal", expect: {element: {ref: journalSiwa}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       - {id: s07-siwa-again-tap, do: tap, target: {ref: journalSiwa}, cue: 8, caption: "Entra de novo com a Apple", timeoutMs: 8000}
+      - {id: s07-siwa-again-show, do: wait, ms: 2500}
       - id: s07-siwa-again
         do: checkpoint
         who: human
-        ask: "Conclua de novo o Sign in with Apple (Face ID)"
+        ask: "Pode concluir agora: Sign in with Apple de novo, com o código"
         until: {element: {ref: journalSignedIn}, state: exists}
         timeoutMs: 180000
         onTimeout: pause
