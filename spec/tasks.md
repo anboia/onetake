@@ -593,7 +593,9 @@ esta tomada precisa. Simplificações só desta tomada (a spec da v1 continua va
 - [~] **M6 — pós e entrega**: aparar, narração, ≤ ~200 MB; publicar só com o sim do dono a cada passo. Vídeo **aprovado pelo
   dono em 2026-10-19**: `~/Movies/contrarregra/hagah/hagah-1.0.0-7-review.mp4` (9 min 03 s, 42 MB, 1168×2532, narração
   Charon; tomada 2 cenas 1–8 + gravação das cenas 9–10; seletor de capítulos encurtado a pedido do dono — corte dentro da
-  cena 2; a folha da Apple mostra e-mail e foto ~2,5 s, mantida pelo dono). Falta publicar.
+  cena 2; a folha da Apple mostra e-mail e foto ~2,5 s, mantida pelo dono). Publicado no R2 com o sim do dono
+  (2026-10-19): https://pub-9d9c1d6de53d42dc869f2518c5e9d57f.r2.dev/review/hagah-1.0.0-7-review.mp4 (200, video/mp4).
+  Falta, no repositório do Hagah e com o sim do dono a cada passo: Notes, build 7, resposta e reenvio (§7 da rejeição).
 
 Adiado, sem data: o resto da Fase 0 (T-0.16, T-0.20, T-0.21, T-0.23…T-0.33, T-0.35, T-0.36, T-0.38,
 T-0.39 e os portões do SP-5, SP-9 e SP-17) e as Fases 1–9.
