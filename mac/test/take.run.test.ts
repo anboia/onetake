@@ -421,12 +421,14 @@ describe('take run --pause-recording-at (destravar fora do vídeo)', () => {
     assert.equal(record.scenes[1]!.pausedMs, undefined);
   });
 
-  test('until já verdadeira na primeira avaliação: nada pausa', async () => {
+  test('until já verdadeira na primeira avaliação (a pessoa se adiantou): pausa mesmo assim, antes da leitura, e retoma', async () => {
     const w = pauseWorld();
     const summary = await takeRun(w.ctx, { file: w.file, pauseRecordingAt: ['s01.unlock'] }, w.deps);
     assert.equal(summary.status, 'finished');
-    assert.ok(!w.trace.some((x) => x.startsWith('obs PauseRecord')));
-    assert.deepEqual(readTakeRecord(summary.dir!).recordingPauses, []);
+    const pause = w.trace.findIndex((x) => x.startsWith('obs PauseRecord'));
+    const resume = w.trace.findIndex((x) => x.startsWith('obs ResumeRecord'));
+    assert.ok(pause >= 0 && resume > pause, 'PauseRecord e depois ResumeRecord');
+    assert.equal(readTakeRecord(summary.dir!).recordingPauses.length, 1);
   });
 
   test('saída com a gravação pausada (Ctrl-C no meio do destravar): para direto, sem ResumeRecord nem pós-rolo', async () => {

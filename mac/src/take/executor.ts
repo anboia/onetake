@@ -806,6 +806,13 @@ export class TakeExecutor {
       if (alerts > 0) rec.alerts = alerts;
       return OK;
     };
+    // `--pause-recording-at`: a gravação pausa ANTES da primeira leitura, sempre. Se a pessoa se adiantou (destravou
+    // antes do aviso, ensaio de 2026-10-19), o `until` já estaria verdadeiro e o destravar seguiria gravado; pausando
+    // primeiro, o pior caso é uma pausa curta.
+    if (scope.section === 'scenes' && this.#pauseRecordingAt.has(step.id)) {
+      const failed = await this.#beginRecordingPause(step.id, scope.scene);
+      if (failed !== undefined) return failed;
+    }
     try {
       if (await this.#waitCondition(step.until, 0)) {
         rec.waitedMs = 0;
@@ -814,11 +821,6 @@ export class TakeExecutor {
     } catch (error) {
       if (error instanceof TakeAborted) throw error;
       this.#log(`  ${step.id}: até agora sem leitura (${errorInfo(error).code ?? 'erro'}); sigo sondando`);
-    }
-    // Vai esperar a pessoa: pausa a gravação antes do primeiro aviso (`--pause-recording-at`).
-    if (scope.section === 'scenes' && this.#pauseRecordingAt.has(step.id)) {
-      const failed = await this.#beginRecordingPause(step.id, scope.scene);
-      if (failed !== undefined) return failed;
     }
     const deadline = waitStart + step.timeoutMs;
     let nextAlert = this.#clock.now();

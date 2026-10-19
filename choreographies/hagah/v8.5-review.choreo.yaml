@@ -227,9 +227,14 @@ prepare:
   # a "Reading" com o app encerrado no fim do preparo.
   - {id: prep-header, do: scrollTo, target: {ref: parallelChip}, within: {ref: readerScroll}, direction: up, maxSwipes: 5, timeoutMs: 8000}
   # Depois de uma rolagem "atrasada" a árvore ainda muda: esperar o chip antes de decidir (ensaio de 2026-10-16).
-  - {id: prep-parallel-chip, do: waitFor, condition: {any: [{element: {ref: parallelChipOn}, state: exists}, {element: {ref: parallelChipOff}, state: exists}]}, timeoutMs: 15000}
-  - {id: prep-parallel-on-tap, do: tap, target: {ref: parallelChipOn}, optional: true, timeoutMs: 1500, expect: {element: {ref: mirrorTitle}, state: exists}, expectTimeoutMs: 10000}
-  - {id: prep-parallel-turn-off, do: tap, target: {ref: mirrorTurnOff}, optional: true, timeoutMs: 1500}
+  # O rótulo do chip ligado depende da versão principal ("…, NVI" ou "…, NIV"): decidir pelo desligado.
+  - {id: prep-parallel-chip, do: waitFor, condition: {element: {ref: parallelChip}, state: exists}, timeoutMs: 15000}
+  - id: prep-parallel-off
+    do: block
+    when: {not: {element: {ref: parallelChipOff}, state: exists}}
+    steps:
+      - {do: tap, target: {ref: parallelChip}, expect: {element: {ref: mirrorTitle}, state: exists}, expectTimeoutMs: 6000}
+      - {do: tap, target: {ref: mirrorTurnOff}, expect: {element: {ref: parallelChipOff}, state: exists}, expectTimeoutMs: 6000}
   - {id: prep-parallel-assert, do: assert, condition: {element: {ref: parallelChipOff}, state: exists}, timeoutMs: 10000}
 
   # Journal: deslogado e vazio. Sair/excluir a conta é do dono (credencial e revogação na Apple).
@@ -270,6 +275,9 @@ prepare:
   - {id: prep-plan-root-top, do: scrollTo, target: {ref: dayBack}, direction: up, maxSwipes: 8, optional: true, timeoutMs: 1500}
   - {id: prep-plan-root, do: tap, target: {ref: dayBack}, optional: true, timeoutMs: 1500}
   - {id: prep-plan-list, do: waitFor, condition: {element: {ref: planGoToCurrent}, state: exists}, timeoutMs: 10000}
+  # A lista pode estar rolada (ensaio de 2026-10-19; até o botão "Go to the current day" sai da tela):
+  # rolar para cima até o dia atual, o primeiro da lista.
+  - {id: prep-go-current, do: scrollTo, target: {ref: planCurrentDay}, direction: up, maxSwipes: 12}
   - {id: prep-day, do: tap, target: {ref: planCurrentDay}, expect: {element: {ref: dayTitle}, state: exists}, expectTimeoutMs: 6000, timeoutMs: 8000}
   # Baixado (por uma tomada anterior): "Remove from device" e o alerta "Remove Day N from this device?" →
   # "Remove from device" (medido no ensaio M4). É download da ferramenta, não dado do dono.
@@ -369,8 +377,9 @@ scenes:
       - id: s03-unlock
         do: checkpoint
         who: human
-        ask: "Destrave o iPhone com o código e deixe o Hagah na tela; se cair na tela de início, abra o Hagah pelo ícone"
-        until: {all: [{locked: false}, {appState: {app: target, state: foreground}}]}
+        ask: "Pode destravar agora: use o código e deixe o Hagah na tela; se cair na tela de início, abra o Hagah pelo ícone"
+        # Um elemento do Hagah na árvore: com a tela travada à frente a leitura do app é recusada ("ainda não").
+        until: {all: [{locked: false}, {appState: {app: target, state: foreground}}, {any: [{element: {ref: npGrabber}, state: exists}, {element: {ref: miniPlayerPs23}, state: exists}]}]}
         timeoutMs: 120000
         onTimeout: pause
         cue: 2
@@ -564,6 +573,7 @@ scenes:
     steps:
       - {id: s08-plan, do: tap, target: {ref: tabPlan}, cue: 0, visual: true, caption: "Aba Plan", expect: {element: {ref: planGoToCurrent}, state: exists}, expectTimeoutMs: 10000, timeoutMs: 8000}
       # A linha do dia não tem play (o ícone de download da linha não está na árvore): abre-se o dia.
+      - {id: s08-go-current, do: scrollTo, target: {ref: planCurrentDay}, direction: up, maxSwipes: 12}
       - {id: s08-day, do: tap, target: {ref: planCurrentDay}, visual: true, caption: "Dia atual do plano", expect: {element: {ref: dayListen}, state: exists}, expectTimeoutMs: 6000, timeoutMs: 8000}
       # "Download" ANTES de "Listen": tocando, a tela do dia segue o texto lido e o cabeçalho (com "Download" e
       # "Back") sai da árvore (ensaio M4: E_TARGET_NOT_FOUND no "Download" depois do "Listen").
