@@ -1,22 +1,22 @@
-# Código de conduta
+# Code of conduct
 
-Queremos que participar do OneTake seja uma experiência respeitosa para pessoas de qualquer nível de experiência, origem, identidade ou condição.
+We want participation in OneTake to be respectful for people of every experience level, background, identity and circumstance.
 
-## Comportamentos esperados
+## Expected behavior
 
-- Critique ideias e código, não pessoas.
-- Dê feedback específico, explique decisões e aceite correções.
-- Acolha dúvidas de quem está começando e respeite limites de tempo dos colaboradores.
-- Respeite privacidade, direitos autorais e consentimento para uso de dispositivos e dados.
+- Critique ideas and code, not people.
+- Give specific feedback, explain decisions and accept corrections.
+- Welcome questions from newcomers and respect contributors' time constraints.
+- Respect privacy, copyright and consent for using devices and data.
 
-## Comportamentos não aceitos
+## Unacceptable behavior
 
-Assédio, discriminação, ameaças, conteúdo sexual inadequado, ataques pessoais, divulgação de informações privadas sem consentimento, spam e insistência após um pedido claro para parar.
+Harassment, discrimination, threats, inappropriate sexual content, personal attacks, disclosure of private information without consent, spam and continued unwanted behavior after a clear request to stop.
 
-## Aplicação
+## Enforcement
 
-Vale para issues, pull requests, discussões e outros espaços oficiais do projeto. Mantenedores podem pedir correções, remover conteúdo, limitar participação ou bloquear contas, proporcionalmente à gravidade e recorrência. O objetivo é interromper o dano, não expor a pessoa que reportou.
+This policy applies to issues, pull requests, discussions and other official project spaces. Maintainers may request corrections, remove content, restrict participation or block accounts in proportion to the severity and recurrence of the behavior. The goal is to stop harm, not expose the person reporting it.
 
-Use os mecanismos de denúncia e bloqueio do GitHub para conteúdo abusivo. Se precisar de tratamento privado pelo mantenedor e não houver canal publicado, solicite um canal sem relatar dados sensíveis em público. Não usamos um e-mail fictício de atendimento.
+Use GitHub's reporting and blocking mechanisms for abusive content. If you need private handling by a maintainer and no contact channel is published, request one without disclosing sensitive information publicly. No dedicated contact email is currently provided.
 
-Mantenedores devem avaliar relatos com discrição, evitar retaliação e explicar suas decisões às pessoas afetadas quando for seguro fazê-lo. Ninguém é obrigado a divulgar dados pessoais para participar.
+Maintainers should handle reports discreetly, prevent retaliation and explain decisions to the affected people when it is safe to do so. No one is required to disclose personal information to participate.

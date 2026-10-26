@@ -1,20 +1,20 @@
-# Instalação do OneTake
+# Installing OneTake
 
-[← README](../README.md) · [Primeira demonstração](usage.md) · [Desenvolvimento](development.md) · [Configuração MCP do repositório](../.mcp.json)
+[← README](../README.md) · [First demo](usage.md) · [Development](development.md) · [Repository MCP configuration](../.mcp.json)
 
-A instalação é **pelo código-fonte** em macOS. `package.json` tem `private: true`: não há pacote npm público deste projeto; a licença do código é [MIT](../LICENSE). O caminho de operação foi preparado para Apple Silicon com Homebrew em `/opt/homebrew`. Até a validação de uma coreografia, você não precisa de iPhone, assinatura ou OBS.
+Installation is **from source** on macOS. `package.json` sets `private: true`: there is no public npm package for this project; the code is licensed under [MIT](../LICENSE). The operational setup was prepared for Apple Silicon with Homebrew in `/opt/homebrew`. You do not need an iPhone, code signing, or OBS to validate a choreography.
 
-## 1. Requisitos para operar um iPhone real
+## 1. Requirements for operating a physical iPhone
 
-- Mac com **Xcode 26 e SDK iOS 26**, ferramentas de linha de comando apontando para esse Xcode, conta Apple de desenvolvimento configurada no Xcode e identidade **Apple Development** instalada no Chaveiro. O conjunto de referência em `config/defaults.json` registra Xcode **26.6 (17F113)** e macOS **26.5.x**; versões diferentes exigem verificação própria, não são garantia de compatibilidade.
-- **XcodeGen ≥ 2.45.4**, conforme `ios/project.yml`, no caminho usado pelo runner: `/opt/homebrew/bin/xcodegen`. Não gere o projeto manualmente sem passar as variáveis de assinatura; use `runner build`.
-- **iPhone físico com iOS 26.x**, Modo de Desenvolvedor ativo, confiando neste Mac, destravado e conectado por **cabo USB**; o app alvo precisa estar instalado por você. Simulador não substitui a captura física.
-- **Node 22.x ≥ 22.18** (Node 23+ não é aceito), npm e nvm recomendado. `./bin/onetake` escolhe um Node compatível do nvm ou do `PATH` e recusa outros majors.
-- **OBS Studio 31.1.2** com **obs-websocket 5.6.2** e **ffmpeg + ffprobe 8.1.1** são as versões registradas em `toolchain.validated`. O cliente OBS confere as versões exatas e os recursos do WebSocket; o módulo de mídia confere as versões exatas dos dois binários. São versões de referência de compatibilidade, **não** uma promessa de que a última versão disponível funcionará.
+- A Mac with **Xcode 26 and the iOS 26 SDK**, command-line tools pointing to that Xcode, an Apple developer account configured in Xcode, and an **Apple Development** identity installed in Keychain. The reference toolchain in `config/defaults.json` records Xcode **26.6 (17F113)** and macOS **26.5.x**; other versions require your own verification and are not guaranteed to be compatible.
+- **XcodeGen ≥ 2.45.4**, as specified in `ios/project.yml`, at the path used by the runner: `/opt/homebrew/bin/xcodegen`. Do not generate the project manually without supplying the signing variables; use `runner build`.
+- A **physical iPhone running iOS 26.x**, with Developer Mode enabled, trusting this Mac, unlocked, and connected by **USB cable**; you must install the target app yourself. A simulator is not a substitute for physical capture.
+- **Node 22.x ≥ 22.18** (Node 23+ is not accepted), npm, and preferably nvm. `./bin/onetake` selects a compatible Node from nvm or the `PATH` and rejects other major versions.
+- **OBS Studio 31.1.2** with **obs-websocket 5.6.2** and **ffmpeg + ffprobe 8.1.1** are the versions recorded in `toolchain.validated`. The OBS client checks the exact versions and WebSocket capabilities; the media module checks the exact versions of both binaries. These are compatibility reference versions, **not** a promise that the latest available versions will work.
 
-Instale Xcode e o SDK iOS pelo canal da Apple; selecione o Xcode correto nas preferências de Command Line Tools. Para XcodeGen e ffmpeg, Homebrew pode ser usado, por exemplo, com `brew install xcodegen ffmpeg`; para OBS, `brew install --cask obs`. **Esses comandos instalam versões atualmente distribuídas, não fixam 2.45.4, 8.1.1 ou 31.1.2**. Confira o resultado antes de operar; se as versões não coincidirem, obtenha releases compatíveis dos distribuidores e valide em sua máquina, sem alterar `toolchain.validated` para mascarar uma incompatibilidade. Se instalar em outros caminhos (inclusive Intel), ajuste os caminhos absolutos de `paths.ffmpeg` e `paths.ffprobe` na sua configuração; o binário XcodeGen do runner é fixo em `/opt/homebrew/bin/xcodegen`. A suíte de testes de mídia usa diretamente os defaults de ffmpeg/ffprobe em `/opt/homebrew/opt/ffmpeg/bin` e afirma esse caminho: ajustar apenas seu arquivo local não torna `npm test` portável para outro layout.
+Install Xcode and the iOS SDK through Apple's distribution channels; select the correct Xcode in the Command Line Tools preferences. For XcodeGen and ffmpeg, you can use Homebrew, for example with `brew install xcodegen ffmpeg`; for OBS, use `brew install --cask obs`. **These commands install the versions currently distributed, not pinned versions 2.45.4, 8.1.1, or 31.1.2**. Check the resulting versions before operating; if they differ, obtain compatible releases from their distributors and validate them on your machine. Do not change `toolchain.validated` to hide an incompatibility. If you install binaries elsewhere (including on Intel), adjust the absolute `paths.ffmpeg` and `paths.ffprobe` paths in your configuration; the runner's XcodeGen path is fixed at `/opt/homebrew/bin/xcodegen`. The media test suite uses the ffmpeg/ffprobe defaults in `/opt/homebrew/opt/ffmpeg/bin` directly and asserts that path: changing only your local configuration does not make `npm test` portable to another layout.
 
-Verificações manuais de ferramentas, sem iniciar build, OBS ou aparelho:
+Manual tool checks that do not start a build, OBS, or a device:
 
 ```sh
 node --version
@@ -25,11 +25,11 @@ xcrun --sdk iphoneos --show-sdk-version
 /opt/homebrew/opt/ffmpeg/bin/ffprobe -version
 ```
 
-Confira a versão OBS e obs-websocket na interface do OBS; não presuma que o Homebrew manteve uma versão. Os comandos com caminhos Homebrew acima só valem quando esses binários foram instalados ali.
+Check the OBS and obs-websocket versions in the OBS interface; do not assume Homebrew retained a particular version. The commands using Homebrew paths above apply only if those binaries were installed there.
 
-## 2. Instale as dependências e valide sem hardware
+## 2. Install dependencies and validate without hardware
 
-Depois de instalar [nvm](https://github.com/nvm-sh/nvm#installing-and-updating), na raiz do checkout:
+After installing [nvm](https://github.com/nvm-sh/nvm#installing-and-updating), run from the checkout root:
 
 ```sh
 git clone https://github.com/anboia/onetake.git
@@ -41,9 +41,9 @@ npm ci
 ./bin/onetake take validate examples/first-take.choreo.yaml --json
 ```
 
-Se já clonou o repositório, entre na raiz e comece em `nvm install`. O clone pode exigir permissão enquanto o repositório não for público. `.nvmrc` pede Node 22 e `package.json` exige `>=22.18 <23`. A CLI executa `.ts` diretamente, sem `npm run build`. `take validate` apenas valida o YAML de exemplo; o app `com.example.demo` não acompanha o projeto.
+If you have already cloned the repository, go to its root and start with `nvm install`. Cloning may require permission while the repository is not public. `.nvmrc` requests Node 22 and `package.json` requires `>=22.18 <23`. The CLI runs `.ts` files directly, without `npm run build`. `take validate` only validates the example YAML; the `com.example.demo` app is not included in the project.
 
-Para contribuir, testes sem aparelho incluem também a mídia ffmpeg; eles **exigem ffmpeg/ffprobe 8.1.1 nos caminhos configurados**, mesmo sem iPhone, assinatura ou OBS:
+For contributors, device-free tests also include ffmpeg media tests; they **require ffmpeg/ffprobe 8.1.1 at the configured paths**, even without an iPhone, code signing, or OBS:
 
 ```sh
 npm run typecheck
@@ -52,35 +52,35 @@ npm run docs:check
 swift test --package-path ios/ContrarregraKit
 ```
 
-`npm test` inclui `mac/test/align.test.ts`, que cria vídeos sintéticos temporários via ffmpeg. Consulte [desenvolvimento](development.md) para escopo dos checks.
+`npm test` includes `mac/test/align.test.ts`, which creates temporary synthetic videos with ffmpeg. See [development](development.md) for the scope of these checks.
 
-## 3. Configure sua máquina (sem enviar dados ao git)
+## 3. Configure your machine (without committing personal data)
 
-Crie um arquivo novo **sem sobrescrever** uma configuração existente:
+Create a new file **without overwriting** an existing configuration:
 
 ```sh
 mkdir -p "$HOME/.config/onetake"
 cp -n config/example.json "$HOME/.config/onetake/config.json"
 ```
 
-**Antes de copiar**, se já houver `~/.config/contrarregra/config.json`, leia [migração](migration.md): criar o arquivo novo faz o antigo deixar de ser usado. Edite `~/.config/onetake/config.json` fora do repositório; não preencha `config/defaults.json` ou `config/example.json` com dados reais. Os objetos da configuração local são mesclados com `config/defaults.json`; listas substituem as listas padrão. Preencha, com seus próprios valores:
+**Before copying**, if `~/.config/contrarregra/config.json` already exists, read [migration](migration.md): creating the new file causes the old one to stop being used. Edit `~/.config/onetake/config.json` outside the repository; do not put real data in `config/defaults.json` or `config/example.json`. Objects in the local configuration are merged with `config/defaults.json`; arrays replace the default arrays. Fill in your own values for:
 
-- `device.udid`: UDID do iPhone; `device.coreDeviceId`: identificador mostrado pelo CoreDevice; `device.name`: **nome da fonte do iPhone mostrado no OBS**. Você pode consultar manualmente o aparelho em Xcode → Devices and Simulators ou em `xcrun devicectl list devices`; não copie identificadores de outra pessoa.
-- `signing.team`: Apple Team ID de **10 caracteres A–Z/0–9**; `signing.identity`: nome **exato** no formato `Apple Development: Nome (IDENTIFICADOR)` da identidade já instalada, pertencente ao time escolhido. O identificador entre parênteses não deve ser inferido a partir do Team ID: copie o nome completo da identidade existente. O titular pode conferi-la manualmente no Xcode/Chaveiro ou com `security find-identity -v -p codesigning` (isso lista identidades locais; não compartilhe a saída). Não coloque senha, chave privada ou certificado no JSON.
-- `bundle.host` e `bundle.runnerTest`: identificadores DNS seus, válidos e **distintos** para o hospedeiro e o bundle de testes; substitua ambos os `com.example.*`. O app que será demonstrado é **outro**: configure `app.explore` com o bundle ID do seu app instalado, e adapte o YAML do roteiro.
-- `apps.allowed` e `urls.allowedPrefixes`: apenas apps adicionais e prefixos URL autorizados para a sua sessão. `runner.privateAllowed` fica vazio a menos que você entenda e autorize uma capacidade privada. Revise também `paths.takes`, `paths.cache`, os dois caminhos absolutos de ffmpeg/ffprobe e `obs.profile`, `obs.collection`, `obs.scene` para não usar destinos de terceiros.
+- `device.udid`: the iPhone's UDID; `device.coreDeviceId`: the identifier shown by CoreDevice; `device.name`: **the iPhone source name shown in OBS**. You can look up the device manually in Xcode → Devices and Simulators or with `xcrun devicectl list devices`; do not copy someone else's identifiers.
+- `signing.team`: a **10-character A–Z/0–9** Apple Team ID; `signing.identity`: the **exact** name of an installed identity belonging to the chosen team, in the format `Apple Development: Name (IDENTIFIER)`. Do not infer the identifier in parentheses from the Team ID: copy the full name of the existing identity. Its owner can check it manually in Xcode/Keychain or with `security find-identity -v -p codesigning` (this lists local identities; do not share the output). Do not put a password, private key, or certificate in the JSON.
+- `bundle.host` and `bundle.runnerTest`: your own valid, **distinct** DNS identifiers for the host and test bundle; replace both `com.example.*` values. The app to be demonstrated is **a separate app**: set `app.explore` to the bundle ID of your installed app, and adapt the choreography YAML.
+- `apps.allowed` and `urls.allowedPrefixes`: only additional apps and URL prefixes authorized for your session. Leave `runner.privateAllowed` empty unless you understand and authorize a private capability. Also review `paths.takes`, `paths.cache`, both absolute ffmpeg/ffprobe paths, and `obs.profile`, `obs.collection`, `obs.scene` to avoid using someone else's destinations.
 
-`loadConfig` aceita campos vazios para inspeção local, mas `runner build` **recusa** team, identity e bundle IDs inválidos antes de chamar XcodeGen. O build injeta `ONETAKE_SIGNING_TEAM`, `ONETAKE_HOST_BUNDLE_ID` e `ONETAKE_RUNNER_TEST_BUNDLE_ID` a partir da sua configuração em `ios/project.yml`; não é necessário exportá-los no terminal. A CLI pública **não oferece `--config`**: o caminho padrão é `~/.config/onetake/config.json`, com fallback para `~/.config/contrarregra/config.json` apenas quando o primeiro não existe.
+`loadConfig` accepts empty fields for local inspection, but `runner build` **rejects** invalid team, identity, and bundle IDs before calling XcodeGen. The build injects `ONETAKE_SIGNING_TEAM`, `ONETAKE_HOST_BUNDLE_ID`, and `ONETAKE_RUNNER_TEST_BUNDLE_ID` from your configuration into `ios/project.yml`; you do not need to export them in the terminal. The public CLI **does not offer `--config`**: its default path is `~/.config/onetake/config.json`, with a fallback to `~/.config/contrarregra/config.json` only when the first file does not exist.
 
-## 4. Configure a senha do OBS no Chaveiro, pessoalmente
+## 4. Set up the OBS password in Keychain yourself
 
-No OBS, abra **Ferramentas → Configurações do servidor WebSocket**; ative o servidor e a autenticação, escolha uma senha forte e mantenha a porta coerente com `obs.url` (padrão `ws://127.0.0.1:4455`). Na aplicação **Acesso às Chaves** do macOS, crie um item de senha de aplicativo/genérica com **serviço/nome `contrarregra`**, **conta `OBS_WEBSOCKET_PASSWORD`** e a **mesma senha**. Verifique os atributos do item na interface antes de fechar. O nome pode ser alterado em `secrets.obsPassword`, mas o serviço legado continua `contrarregra` no código.
+In OBS, open **Tools → WebSocket Server Settings**; enable the server and authentication, choose a strong password, and keep the port consistent with `obs.url` (default `ws://127.0.0.1:4455`). In the macOS **Keychain Access** app, create an application/generic password item with **service/name `contrarregra`**, **account `OBS_WEBSOCKET_PASSWORD`**, and the **same password**. Check the item's attributes in the interface before closing it. The account name can be changed via `secrets.obsPassword`, but the legacy service remains `contrarregra` in the code.
 
-Nunca passe a senha como argumento de comando, ponha-a em JSON, `.env`, issue, prompt ou log. O OneTake a busca no Chaveiro na conexão; se faltar, devolve `E_SECRET_MISSING`. Desative o servidor WebSocket quando não estiver gravando e considere o alcance de rede configurado pelo OBS, além da senha.
+Never pass the password as a command argument or put it in JSON, `.env`, an issue, a prompt, or a log. OneTake retrieves it from Keychain when connecting; if it is missing, it returns `E_SECRET_MISSING`. Disable the WebSocket server when you are not recording, and consider the network reach configured in OBS as well as the password.
 
-## 5. Primeira operação — somente com consentimento do dono
+## 5. First operation — only with the owner's consent
 
-Com o iPhone preparado e suas configurações revisadas, `runner build` executa XcodeGen e Xcode, pode gerar provisionamento e reavalia a assinatura; `runner up` instala/inicia o runner no aparelho. **Não execute esses comandos só para testar a documentação.** A linha de base de assinatura fica ao lado do `config.json` escolhido; se já existia uma instalação, veja [migração](migration.md) antes do build.
+With the iPhone prepared and your configuration reviewed, `runner build` runs XcodeGen and Xcode, may generate provisioning, and rechecks code signing; `runner up` installs/starts the runner on the device. **Do not run these commands just to test the documentation.** The signing baseline is stored beside the selected `config.json`; if you had a previous installation, read [migration](migration.md) before building.
 
 ```sh
 ./bin/onetake runner build
@@ -88,4 +88,4 @@ Com o iPhone preparado e suas configurações revisadas, `runner build` executa 
 ./bin/onetake runner status --json
 ```
 
-Para gravar, `./bin/onetake obs setup` cria ou reconcilia o perfil/coleção configurados e pode abrir o OBS ou indicar reinício necessário: confirme essas mudanças no seu ambiente antes. O `device.name` deve corresponder ao nome exibido pelo OBS para o iPhone. **`take run --dry` ainda opera o aparelho de verdade**; somente `take validate` é verificação offline. Continue em [primeira demonstração](usage.md) e [CLI](cli.md). Para a entrada MCP existente, confira [`.mcp.json`](../.mcp.json) e [desenvolvimento](development.md); instruções específicas de agentes dependem de aprovação e não são fornecidas aqui. Nunca compartilhe a configuração local, vídeos, UDIDs ou material de assinatura num PR.
+To record, `./bin/onetake obs setup` creates or reconciles the configured profile/collection and may open OBS or indicate that a restart is needed: approve these changes in your environment first. `device.name` must match the name OBS shows for the iPhone. **`take run --dry` still operates the real device**; only `take validate` is an offline check. Continue with the [first demo](usage.md) and [CLI reference](cli.md). For the existing MCP entry, see [`.mcp.json`](../.mcp.json) and [development](development.md); agent-specific instructions are pending approval and are not provided here. Never share your local configuration, videos, UDIDs, or signing material in a PR.

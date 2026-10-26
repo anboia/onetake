@@ -1,33 +1,33 @@
-# Segurança e privacidade
+# Security and privacy
 
-OneTake controla um dispositivo físico e pode capturar conteúdo pessoal. Use apenas aparelhos, apps e contas para os quais você tem autorização. Revise roteiros e alterações de código antes de executá-los.
+OneTake controls a physical device and may capture personal content. Use only devices, apps and accounts you are authorized to access. Review scripts and code changes before running them.
 
-## Reportar uma vulnerabilidade
+## Reporting a vulnerability
 
-**Não abra uma issue pública com detalhes exploráveis, dados pessoais ou segredos.** Se o repositório oferecer **Security → Report a vulnerability**, use esse canal privado do GitHub. Sua disponibilidade depende de o mantenedor ativá-lo.
+**Do not open a public issue containing exploitable details, personal data or secrets.** If the repository offers **Security → Report a vulnerability**, use that private GitHub channel. It is available only if the maintainer has enabled it.
 
-Enquanto esse canal não estiver disponível, peça ao mantenedor, por uma issue sem detalhes técnicos sensíveis, que disponibilize um meio privado de contato. Não publique a reprodução até obter esse canal. Não há um endereço de segurança inventado nem SLA de resposta garantido.
+Until that channel is available, open an issue without sensitive technical details asking the maintainer to provide a private contact channel. Do not publish the reproduction before a private channel is available. No dedicated security email address or response SLA is currently provided.
 
-Inclua em privado: versão/commit, componente afetado, impacto, reprodução mínima com dados sintéticos e mitigação sugerida. Nunca inclua senha, token real, certificado, perfil de provisionamento, vídeo pessoal ou dump do dispositivo.
+Include privately: the version/commit, affected component, impact, a minimal reproduction using synthetic data and a suggested mitigation. Never include passwords, real tokens, certificates, provisioning profiles, personal videos or device dumps.
 
-## Escopo e suporte
+## Scope and support
 
-Projeto experimental. Correções serão avaliadas sobre o desenvolvimento atual; não há linhas de versões antigas com suporte garantido. Não há auditoria independente ou certificação de segurança implícita.
+This is an experimental project. Fixes are evaluated against current development; older release lines have no guaranteed support. No independent audit or security certification is implied.
 
-## Limites de segurança
+## Security boundaries
 
-- O runner usa token efêmero e controle de acesso por sessão. Não exponha suas portas na rede.
-- Não habilite modos experimentais de binding ou APIs privadas sem analisar os riscos.
-- Apps e URLs devem estar na allowlist; não remova proteções para contornar uma falha de teste.
-- Login, Face ID, senhas e códigos de verificação são tarefas humanas.
-- `tap` não sabe se o botão compra, apaga ou envia algo. Um toque pode ter efeito irreversível; a anotação MCP não substitui autorização.
-- `take run --dry` continua fazendo ações reais; somente `take validate` é validação offline.
-- A senha do OBS fica no Chaveiro, não no JSON, ambiente compartilhado, argumentos de processo ou repositório. O serviço legado do Chaveiro é `contrarregra`.
-- O obs-websocket pode escutar em interfaces de rede além de loopback. Use autenticação forte, firewall/rede confiável e desligue-o fora das sessões.
-- Mantenha áudio do Mac fora da trilha gravada e desative notificações por conta própria antes de gravar.
+- The runner uses an ephemeral token and per-session access control. Do not expose its ports to the network.
+- Do not enable experimental binding modes or private APIs without assessing the risks.
+- Apps and URLs must be on the allowlist; do not remove protections to work around a failing test.
+- Login, Face ID, passwords and verification codes are human tasks.
+- `tap` cannot tell whether a button purchases, deletes or sends something. A tap may have irreversible effects; the MCP annotation is not a substitute for authorization.
+- `take run --dry` still performs real actions; only `take validate` is offline validation.
+- The OBS password belongs in Keychain, not JSON, shared environment variables, process arguments or the repository. The legacy Keychain service is `contrarregra`.
+- obs-websocket may listen on network interfaces beyond loopback. Use strong authentication and a firewall/trusted network, and disable it outside sessions.
+- Keep Mac audio out of the recorded track and manually disable notifications before recording.
 
-## Antes de compartilhar arquivos
+## Before sharing files
 
-Revise capturas, vídeo, transcrições, logs e `take.json`. Remova identificadores de dispositivos, nomes pessoais, URLs privadas, dados de usuários e conteúdo do app. `.gitignore` não protege arquivos já rastreados nem o histórico.
+Review screenshots, video, transcripts, logs and `take.json`. Remove device identifiers, personal names, private URLs, user data and app content. `.gitignore` does not protect tracked files or history.
 
-Um segredo que chegou ao Git precisa ser **revogado/rotacionado**. Apagar o arquivo ou torná-lo privado não invalida o segredo. Reescrever histórico exige coordenação e autorização do titular. Consulte o [checklist de publicação](docs/publishing.md).
+A secret that has entered Git must be **revoked/rotated**. Deleting the file or making it private does not invalidate the secret. Rewriting history requires coordination and the owner's authorization. See the [publication checklist](docs/publishing.md).

@@ -1,29 +1,29 @@
-# Desenvolvimento e arquitetura
+# Development and architecture
 
-[← Contribuir](../CONTRIBUTING.md)
+[← Contributing](../CONTRIBUTING.md)
 
-## Modelo mental
+## Mental model
 
-OneTake tem dois processos principais: ferramentas TypeScript no Mac e um runner XCTest no iPhone. O OBS é um terceiro processo, controlado por WebSocket. A CLI e o MCP são adaptadores de entrada; as operações vivem em módulos compartilhados.
+OneTake has two main processes: TypeScript tools on the Mac and an XCTest runner on the iPhone. OBS is a third process, controlled over WebSocket. The CLI and MCP are entry-point adapters; the operations live in shared modules.
 
-| Caminho | Responsabilidade |
+| Path | Responsibility |
 | --- | --- |
-| `bin/` | Escolha de Node compatível e pontos de entrada CLI/MCP |
-| `mac/src/cli/`, `mac/src/mcp/` | Parsing, ferramentas registradas e formato da saída |
-| `mac/src/commands/` | Operações compartilhadas e validação de argumentos/contexto |
-| `mac/src/core/` | Tipos, schemas, erros, JSON canônico e segredos |
-| `mac/src/runner/`, `mac/src/usbmux/` | Sessões, builds, assinatura, transporte USB e reconexão |
-| `mac/src/take/` | Validação YAML, execução, checkpoints, locks e manifesto |
-| `mac/src/obs/` | Cliente obs-websocket e configuração isolada de perfil/coleção |
-| `mac/src/media/`, `clock/`, `align/` | ffmpeg, OCR, relógios e primitivas de alinhamento |
-| `ios/ContrarregraKit/` | Modelos e protocolo Foundation, testáveis sem aparelho |
-| `ios/ContrarregraRunner/` | Implementação XCTest, leitura/ações e servidor do dispositivo |
-| `ios/ContrarregraHost/` | Hospedeiro mínimo e tela de calibração |
-| `mac/test/fixtures/` | Fixtures de protocolo/artifacts; parte também consumida por Swift |
+| `bin/` | Compatible Node selection and CLI/MCP entry points |
+| `mac/src/cli/`, `mac/src/mcp/` | Argument parsing, registered tools, and output formatting |
+| `mac/src/commands/` | Shared operations and argument/context validation |
+| `mac/src/core/` | Types, schemas, errors, canonical JSON, and secrets |
+| `mac/src/runner/`, `mac/src/usbmux/` | Sessions, builds, signing, USB transport, and reconnection |
+| `mac/src/take/` | YAML validation, execution, checkpoints, locks, and manifest |
+| `mac/src/obs/` | obs-websocket client and isolated profile/collection setup |
+| `mac/src/media/`, `clock/`, `align/` | ffmpeg, OCR, clocks, and alignment primitives |
+| `ios/ContrarregraKit/` | Foundation models and protocol, testable without a device |
+| `ios/ContrarregraRunner/` | XCTest implementation, reads/actions, and device server |
+| `ios/ContrarregraHost/` | Minimal host and calibration screen |
+| `mac/test/fixtures/` | Protocol/artifact fixtures, some also consumed by Swift |
 
-`ContrarregraKit`, os targets Xcode e schemas antigos não foram renomeados por estética: uma migração interna deve considerar instalações, sessões e fixtures. Veja [migração](migration.md).
+`ContrarregraKit`, the Xcode targets, and older schemas were not renamed for cosmetic reasons: an internal migration must account for installations, sessions, and fixtures. See [migration](migration.md).
 
-## Ambiente
+## Environment
 
 ```sh
 nvm install
@@ -31,9 +31,9 @@ nvm use
 npm ci
 ```
 
-Node 22.x ≥22.18 executa TypeScript por type stripping. Não há transpile/bundle obrigatório nem `npm run build`. `tsconfig.json` usa `noEmit`, `strict`, `erasableSyntaxOnly`, ESM NodeNext e imports `.ts`. Não use sintaxe que exija emissão de JavaScript.
+Node 22.x ≥22.18 runs TypeScript through type stripping. No transpilation or bundling is required, and there is no `npm run build`. `tsconfig.json` uses `noEmit`, `strict`, `erasableSyntaxOnly`, ESM NodeNext, and `.ts` imports. Do not use syntax that requires JavaScript emission.
 
-## Testes e checks
+## Tests and checks
 
 ```sh
 npm run typecheck
@@ -43,32 +43,32 @@ swift test --package-path ios/ContrarregraKit
 git diff --check
 ```
 
-- `npm test`: `node:test`, fakes de runner, usbmuxd, OBS e Chaveiro; não é teste end-to-end no iPhone.
-- `typecheck`: contratos TypeScript, sem gerar arquivos.
-- `docs:check`: links relativos do material público, exemplos YAML e configurações públicas; não verifica disponibilidade de todos os links externos nem revisa privacidade do histórico.
-- `swift test`: XCTest dos modelos/runner core em macOS; não valida toque real ou assinatura.
+- `npm test`: `node:test` with runner, usbmuxd, OBS, and Keychain fakes; not an end-to-end iPhone test.
+- `typecheck`: checks TypeScript contracts without generating files.
+- `docs:check`: checks relative links in public documentation, YAML examples, and public configuration; it does not check every external link or review historical content for privacy.
+- `swift test`: tests the models and runner core on macOS; it does not validate real taps or signing.
 
-Para um teste específico:
+To run a specific test:
 
 ```sh
 node --test mac/test/take.choreo.test.ts
 node --test mac/test/mcp.test.ts
 ```
 
-Os testes de transporte abrem sockets locais e os de mídia usam ffmpeg/ffprobe **8.1.1**, nos caminhos de `config/defaults.json`. Execute no Mac com o runtime suportado e esses binários instalados; `npm ci` não os instala. A CI instala ffmpeg pelo Homebrew e executa os checks TypeScript/documentação e Swift em jobs separados. Se o Homebrew mudar de versão, o check estrito falhará até uma atualização de compatibilidade deliberada. A execução remota só estará comprovada depois de um push autorizado.
+Transport tests open local sockets, and media tests use ffmpeg/ffprobe **8.1.1** at the paths specified in `config/defaults.json`. Run them on a Mac with the supported runtime and those binaries installed; `npm ci` does not install them. CI installs ffmpeg through Homebrew and runs TypeScript/documentation checks and Swift checks in separate jobs. If Homebrew changes the version, the strict check will fail until compatibility is deliberately updated. Remote CI execution is only confirmed after an authorized push.
 
-## Evoluir um contrato
+## Evolving a contract
 
-1. Descubra o registro público real: `cli/main.ts` e `mcp/server.ts`.
-2. Reproduza o comportamento com teste que falha.
-3. Altere o núcleo, evitando lógica duplicada em CLI/MCP.
-4. Se mexer em JSON/protocolo, atualize Zod, tipos, modelo Swift e fixtures compartilhadas.
-5. Preserve timestamp em nanossegundos como string decimal e a canonização usada pelos hashes.
-6. Atualize ajuda, exemplo, `docs/cli.md` e `docs/agents.md` conforme aplicável.
-7. Execute os testes; relate o que exige confirmação física separada.
+1. Find the actual public registries: `cli/main.ts` and `mcp/server.ts`.
+2. Reproduce the behavior with a failing test.
+3. Change the core, avoiding duplicated CLI/MCP logic.
+4. For JSON or protocol changes, update Zod, types, the Swift model, and shared fixtures.
+5. Preserve nanosecond timestamps as decimal strings and the canonicalization used for hashes.
+6. Update help, examples, `docs/cli.md`, and `docs/agents.md` where applicable. Public and collaboration documentation must be in English; leave historical notes in `spec/` and `spikes/` in their original language unless separately authorized. `docs/agents.md` is currently absent because its write was blocked; do not bypass that protection.
+7. Run the tests; report anything that requires separate confirmation on physical hardware.
 
-## Segurança e código legado
+## Security and legacy code
 
-Nunca contorne allowlists, bloqueio de campos seguros, checkpoints humanos, locks ou verificação da identidade de assinatura para fazer um teste passar. `PrivateXCT/` é o limite para APIs privadas. Configuração deve rejeitar entradas inválidas antes de abrir conexão ou processo de hardware.
+Never bypass allowlists, secure-field blocking, human checkpoints, locks, or signing-identity checks to make a test pass. `PrivateXCT/` is the boundary for private APIs. Configuration must reject invalid inputs before opening a hardware connection or process.
 
-`spec/constitution.md` contém o modelo original de decisões; a emenda OneTake distingue regras públicas de antigas escolhas pessoais. `spec/spec.md` inclui funcionalidades planejadas e **não** prevalece sobre o estado implementado para fins de documentação de uso. Mantenha mudanças de arquitetura explícitas, pequenas e revisáveis.
+`spec/constitution.md` contains the original decision model; the OneTake amendment distinguishes public rules from earlier personal choices. `spec/spec.md` includes planned features and **does not** override the implemented behavior when documenting usage. Keep architectural changes explicit, small, and reviewable.

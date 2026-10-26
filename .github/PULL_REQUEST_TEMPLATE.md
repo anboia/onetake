@@ -1,24 +1,24 @@
-## Problema e mudança
+## Problem and change
 
-<!-- O que este PR resolve? Link da issue, se existir. Uma mudança por PR. -->
+<!-- What does this PR solve? Link the issue, if any. One change per PR. -->
 
-## Verificação executada
+## Checks performed
 
-<!-- Comandos e resultados reais; diferencie testes com fakes de teste no iPhone. -->
+<!-- Actual commands and results; distinguish tests using fakes from real iPhone tests. -->
 
 - [ ] `npm run typecheck`
 - [ ] `npm test`
 - [ ] `npm run docs:check`
-- [ ] Swift, quando aplicável: `swift test --package-path ios/ContrarregraKit`
+- [ ] Swift, when applicable: `swift test --package-path ios/ContrarregraKit`
 - [ ] `git diff --check`
 
-## Riscos / compatibilidade / não testado
+## Risks / compatibility / not tested
 
-<!-- Mudanças em schemas, assinaturas, permissões, dependências ou hardware. -->
+<!-- Changes to schemas, signing, permissions, dependencies or hardware. -->
 
-## Revisão
+## Review
 
-- [ ] Li `CONTRIBUTING.md` e a situação da licença.
-- [ ] Não incluí credenciais, mídias, identificadores reais de aparelhos nem configurações locais.
-- [ ] Atualizei os exemplos/documentos afetados.
-- [ ] Revisei o diff e os testes; IA usada (se houver):
+- [ ] I read `CONTRIBUTING.md` and the licensing terms.
+- [ ] I did not include credentials, media, real device identifiers or local configuration.
+- [ ] I updated affected examples and documentation.
+- [ ] I reviewed the diff and tests; AI assistance used (if any):

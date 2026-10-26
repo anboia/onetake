@@ -1,21 +1,21 @@
-name: Propor melhoria / Feature request
-description: Explique o problema e um caso de uso concreto.
+name: Feature request
+description: Explain the problem and a concrete use case.
 title: "[Feature]: "
 body:
   - type: textarea
     id: problem
     attributes:
-      label: Qual problema você quer resolver?
+      label: What problem do you want to solve?
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Proposta e resultado esperado
+      label: Proposal and expected outcome
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternativas e impacto
-      description: Considere segurança, mudanças de protocolo, dependências e compatibilidade.
+      label: Alternatives and impact
+      description: Consider security, protocol changes, dependencies and compatibility.

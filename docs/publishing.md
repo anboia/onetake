@@ -1,21 +1,21 @@
-# Checklist do mantenedor: publicação no GitHub
+# Maintainer checklist: publishing on GitHub
 
 [← README](../README.md)
 
-Preparar arquivos não equivale a publicar. Este trabalho não autoriza commit, push, mudança de visibilidade, upload de vídeo ou reescrita de histórico.
+File preparation does not itself authorize a commit, push, visibility change, video upload, or history rewrite. Obtain explicit authorization for each publication action.
 
-## Bloqueios antes de abrir a visibilidade
+## Blockers before making the repository public
 
-- [x] **Licença:** MIT escolhida pelo titular, em `LICENSE`, manifesto e guias de contribuição. Preserve atribuições de terceiros.
-- [ ] **Privacidade do histórico:** revise todo o histórico, incluindo `.claude/handoffs/`, `spec/`, `spikes/` e a coreografia do app original. Há contexto pessoal/de operação que não deve ser publicado automaticamente.
-- [ ] **Triagem do scanner:** Gitleaks 8.30.1 foi executado sobre 61 commits (`--all`, valores redigidos) e apontou 9 ocorrências `generic-api-key`, em testes/fixtures. Elas ainda exigem triagem: estar em teste não prova que um valor é fictício. Se houver segredo real, revogue/rotacione primeiro. O scan não substitui revisão de dados pessoais nem garante ausência de segredos desconhecidos.
-- [ ] **Material demonstrativo:** obtenha autorização antes de reutilizar nome de app, vídeo, áudio, telas, dados de terceiros ou links de entrega. Não publique a gravação existente só porque há uma URL acessível.
-- [ ] **Instruções de agentes protegidas:** `AGENTS.md`, `CLAUDE.md` e `docs/agents.md` tiveram a gravação bloqueada por expiração da aprovação de segurança, mesmo após o titular autorizar nova tentativa. Permanecem ausentes; não prometa descoberta automática desses arquivos nem contorne a proteção por outro mecanismo.
-- [ ] **Revisão da migração:** confira defaults sem identificadores pessoais, configuração explícita do usuário e compatibilidade de instalações antigas.
+- [x] **License:** The owner chose MIT, recorded in `LICENSE`, the manifest, and contribution guides. Preserve third-party attributions.
+- [ ] **History privacy:** Review the entire history, including `.claude/handoffs/`, `spec/`, `spikes/`, and the original app's choreography. It contains personal and operational context that must not be published automatically.
+- [ ] **Scanner triage:** Gitleaks 8.30.1 was run over 61 commits (`--all`, values redacted) and flagged 9 `generic-api-key` occurrences in tests/fixtures. They still need triage: being in a test does not prove a value is fake. Revoke or rotate any real secret first. The scan does not replace a personal-data review or guarantee that unknown secrets are absent.
+- [ ] **Demo material:** Obtain permission before reusing an app name, video, audio, screens, third-party data, or delivery links. Do not publish the existing recording just because a URL is accessible.
+- [ ] **Protected agent instructions:** Writes to `AGENTS.md`, `CLAUDE.md`, and `docs/agents.md` were blocked when security approval expired, even after the owner authorized another attempt. These files remain absent; do not promise automatic discovery of them or bypass the protection by other means.
+- [ ] **Migration review:** Check for defaults free of personal identifiers, explicit user configuration, and compatibility with older installations.
 
-`.gitignore` não remove arquivos já rastreados. Decida com o titular se o repositório existente terá histórico revisado ou se haverá um repositório público inicial separado. Não use `git filter-repo`, force-push ou exclusão de arquivos/histórico sem autorização explícita.
+`.gitignore` does not remove files already tracked by Git. Decide with the owner whether to review the existing repository history or create a separate initial public repository. Do not use `git filter-repo`, force-push, or delete files/history without explicit authorization.
 
-## Validação local
+## Local validation
 
 ```sh
 nvm use
@@ -29,26 +29,26 @@ git diff --check
 git status --short
 ```
 
-Faça também uma instalação a partir de checkout limpo e um teste no aparelho autorizado, verificando assinatura, transporte, OBS e vídeo. Testes com fakes não comprovam essa etapa. Não gere certificado automaticamente para contornar uma falha.
+Also install from a clean checkout and test on an authorized device, checking signing, transport, OBS, and video. Tests with fakes do not establish this. Do not automatically generate a certificate to work around a failure.
 
-## Configuração no GitHub — aplicar apenas com autorização
+## GitHub setup — apply only with authorization
 
-- **Nome:** `onetake`; título de produto **OneTake**.
-- **Descrição sugerida:** `Repeatable iPhone demos with XCUITest, YAML and OBS. CLI + MCP for macOS.`
-- **Topics sugeridos:** `ios`, `iphone`, `xcuitest`, `obs-studio`, `mcp`, `automation`, `developer-tools`, `demo`.
-- Habilite Issues; use os formulários e o template de PR versionados.
-- Habilite **private vulnerability reporting**, Dependabot alerts e secret scanning/push protection onde disponíveis.
-- Configure proteção/ruleset da branch principal: checks `TypeScript and docs` e `Swift models`, revisão antes do merge, bloqueio de force-push e deleção. Confirme os nomes após o primeiro run real.
-- Revise permissões do GitHub Actions; os workflows versionados usam `contents: read` e não acessam segredos de produção.
-- Confira **Insights → Community Standards** e a detecção da licença MIT após o push.
-- Só depois do push autorizado confirme a execução remota da CI e a renderização dos READMEs/links.
+- **Name:** `onetake`; product name **OneTake**.
+- **Suggested description:** `Repeatable iPhone demos with XCUITest, YAML and OBS. CLI + MCP for macOS.`
+- **Suggested topics:** `ios`, `iphone`, `xcuitest`, `obs-studio`, `mcp`, `automation`, `developer-tools`, `demo`.
+- Enable Issues; use the checked-in issue forms and PR template.
+- Enable **private vulnerability reporting**, Dependabot alerts, and secret scanning/push protection where available.
+- Configure main-branch protection/rulesets: checks `TypeScript and docs` and `Swift models`, review before merge, and blocks on force-push and deletion. Confirm the check names after the first actual run.
+- Review GitHub Actions permissions; the checked-in workflows use `contents: read` and do not access production secrets.
+- Check **Insights → Community Standards** and MIT license detection after a push.
+- Only after an authorized push, confirm remote CI execution and README/link rendering.
 
-## Apresentação pública
+## Public presentation
 
-A primeira tela deve explicar problema, benefício, público e limites; o README atual faz isso sem depender de vídeo privado. Depois de aprovar material demonstrativo, adicione um clipe curto com legenda, dados de teste e link claro. Não fabrique screenshots nem badges de CI, downloads ou popularidade.
+The first screen should explain the problem, benefit, audience, and limitations; the current README does this without relying on private video. After demo material is approved, add a short captioned clip with test data and a clear link. Do not fabricate screenshots or CI, download, or popularity badges.
 
-Mantenha o caminho rápido **validar sem hardware → configurar conscientemente → executar**. Atualize português e inglês juntos. Use docs relativas para que forks e outras branches continuem navegáveis.
+Keep the quick path **validate without hardware → configure deliberately → run**. Maintain public and collaboration documentation in English; preserve historical notes in `spec/` and `spikes/` in their original language pending a separate scope decision. Use relative documentation links so forks and other branches remain navigable.
 
-## Primeiro release
+## First release
 
-Não há promessa de pacote npm ou binário distribuído. `private: true` fica no manifesto enquanto a instalação for pelo código-fonte. Antes de um release, escolha versão, escreva notas com funcionalidades reais e limites, execute a matriz de checks e publique somente com aprovação do titular. Uma tag não torna recursos planejados em `spec/` disponíveis.
+There is no promise of a published npm package or distributed binary. `private: true` remains in the manifest while installation is from source. Before a release, choose a version, write notes about actual features and limitations, run the check matrix, and publish only with the owner's approval. A tag does not make planned features in `spec/` available.

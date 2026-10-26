@@ -1,38 +1,38 @@
 # OneTake
 
-### Demonstrações de iPhone que você pode repetir.
+### Repeatable iPhone demos.
 
-**Descreva o roteiro em YAML. Opere um iPhone real. Grave com o OBS.**
+**Write your script in YAML. Control a real iPhone. Record with OBS.**
 
-OneTake combina automação por XCUITest, gravação e pontos de intervenção humana para quem precisa demonstrar um aplicativo sem repetir manualmente cada toque. A CLI executa os roteiros; o servidor MCP permite que um agente de IA inspecione a interface e ajude a preparar a demonstração.
+OneTake combines XCUITest automation, recording and human checkpoints for developers who need to demonstrate an app without manually repeating every tap. The CLI runs your scripts; the MCP server lets an AI agent inspect the interface and help prepare the demonstration.
 
-[Instalação](docs/installation.md) · [Primeira demonstração](docs/usage.md) · [Contribuir](CONTRIBUTING.md) · [English](README.en.md)
+[Installation](docs/installation.md) · [Your first demo](docs/usage.md) · [Contributing](CONTRIBUTING.md)
 
-> **Experimental — instalação a partir do código-fonte, sob licença MIT.** Destinado a desenvolvedores com um Mac e um iPhone físico. Não é um aplicativo da App Store, não há pacote npm público mantido por este projeto e a configuração inicial exige Xcode e assinatura Apple.
+> **Experimental — source-only installation, licensed under MIT.** Intended for developers with a Mac and a physical iPhone. This is not an App Store application, the project does not maintain a public npm package, and initial setup requires Xcode and Apple development signing.
 
-## Para que serve?
+## What is it for?
 
-- **Demos de produto:** reutilize cenas, seletores e verificações em um roteiro versionado.
-- **Evidências de QA e revisão:** registre uma execução real, com os resultados dos passos em `take.json`.
-- **Preparação assistida por IA:** leia a árvore de acessibilidade, veja a tela e teste alvos via MCP.
-- **Fluxos com intervenção humana:** pause quando login, Face ID ou outra decisão exigir a pessoa responsável.
+- **Product demos:** reuse scenes, selectors and checks in a version-controlled script.
+- **QA and review evidence:** record a real execution, with step results in `take.json`.
+- **AI-assisted preparation:** read the accessibility tree, inspect the screen and test targets through MCP.
+- **Human-in-the-loop workflows:** pause when login, Face ID or another decision requires the person responsible.
 
-O aplicativo demonstrado não precisa integrar um SDK do OneTake. Ele continua separado do aplicativo hospedeiro e do runner de testes instalados pelo Xcode.
+The app being demonstrated does not need to integrate a OneTake SDK. It remains separate from the host app and test runner installed by Xcode.
 
 ```mermaid
 flowchart LR
-  A[Roteiro YAML] --> B[OneTake CLI]
-  B --> C[iPhone real · USB · XCUITest]
-  B --> D[OBS · gravação]
-  E[Agente de IA] --> F[OneTake MCP]
+  A[YAML script] --> B[OneTake CLI]
+  B --> C[Real iPhone · USB · XCUITest]
+  B --> D[OBS · recording]
+  E[AI agent] --> F[OneTake MCP]
   F --> C
-  D --> G[Vídeo local]
+  D --> G[Local video]
   B --> H[take.json]
 ```
 
-## Experimente sem conectar um iPhone
+## Try it without connecting an iPhone
 
-Instale [Node com nvm](https://github.com/nvm-sh/nvm#installing-and-updating), depois:
+Install [Node with nvm](https://github.com/nvm-sh/nvm#installing-and-updating), then:
 
 ```sh
 git clone https://github.com/anboia/onetake.git
@@ -44,59 +44,61 @@ npm ci
 ./bin/onetake take validate examples/first-take.choreo.yaml --json
 ```
 
-Esses comandos instalam as dependências, mostram a ajuda e validam um exemplo **sem operar o aparelho nem abrir o OBS**. Enquanto o repositório for privado, o clone exige acesso concedido pelo titular.
+These commands install dependencies, display help and validate an example **without controlling a device or opening OBS**. While the repository is private, cloning requires access granted by its owner.
 
-Para executar e gravar, siga a [instalação completa](docs/installation.md) e adapte o [exemplo comentado](examples/first-take.choreo.yaml) ao seu app. O exemplo é um modelo, não um aplicativo incluído no projeto.
+To run and record a demo, follow the [full installation guide](docs/installation.md) and adapt the [annotated example](examples/first-take.choreo.yaml) to your app. The example is a template, not an application bundled with the project.
 
-> **Atenção:** `take run --dry` executa ações reais no iPhone; apenas não grava no OBS. Para conferir somente o arquivo, use `take validate`.
+> **Warning:** `take run --dry` performs real actions on the iPhone; it only disables OBS recording. To check the file without operating a device, use `take validate`.
 
-## O que funciona hoje
+## Current capabilities
 
-| Interface | Disponível |
+| Interface | Available |
 | --- | --- |
-| CLI | Construir, iniciar e parar o runner; consultar estado; configurar OBS; validar, executar e controlar tomadas |
+| CLI | Build, start and stop the runner; inspect status; configure OBS; validate, execute and control takes |
 | MCP | `doctor`, `device_status`, `screenshot`, `ui_tree`, `tap` |
-| Roteiros | Cenas YAML, alvos de acessibilidade/OCR/coordenadas, condições, checkpoints e seleção de trechos |
-| Gravação | OBS via obs-websocket v5, saída local e registro da execução |
-| Desenvolvimento | Testes TypeScript, tipos estritos e testes Swift sem aparelho |
+| Scripts | YAML scenes, accessibility/OCR/coordinate targets, conditions, checkpoints and partial execution |
+| Recording | OBS through obs-websocket v5, local output and execution records |
+| Development | TypeScript tests, strict types and Swift tests without a device |
 
-**Não prometa a si mesmo o que ainda não está integrado:** o MCP não inicia gravações; não há um fluxo público completo de pós-produção com um único comando; Android, Windows e Linux não são plataformas de operação. A especificação em `spec/` contém trabalho futuro e decisões históricas, não uma lista de funcionalidades já entregues. Veja [estado e limitações](docs/status.md).
+**Know what is not yet integrated:** MCP does not start recordings; there is no complete, one-command public post-production workflow; Android, Windows and Linux are not supported operating platforms. The specification in `spec/` includes planned work and historical decisions, not a list of shipped features. See [status and limitations](docs/status.md).
 
-## Requisitos para gravar
+## Recording requirements
 
-- Mac, inicialmente com Apple Silicon e ferramentas Homebrew nos caminhos documentados.
-- Node **22.x, a partir de 22.18**; outros majors são recusados pelo launcher.
-- Xcode com SDK iOS 26, XcodeGen e identidade Apple Development já configurada.
-- iPhone físico com iOS 26.x, Modo de Desenvolvedor, confiança no Mac e cabo USB.
-- OBS com obs-websocket v5, ffmpeg/ffprobe e espaço em disco.
+- A Mac; the initial setup targets Apple Silicon and the documented Homebrew paths.
+- Node **22.x, starting at 22.18**; the launcher rejects other major versions.
+- Xcode with the iOS 26 SDK, XcodeGen and an existing Apple Development signing identity.
+- A physical iPhone running iOS 26.x, with Developer Mode enabled, trust established with the Mac and a USB cable.
+- OBS with obs-websocket v5, ffmpeg/ffprobe and available disk space.
 
-Veja as [versões de referência e os limites de compatibilidade](docs/installation.md). Ter uma versão mais recente não comprova compatibilidade com o runner.
+See the [reference versions and compatibility limits](docs/installation.md). A newer version does not establish compatibility with the runner.
 
-## Usar com agentes de IA
+## Working with AI agents
 
-O repositório inclui estas entradas complementares:
+The repository provides these complementary entry points:
 
-- [Guia de desenvolvimento](docs/development.md): comandos, arquitetura e contratos para agentes que modificam o código. A ativação de `AGENTS.md` e `CLAUDE.md` aguarda autorização de escrita.
-- [Configuração MCP](.mcp.json): integração stdio do cliente, com o launcher `bin/onetake-mcp`. O guia detalhado `docs/agents.md` também aguarda liberação de escrita no ambiente de edição.
-- [`llms.txt`](llms.txt): índice enxuto da documentação para ferramentas de recuperação de contexto.
+- [Development guide](docs/development.md): commands, architecture and contracts for agents that modify the code. Creation of `AGENTS.md` and `CLAUDE.md` is pending write approval.
+- [MCP configuration](.mcp.json): stdio client integration through the `bin/onetake-mcp` launcher. The detailed `docs/agents.md` guide is also pending write approval in the editing environment.
+- [`llms.txt`](llms.txt): a compact documentation index for context-retrieval tools.
 
-O servidor anuncia os schemas das ferramentas no próprio protocolo. Não é necessário ensinar ao agente uma API inventada ou copiar toda a especificação para o prompt.
+The server advertises its tool schemas through the protocol itself. Agents can discover the actual interface rather than rely on a guessed API or a copy of the entire specification in a prompt.
 
-## Colabore
+## Contributing
 
-Comece pelo [guia de contribuição](CONTRIBUTING.md). Correções na documentação, exemplos genéricos, testes de seletores e relatos de compatibilidade são boas primeiras contribuições. Discuta mudanças grandes antes de implementá-las.
+Start with the [contribution guide](CONTRIBUTING.md). Documentation fixes, generic examples, selector tests and compatibility reports are useful first contributions. Discuss major changes before implementing them.
 
-- [Arquitetura e testes](docs/development.md)
-- [Código de conduta](CODE_OF_CONDUCT.md)
-- [Segurança e privacidade](SECURITY.md)
-- [Preparação da publicação](docs/publishing.md)
+- [Architecture and testing](docs/development.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
+- [Security and privacy](SECURITY.md)
+- [Publication checklist](docs/publishing.md)
 
-**Nunca envie vídeos pessoais, credenciais, certificados, UDIDs reais ou configurações da sua máquina em um pull request.**
+**Never include personal videos, credentials, certificates, real UDIDs or your machine configuration in a pull request.**
 
-## Nome e compatibilidade
+## Naming and compatibility
 
-OneTake é o nome público do projeto anteriormente chamado Contrarregra. Os comandos novos são `onetake` e `onetake-mcp`; os launchers antigos continuam disponíveis. Alguns nomes de módulos Swift, identificadores de protocolo e o serviço do Chaveiro permanecem estáveis para não invalidar instalações e arquivos existentes. Consulte [migração](docs/migration.md).
+OneTake is the public name of the project previously called Contrarregra. The new commands are `onetake` and `onetake-mcp`; legacy launchers remain available. Some Swift module names, protocol identifiers and the Keychain service stay unchanged to preserve existing installations and files. See [migration](docs/migration.md).
 
-## Licença
+Public documentation and contribution templates are maintained in English. Historical specifications, research, experiment reports and internal handoffs retain their original language; they are not the current onboarding documentation.
 
-[MIT](LICENSE). Você pode usar, modificar e redistribuir o código conforme os termos da licença, preservando os avisos exigidos. Dependências mantêm suas próprias licenças. `private: true` no manifesto impede publicação acidental no npm; não define a visibilidade no GitHub nem restringe a licença MIT. Publicação de gravações e dados pessoais exige autorização separada. [Checklist de publicação](docs/publishing.md).
+## License
+
+[MIT](LICENSE). You may use, modify and redistribute the code under the license terms, retaining the required notices. Dependencies retain their own licenses. `private: true` in the package manifest prevents accidental npm publication; it does not determine GitHub visibility or restrict the MIT license. Publishing recordings and personal data requires separate permission. See the [publication checklist](docs/publishing.md).
