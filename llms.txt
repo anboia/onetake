@@ -7,6 +7,7 @@ Experimental, source-only installation under the MIT license. Requires Node 22.x
 ## Start here
 
 - [Overview](README.md): Product scope, quick start and limits.
+- [Portuguese overview](README.pt.md): Complete Brazilian Portuguese translation of the README; detailed guides remain in English.
 - [Installation](docs/installation.md): Local dependencies, signing, configuration and OBS.
 - [Usage](docs/usage.md): Validate a script, rehearse, record and handle pauses.
 - [CLI reference](docs/cli.md): Commands actually registered, flags and exit codes.

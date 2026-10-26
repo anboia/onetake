@@ -12,7 +12,7 @@ Thank you for helping make iPhone demos more reproducible. Documentation, clear 
 - **Compatibility:** report macOS, Xcode, iOS, Node and OBS versions; do not include a UDID, serial number, tokens or signing identity.
 - **Feature:** open an issue before changing the protocol, security, dependencies or architecture.
 
-Use English for documentation, examples and contribution templates. Discussions and reports are welcome in English or Portuguese. Be specific and follow the [code of conduct](CODE_OF_CONDUCT.md). Report security vulnerabilities according to [SECURITY.md](SECURITY.md), not through public issues.
+Use English for documentation, examples and contribution templates, except for the [Portuguese README](README.pt.md). Keep `README.md` and `README.pt.md` in sync when changing product information, commands or safety warnings; preserve command and protocol identifiers exactly. `README.en.md` remains a compatibility link to the main README. Discussions and reports are welcome in English or Portuguese. Be specific and follow the [code of conduct](CODE_OF_CONDUCT.md). Report security vulnerabilities according to [SECURITY.md](SECURITY.md), not through public issues.
 
 ## Set up your environment
 
@@ -40,7 +40,7 @@ TypeScript checking and Swift model tests do not require signing or an iPhone. O
 6. **Security is not negotiable.** Preserve allowlists, human checkpoints, secure-field exclusions, ephemeral tokens and OBS profile isolation.
 7. **Document what exists.** When changing an option or tool, update help text, examples and guides. An internal function does not imply a public command.
 
-Use ESM imports with the `.ts` extension, `import type` where applicable, single quotes and semicolons in TypeScript. Follow the surrounding file's style in Swift. Write public documentation, identifiers and filenames in English. Historical specifications, research, spike reports and internal handoffs retain their original language. See the [development guide](docs/development.md).
+Use ESM imports with the `.ts` extension, `import type` where applicable, single quotes and semicolons in TypeScript. Follow the surrounding file's style in Swift. Write public documentation in English except for `README.pt.md`; keep identifiers and filenames in English. Historical specifications, research, spike reports and internal handoffs retain their original language. See the [development guide](docs/development.md).
 
 ## Using AI
 

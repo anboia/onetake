@@ -1,5 +1,7 @@
 # OneTake
 
+**English** · [Português (Brasil)](README.pt.md)
+
 ### Repeatable iPhone demos.
 
 **Write your script in YAML. Control a real iPhone. Record with OBS.**
@@ -97,7 +99,7 @@ Start with the [contribution guide](CONTRIBUTING.md). Documentation fixes, gener
 
 OneTake is the public name of the project previously called Contrarregra. The new commands are `onetake` and `onetake-mcp`; legacy launchers remain available. Some Swift module names, protocol identifiers and the Keychain service stay unchanged to preserve existing installations and files. See [migration](docs/migration.md).
 
-Public documentation and contribution templates are maintained in English. Historical specifications, research, experiment reports and internal handoffs retain their original language; they are not the current onboarding documentation.
+Public documentation and contribution templates are maintained in English, with a complete [Portuguese README](README.pt.md) also available. Keep both README versions in sync when updating the overview, requirements or quick start. Historical specifications, research, experiment reports and internal handoffs retain their original language; they are not the current onboarding documentation.
 
 ## License
 

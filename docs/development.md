@@ -64,7 +64,7 @@ Transport tests open local sockets, and media tests use ffmpeg/ffprobe **8.1.1**
 3. Change the core, avoiding duplicated CLI/MCP logic.
 4. For JSON or protocol changes, update Zod, types, the Swift model, and shared fixtures.
 5. Preserve nanosecond timestamps as decimal strings and the canonicalization used for hashes.
-6. Update help, examples, `docs/cli.md`, and `docs/agents.md` where applicable. Public and collaboration documentation must be in English; leave historical notes in `spec/` and `spikes/` in their original language unless separately authorized. `docs/agents.md` is currently absent because its write was blocked; do not bypass that protection.
+6. Update help, examples, `docs/cli.md`, and `docs/agents.md` where applicable. Public and collaboration documentation must be in English, except for `README.pt.md`; keep the English and Portuguese READMEs in sync. Leave historical notes in `spec/` and `spikes/` in their original language unless separately authorized. `docs/agents.md` is currently absent because its write was blocked; do not bypass that protection.
 7. Run the tests; report anything that requires separate confirmation on physical hardware.
 
 ## Security and legacy code

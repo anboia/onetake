@@ -28,7 +28,7 @@ function markdownFiles(dir: string): string[] {
 }
 
 export function checkDocs(root: string): { files: number; errors: string[] } {
-  const files = ['README.md', 'README.en.md', 'CONTRIBUTING.md', 'SECURITY.md', 'CODE_OF_CONDUCT.md', 'llms.txt']
+  const files = ['README.md', 'README.en.md', 'README.pt.md', 'CONTRIBUTING.md', 'SECURITY.md', 'CODE_OF_CONDUCT.md', 'llms.txt']
     .map((file) => join(root, file));
   files.push(...markdownFiles(join(root, 'docs')), ...markdownFiles(join(root, '.github')));
   const errors = files.flatMap((file) => checkMarkdownLinks(readFileSync(file, 'utf8'), file, root));

@@ -1,5 +1,7 @@
 # OneTake
 
+[English](README.md) · [Português (Brasil)](README.pt.md)
+
 The English documentation now lives in the main [README](README.md).
 
 This page is retained so existing links continue to work. Use the main README as the single source for the overview, requirements and quick start.
