@@ -1,4 +1,26 @@
-# Contrarregra — Constituição (invariantes do projeto)
+# OneTake — Constituição e contexto histórico
+
+## Emenda de preparação pública — prevalece sobre escolhas pessoais abaixo
+
+O pedido do titular para preparar **OneTake** para colaboração substitui o nome público antigo e
+o requisito de usar um aparelho, time Apple e certificado específicos do autor. Novas instalações
+devem declarar sua própria configuração; nunca inferir uma identidade ou operar o aparelho do autor.
+O build continua verificando a identidade explicitamente escolhida, sem criar certificados para
+contornar falhas. Defaults não carregam identificadores pessoais.
+
+CLI/MCP públicos: `onetake` / `onetake-mcp`; nomes de protocolo, módulos Swift e serviço do Chaveiro
+legados permanecem por compatibilidade. Documentação de uso atual: `README.md` e `docs/`.
+O conteúdo abaixo registra a implantação original; seus marcos de versão, metas futuras e regras
+editoriais de um vídeo específico não são promessas de funcionalidades públicas já implementadas.
+
+As proteções de credenciais, allowlists, intervenção humana, assinatura explícita e isolamento do
+OBS continuam válidas. Publicar código, mudar visibilidade ou reescrever histórico ainda exige
+autorização específica; o titular escolheu a licença MIT, registrada em `LICENSE`. A atualização de Zod para 4.6.7 corrige a
+vulnerabilidade detectada por `npm audit`, sem adicionar uma nova dependência.
+
+---
+
+# Registro original: Contrarregra — Constituição
 
 **Status:** RATIFIED 2026-10-06
 

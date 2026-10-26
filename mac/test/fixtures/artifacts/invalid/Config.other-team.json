@@ -1,6 +1,6 @@
-{"type": "Config", "expect": {"path": "signing.team", "rule": "value", "code": "E_CONFIG"}, "value": {
+{"type": "Config", "expect": {"path": "signing.team", "rule": "custom", "code": "E_CONFIG"}, "value": {
   "device": {"udid": "00008101-001E79203A68001E", "coreDeviceId": "DC77A78E-5E8D-5825-B2EE-C297FBC14ABD", "name": "VIVO_00G7"},
-  "signing": {"team": "V4397KJVXZ", "identity": "Apple Development: Andre Saboia (6NKUX5CX7G)"},
+  "signing": {"team": "INVALID!", "identity": "Apple Development: Example User (EXAMPLE123)"},
   "bundle": {"host": "app.kifactory.contrarregra", "runnerTest": "app.kifactory.contrarregra.runner", "displayNames": ["Contrarregra", "ContrarregraRunner-Runner"]},
   "runner": {"port": 8700, "privateAllowed": []},
   "usbmux": {"socketPath": "/var/run/usbmuxd"},

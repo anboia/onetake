@@ -32,3 +32,23 @@ node_modules/
 
 # Saídas dos spikes
 spikes/sp-*/out/
+
+# Machine configuration, secrets and local tooling state
+.env
+.env.*
+!.env.example
+config/local*.json
+config/*.local.json
+.mcp.local.json
+.DS_Store
+*.pem
+*.key
+*.keystore
+.swiftpm/
+DerivedData/
+coverage/
+
+# Keep new session notes and local choreographies private (tracked history is unchanged)
+.claude/handoffs/
+.hermes/
+choreographies/local/

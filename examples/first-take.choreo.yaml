@@ -1,0 +1,36 @@
+# OneTake: modelo de uma cena. Validar é offline; executar toca no iPhone real.
+# Substitua app, versão, idioma, tela e seletores pelos do seu aplicativo.
+# O schema legado é intencional: não o renomeie para onetake.*.
+schema: contrarregra.choreography/1
+app:
+  bundleId: com.example.demo
+  iconLabel: Demo
+  expectVersion: "1.0.0"
+  urlPrefixes: []
+device:
+  language: en
+  screenPt: { w: 390, h: 844 }
+  textSize: UICTContentSizeCategoryL
+  appearance: light
+targets:
+  # Prefira um rótulo observado via ui_tree; não adivinhe as coordenadas.
+  continueButton: { label: Continue, type: button }
+# Abra manualmente o app e deixe a tela inicial pronta antes de executar.
+prepare: []
+scenes:
+  - id: s01
+    title: Primeira interação
+    steps:
+      - id: s01.ready
+        do: waitFor
+        condition: { element: { ref: continueButton }, state: hittable }
+        timeoutMs: 10000
+        onFail: abort
+      - id: s01.continue
+        do: tap
+        target: { ref: continueButton }
+        onFail: abort
+      - id: s01.hold
+        do: wait
+        ms: 1000
+cleanup: []

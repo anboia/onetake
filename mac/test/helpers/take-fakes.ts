@@ -395,7 +395,7 @@ export function takeEnv(): TakeEnv {
   const choreoDir = join(root, 'choreographies', 'demo');
   mkdirSync(choreoDir, { recursive: true });
   const configPath = join(root, 'config.json');
-  writeFileSync(configPath, JSON.stringify({ paths: { takes, cache } }));
+  writeFileSync(configPath, JSON.stringify({ paths: { takes, cache }, device: { name: 'VIVO_00G7' } }));
   const config = loadConfig({ configPath });
   return { root, config, configPath, takes, cache, choreoDir, cleanup: () => rmSync(root, { recursive: true, force: true }) };
 }

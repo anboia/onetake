@@ -1,20 +1,39 @@
 {
-  "name": "contrarregra",
+  "name": "onetake",
   "version": "0.0.0",
   "private": true,
-  "description": "Opera um iPhone físico por XCUITest e grava demos coreografadas pelo OBS; CLI e servidor MCP.",
+  "description": "Repeatable iPhone demos, from a YAML script to an OBS recording. CLI and MCP for macOS.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anboia/onetake.git"
+  },
+  "homepage": "https://github.com/anboia/onetake#readme",
+  "bugs": {
+    "url": "https://github.com/anboia/onetake/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ios",
+    "iphone",
+    "xcuitest",
+    "obs",
+    "mcp",
+    "demo",
+    "automation"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22.18 <23"
   },
   "scripts": {
     "test": "node --test \"mac/test/**/*.test.ts\"",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "docs:check": "node mac/tools/check-docs.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.3.0",
     "yaml": "2.9.1",
-    "zod": "4.6.5"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.0",

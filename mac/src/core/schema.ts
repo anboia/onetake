@@ -13,7 +13,7 @@
 
 import { z } from 'zod';
 
-import { type Config, REQUIRED_TEAM } from './config.ts';
+import { type Config, APPLE_TEAM, APPLE_DEVELOPMENT_IDENTITY } from './config.ts';
 import { ContrarregraError, type ErrorCode, RPC_ERROR_CODES } from './errors.ts';
 import { jcsSha256 } from './jcs.ts';
 import {
@@ -621,10 +621,10 @@ export function choreographySha256(doc: CompiledChoreography): string {
 // ── S0.1 Configuração ─────────────────────────────────────────────────────────────────────────────
 
 export const ConfigSchema: z.ZodType<Config> = z.strictObject({
-  device: z.strictObject({ udid: NonEmpty, coreDeviceId: NonEmpty, name: NonEmpty }),
+  device: z.strictObject({ udid: z.string(), coreDeviceId: z.string(), name: z.string() }),
   signing: z.strictObject({
-    team: z.literal(REQUIRED_TEAM, `o time de assinatura é fixo em ${REQUIRED_TEAM} (P-3)`),
-    identity: NonEmpty,
+    team: z.string().refine((value) => value === '' || APPLE_TEAM.test(value), 'Apple Team ID inválido'),
+    identity: z.string().refine((value) => value === '' || APPLE_DEVELOPMENT_IDENTITY.test(value), 'identidade Apple Development inválida'),
     ascKeyPath: z.string().optional(),
   }),
   bundle: z.strictObject({ host: NonEmpty, runnerTest: NonEmpty, displayNames: z.array(NonEmpty) }),
@@ -643,7 +643,7 @@ export const ConfigSchema: z.ZodType<Config> = z.strictObject({
     flashSource: NonEmpty,
   }),
   secrets: z.strictObject({ obsPassword: NonEmpty }),
-  alerts: z.strictObject({ sayDevice: NonEmpty, voice: NonEmpty }),
+  alerts: z.strictObject({ sayDevice: z.string(), voice: NonEmpty }),
   guide: z.strictObject({
     voice: NonEmpty,
     targetWpm: PosInt,

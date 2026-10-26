@@ -7,10 +7,10 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio';
 
 import { createContrarregraServer } from './server.ts';
 
-process.stderr.write(`contrarregra-mcp: Node ${process.version} em ${process.execPath}\n`);
+process.stderr.write(`onetake-mcp: Node ${process.version} em ${process.execPath}\n`);
 
 const handle = serveStdio(() => createContrarregraServer(), {
-  onerror: (error) => process.stderr.write(`contrarregra-mcp: ${error.message}\n`),
+  onerror: (error) => process.stderr.write(`onetake-mcp: ${error.message}\n`),
 });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {

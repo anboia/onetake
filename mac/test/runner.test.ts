@@ -170,6 +170,9 @@ rec="$dir/calls/$tool.$$"
   if [ -p /dev/fd/0 ]; then echo stdin=pipe; elif [ -c /dev/fd/0 ]; then echo stdin=chardev; else echo stdin=other; fi
   if [ -p /dev/fd/1 ]; then echo stdout=pipe; elif [ -f /dev/fd/1 ]; then echo stdout=file; else echo stdout=other; fi
   if [ -p /dev/fd/2 ]; then echo stderr=pipe; elif [ -f /dev/fd/2 ]; then echo stderr=file; else echo stderr=other; fi
+  echo "env_ONETAKE_HOST_BUNDLE_ID=\${ONETAKE_HOST_BUNDLE_ID-}"
+  echo "env_ONETAKE_RUNNER_TEST_BUNDLE_ID=\${ONETAKE_RUNNER_TEST_BUNDLE_ID-}"
+  echo "env_ONETAKE_SIGNING_TEAM=\${ONETAKE_SIGNING_TEAM-}"
   for a in "$@"; do echo "arg=$a"; done
 } > "$rec.tmp" && mv "$rec.tmp" "$rec"
 `;
@@ -304,6 +307,7 @@ interface Call {
   stdout: string;
   stderr: string;
   args: string[];
+  environment: Record<string, string>;
   mtimeMs: number;
 }
 
@@ -550,6 +554,8 @@ async function setup(options: SetupOptions = {}): Promise<Env> {
       apps: { allowed: ['com.example.other'] },
       urls: { allowedPrefixes: ['https://example.com/'] },
       app: { explore: 'com.example.target' },
+      signing: { team: TEAM, identity: IDENTITY },
+      device: { udid: UDID, coreDeviceId: CORE_DEVICE_ID, name: 'Test iPhone' },
       ...options.config,
     }),
   );
@@ -602,7 +608,7 @@ function calls(env: Env, tool: string): Call[] {
     .filter((name) => name.startsWith(`${tool}.`) && !name.endsWith('.tmp'))
     .map((name) => {
       const path = join(dir, name);
-      const call: Call = { tool, pid: 0, pgid: 0, stdin: '', stdout: '', stderr: '', args: [], mtimeMs: statSync(path).mtimeMs };
+      const call: Call = { tool, pid: 0, pgid: 0, stdin: '', stdout: '', stderr: '', args: [], environment: {}, mtimeMs: statSync(path).mtimeMs };
       for (const line of readFileSync(path, 'utf8').split('\n')) {
         const eq = line.indexOf('=');
         if (eq < 0) continue;
@@ -614,6 +620,7 @@ function calls(env: Env, tool: string): Call[] {
         else if (key === 'stdin') call.stdin = value;
         else if (key === 'stdout') call.stdout = value;
         else if (key === 'stderr') call.stderr = value;
+        else if (key.startsWith('env_')) call.environment[key.slice(4)] = value;
       }
       return call;
     })
@@ -759,6 +766,42 @@ describe('.xctestrun da sessão (S2 item 1, S1 item 9)', () => {
 // ── runner build ────────────────────────────────────────────────────────────────────────────────────
 
 describe('runner build (S2 item 1, D3.3)', () => {
+  test('sem time configurado falha antes de chaveiro, XcodeGen ou baseline', async () => {
+    const env = await setup({ config: { signing: { team: '', identity: '' } } });
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_CONFIG');
+    assert.equal(data['field'], 'signing.team');
+    assert.equal(calls(env, 'security').length, 0);
+    assert.equal(calls(env, 'xcodegen').length, 0);
+    assert.equal(existsSync(join(env.configDir, SIGNING_BASELINE_FILE)), false);
+  });
+
+  test('sem identidade Apple Development explícita falha antes do chaveiro', async () => {
+    const env = await setup({ config: { signing: { team: TEAM, identity: '' } } });
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_CONFIG');
+    assert.equal(data['field'], 'signing.identity');
+    assert.equal(calls(env, 'security').length, 0);
+  });
+
+  test('IDs de host e teste iguais falham antes do chaveiro', async () => {
+    const env = await setup({ config: { bundle: { host: 'dev.sample.onetake', runnerTest: 'dev.sample.onetake' } } });
+    const { data } = await rejectsWith(buildRunner(env.config, { tools: env.tools, configDir: env.configDir }), 'E_CONFIG');
+    assert.equal(data['field'], 'bundle.runnerTest');
+    assert.equal(calls(env, 'security').length, 0);
+  });
+
+  test('encaminha os IDs separados ao XcodeGen e não substitui PRODUCT_BUNDLE_IDENTIFIER globalmente', async () => {
+    const env = await setup({ config: { bundle: { host: 'dev.sample.onetake', runnerTest: 'dev.sample.onetake.tests' } } });
+    writeFileSync(join(env.toolsDir, 'codesign.display'), codesignDisplay(IDENTITY, TEAM, 'dev.sample.onetake.tests.xctrunner'));
+    writeFileSync(join(env.toolsDir, 'xcent.xml'), entitlementsXml(`${TEAM}.dev.sample.onetake.tests.xctrunner`));
+    writeFileSync(join(env.toolsDir, 'entitlements.xml'), entitlementsXml(`${TEAM}.dev.sample.onetake.tests.xctrunner`));
+    await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
+    const gen = calls(env, 'xcodegen')[0]!;
+    assert.equal(gen.environment?.['ONETAKE_HOST_BUNDLE_ID'], 'dev.sample.onetake');
+    assert.equal(gen.environment?.['ONETAKE_RUNNER_TEST_BUNDLE_ID'], 'dev.sample.onetake.tests');
+    assert.equal(gen.environment?.['ONETAKE_SIGNING_TEAM'], TEAM);
+    assert.ok(!calls(env, 'xcodebuild')[0]!.args.some((arg) => arg.startsWith('PRODUCT_BUNDLE_IDENTIFIER=')));
+  });
+
   test('xcodegen generate + xcodebuild build-for-testing com o time fixo e assinatura automática, saída em arquivo', async () => {
     const env = await setup();
     const result = await buildRunner(env.config, { tools: env.tools, configDir: env.configDir });
@@ -1931,9 +1974,9 @@ describe('CLI contrarregra runner (S8 item 1; AC-0.5)', () => {
     return { out, err, io: { stdout: (t) => void out.push(t), stderr: (t) => void err.push(t) } };
   }
 
-  test('config com outro time → E_CONFIG antes de qualquer processo ou conexão (AC-0.5)', async () => {
+  test('config com time malformado → E_CONFIG antes de qualquer processo ou conexão (AC-0.5)', async () => {
     const env = await setup({ built: 'Debug' });
-    writeFileSync(env.configPath, JSON.stringify({ usbmux: { socketPath: env.usbmuxd.socketPath }, paths: { cache: env.cache }, signing: { team: '59CB45686C' } }));
+    writeFileSync(env.configPath, JSON.stringify({ usbmux: { socketPath: env.usbmuxd.socketPath }, paths: { cache: env.cache }, signing: { team: 'INVALID!' } }));
     for (const sub of [['up'], ['build'], ['status'], ['down']]) {
       const cap = io();
       const code = await main(['runner', ...sub, '--json'], { config: { configPath: env.configPath }, tools: env.tools, io: cap.io });

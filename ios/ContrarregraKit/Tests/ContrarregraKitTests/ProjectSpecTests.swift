@@ -1,12 +1,10 @@
 import Foundation
 import XCTest
 
-/// AC-1.14 (parte estática) e P-3/P-4 no `ios/project.yml`: todo bundle id com prefixo
-/// `app.kifactory.contrarregra` (o que já deixa de fora o app alvo), time `984PNJZ8B9` explícito,
-/// assinatura automática e alvos só de iPhone. A parte dinâmica (`xcodebuild -showBuildSettings`,
-/// `codesign -dvv`) é conferida no build.
+/// O projeto iOS usa variáveis independentes para os bundles e o time; o build confere a assinatura.
 final class ProjectSpecTests: XCTestCase {
-    static let bundlePrefix = "app.kifactory.contrarregra"
+    static let hostBundle = "${ONETAKE_HOST_BUNDLE_ID}"
+    static let runnerBundle = "${ONETAKE_RUNNER_TEST_BUNDLE_ID}"
 
     func projectText() throws -> String {
         try Fixtures.text(Fixtures.repoRoot.appending(path: "ios/project.yml"))
@@ -40,39 +38,28 @@ final class ProjectSpecTests: XCTestCase {
         return blocks
     }
 
-    func isContrarregraBundleId(_ id: String) -> Bool {
-        id == Self.bundlePrefix || id.hasPrefix(Self.bundlePrefix + ".")
-    }
-
-    func testAC114_everyBundleIdHasTheContrarregraPrefix() throws {
+    func testEachBundleHasItsOwnXcodeGenVariable() throws {
         let text = try projectText()
         let ids = values(of: "PRODUCT_BUNDLE_IDENTIFIER", in: text)
-        XCTAssertEqual(Set(ids), [Self.bundlePrefix, Self.bundlePrefix + ".runner"])
-        for id in ids { XCTAssertTrue(isContrarregraBundleId(id), id) }
-
-        // Nenhum outro identificador do mesmo domínio aparece no arquivo (P-4: nenhum alvo do app gravado).
-        var rest = Substring(text)
-        while let found = rest.range(of: "app.kifactory.") {
-            let tail = rest[found.lowerBound...].prefix { !$0.isWhitespace && $0 != "\"" && $0 != "'" }
-            XCTAssertTrue(isContrarregraBundleId(String(tail)), "identificador fora do prefixo: \(tail)")
-            rest = rest[found.upperBound...]
-        }
+        XCTAssertEqual(Set(ids), [Self.hostBundle, Self.runnerBundle])
+        XCTAssertFalse(text.contains("app.kifactory."))
     }
 
     func testAC114_eachTargetDeclaresItsOwnContrarregraBundleId() throws {
         let blocks = try targetBlocks(in: try projectText())
         XCTAssertEqual(Set(blocks.keys), ["ContrarregraHost", "ContrarregraRunner"])
-        XCTAssertEqual(values(of: "PRODUCT_BUNDLE_IDENTIFIER", in: blocks["ContrarregraHost"] ?? ""), [Self.bundlePrefix])
-        XCTAssertEqual(values(of: "PRODUCT_BUNDLE_IDENTIFIER", in: blocks["ContrarregraRunner"] ?? ""), [Self.bundlePrefix + ".runner"])
+        XCTAssertEqual(values(of: "PRODUCT_BUNDLE_IDENTIFIER", in: blocks["ContrarregraHost"] ?? ""), [Self.hostBundle])
+        XCTAssertEqual(values(of: "PRODUCT_BUNDLE_IDENTIFIER", in: blocks["ContrarregraRunner"] ?? ""), [Self.runnerBundle])
     }
 
-    func testP3_fixedTeamAndAutomaticSigningAndNoOtherTeam() throws {
+    func testSigningTeamIsInjectedAndHostDisplayNameIsOneTake() throws {
         let text = try projectText()
         let teams = values(of: "DEVELOPMENT_TEAM", in: text)
         XCTAssertFalse(teams.isEmpty)
-        XCTAssertEqual(Set(teams), ["984PNJZ8B9"])
+        XCTAssertEqual(Set(teams), ["${ONETAKE_SIGNING_TEAM}"])
         XCTAssertEqual(Set(values(of: "CODE_SIGN_STYLE", in: text)), ["Automatic"])
-        for other in ["59CB45686C", "V4397KJVXZ", "Apple Distribution", "PROVISIONING_PROFILE"] {
+        XCTAssertEqual(values(of: "INFOPLIST_KEY_CFBundleDisplayName", in: text), ["OneTake"])
+        for other in ["984PNJZ8B9", "Apple Distribution", "PROVISIONING_PROFILE"] {
             XCTAssertFalse(text.contains(other), other)
         }
     }

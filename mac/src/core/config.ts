@@ -1,20 +1,23 @@
-// Configuração (spec S0.1): `~/.config/contrarregra/config.json` da máquina, sem segredos, mesclado
+// Configuração: `~/.config/onetake/config.json` da máquina (com fallback legado), sem segredos, mesclado
 // sobre `config/defaults.json` do repositório. Só lê arquivos: nenhum processo filho, nenhuma conexão.
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { ContrarregraError } from './errors.ts';
 
-/** Time de assinatura fixo (constituição P-3); qualquer outro valor é `E_CONFIG`. */
-export const REQUIRED_TEAM = '984PNJZ8B9';
+/** Identificador de equipe Apple: dez caracteres alfanuméricos maiúsculos. */
+export const APPLE_TEAM = /^[A-Z0-9]{10}$/;
+export const APPLE_DEVELOPMENT_IDENTITY = /^Apple Development: .+ \([A-Z0-9]{10}\)$/;
 
 export const DEFAULTS_PATH = fileURLToPath(new URL('../../../config/defaults.json', import.meta.url));
 
 export function defaultConfigPath(): string {
-  return join(homedir(), '.config', 'contrarregra', 'config.json');
+  const modern = join(homedir(), '.config', 'onetake', 'config.json');
+  const legacy = join(homedir(), '.config', 'contrarregra', 'config.json');
+  return existsSync(modern) || !existsSync(legacy) ? modern : legacy;
 }
 
 /** Campos de S0.1. Os opcionais (`?`) ficam vazios nos padrões e só existem no `config.json` da máquina. */
@@ -41,7 +44,7 @@ export interface Config {
 }
 
 export interface LoadConfigOptions {
-  /** Padrão: `~/.config/contrarregra/config.json`. */
+  /** Padrão: `~/.config/onetake/config.json`; se ausente, arquivo legado `contrarregra`. */
   configPath?: string;
   /** Padrão: `config/defaults.json` do repositório. */
   defaultsPath?: string;
@@ -89,8 +92,8 @@ function readJsonObject(path: string, required: boolean): JsonObject | undefined
 }
 
 /**
- * Carrega a configuração mesclada. Sem `config.json` na máquina, valem só os padrões. Confere aqui o
- * time de assinatura (AC-0.5), antes de qualquer comando criar processo ou conexão.
+ * Carrega a configuração mesclada. Sem `config.json` na máquina, valem só os padrões.
+ * Valores parciais/ausentes permitem inspeção local; buildRunner valida os requisitos de assinatura.
  */
 export function loadConfig(options: LoadConfigOptions = {}): Config {
   const defaultsPath = options.defaultsPath ?? DEFAULTS_PATH;
@@ -101,12 +104,12 @@ export function loadConfig(options: LoadConfigOptions = {}): Config {
 
   const signing = merged['signing'];
   const team = isJsonObject(signing) ? signing['team'] : undefined;
-  if (team !== REQUIRED_TEAM) {
+  if (typeof team !== 'string' || (team !== '' && !APPLE_TEAM.test(team))) {
     const source = 'signing' in machine ? configPath : defaultsPath;
     throw new ContrarregraError(
       'E_CONFIG',
-      `signing.team = ${JSON.stringify(team ?? null)} em ${source}: o time de assinatura é fixo em ${REQUIRED_TEAM} (P-3)`,
-      { field: 'signing.team', value: team ?? null, expected: REQUIRED_TEAM, path: source },
+      `signing.team = ${JSON.stringify(team ?? null)} em ${source}: use um Apple Team ID de dez caracteres A-Z/0-9`,
+      { field: 'signing.team', value: team ?? null, path: source },
     );
   }
   return merged as unknown as Config;

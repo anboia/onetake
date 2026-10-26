@@ -1,0 +1,28 @@
+# OneTake
+
+> macOS CLI and stdio MCP server for repeatable physical-iPhone demos using XCUITest, YAML and OBS.
+
+Experimental, source-only installation under the MIT license. Requires Node 22.x >=22.18. Real operation requires macOS, Xcode, Apple development signing and an authorized USB-connected iPhone. `take validate` is offline; `take run --dry` performs real actions without recording. Protocol schema IDs remain `contrarregra.*/1` for compatibility.
+
+## Start here
+
+- [Overview](README.md): Product scope, quick start and limits.
+- [English overview](README.en.md): Brief English introduction and installation commands.
+- [Installation](docs/installation.md): Local dependencies, signing, configuration and OBS.
+- [Usage](docs/usage.md): Validate a script, rehearse, record and handle pauses.
+- [CLI reference](docs/cli.md): Commands actually registered, flags and exit codes.
+- [Example choreography](examples/first-take.choreo.yaml): Generic template, not a bundled application.
+
+## Agents and contributors
+
+- [MCP configuration](.mcp.json): Project stdio server launcher; five tools are implemented.
+- [Development](docs/development.md): Source map, contracts and verified test commands.
+- [Contributing](CONTRIBUTING.md): Small PRs, testing and review expectations.
+- [Security](SECURITY.md): Human authentication, data handling and reporting policy.
+- [Status](docs/status.md): Implemented features versus historical plans.
+- [Migration](docs/migration.md): Public rename and retained compatibility identifiers.
+
+## Optional
+
+- [Publication checklist](docs/publishing.md): Privacy, CI and repository settings still requiring owner action.
+- [Code of conduct](CODE_OF_CONDUCT.md): Participation and moderation expectations.

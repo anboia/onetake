@@ -39,17 +39,17 @@ import {
   type UpResult,
 } from '../commands/runner.ts';
 
-export const USAGE = `uso:
-  contrarregra runner build [--configuration Spike] [--json]
-  contrarregra runner up [--spike [--bind loopback|endpoint]] [--json]
-  contrarregra runner down [--json]
-  contrarregra runner status [--json]
-  contrarregra runner sever --for <segundos> [--json]
-  contrarregra obs setup [--json]
-  contrarregra take validate <choreo.yaml> [--json]
-  contrarregra take run <choreo.yaml> [--dry] [--scenes s02,s05] [--from <stepId|sceneId>] [--until <stepId>]
+export const USAGE = `OneTake — uso:
+  onetake runner build [--configuration Spike] [--json]
+  onetake runner up [--spike [--bind loopback|endpoint]] [--json]
+  onetake runner down [--json]
+  onetake runner status [--json]
+  onetake runner sever --for <segundos> [--json]
+  onetake obs setup [--json]
+  onetake take validate <choreo.yaml> [--json]
+  onetake take run <choreo.yaml> [--dry] [--scenes s02,s05] [--from <stepId|sceneId>] [--until <stepId>]
                         [--voice <voice.json>] [--pause-recording-at <checkpointId>[,…]] [--no-prepare] [--no-cleanup] [--json]
-  contrarregra take control <takeDir> resume|retry|skip|abort [--json]`;
+  onetake take control <takeDir> resume|retry|skip|abort [--json]`;
 
 export interface CliIo {
   stdout: (text: string) => void;
@@ -316,7 +316,7 @@ export async function main(argv: string[], deps: CliDeps = {}): Promise<number> 
   try {
     parsed = parse(argv);
   } catch (error) {
-    io.stderr(`contrarregra: ${(error as Error).message}\n${USAGE}\n`);
+    io.stderr(`onetake: ${(error as Error).message}\n${USAGE}\n`);
     return 2;
   }
   if (parsed === 'help') {
@@ -369,11 +369,11 @@ export async function main(argv: string[], deps: CliDeps = {}): Promise<number> 
     if (isContrarregraError(error)) {
       const hint = error.data?.['hint'];
       const progress = json ? '' : errorProgressText(error.data ?? {});
-      io.stderr(`contrarregra: ${error.code}: ${error.message}\n${progress}${typeof hint === 'string' ? `dica: ${hint}\n` : ''}`);
+      io.stderr(`onetake: ${error.code}: ${error.message}\n${progress}${typeof hint === 'string' ? `dica: ${hint}\n` : ''}`);
       if (json) io.stdout(`${JSON.stringify({ error: { code: error.code, message: error.message, data: error.data ?? {} } })}\n`);
       return 1;
     }
-    io.stderr(`contrarregra: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`);
+    io.stderr(`onetake: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`);
     return 1;
   }
 }

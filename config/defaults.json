@@ -1,17 +1,17 @@
 {
   "device": {
-    "udid": "00008101-001E79203A68001E",
-    "coreDeviceId": "DC77A78E-5E8D-5825-B2EE-C297FBC14ABD",
-    "name": "VIVO_00G7"
+    "udid": "",
+    "coreDeviceId": "",
+    "name": ""
   },
   "signing": {
-    "team": "984PNJZ8B9",
-    "identity": "Apple Development: Andre Saboia (6NKUX5CX7G)"
+    "team": "",
+    "identity": ""
   },
   "bundle": {
     "host": "app.kifactory.contrarregra",
     "runnerTest": "app.kifactory.contrarregra.runner",
-    "displayNames": ["Contrarregra", "ContrarregraRunner-Runner"]
+    "displayNames": ["OneTake", "ContrarregraRunner-Runner"]
   },
   "runner": {
     "port": 8700,
@@ -45,7 +45,7 @@
     "obsPassword": "OBS_WEBSOCKET_PASSWORD"
   },
   "alerts": {
-    "sayDevice": "MacBook Air Speakers",
+    "sayDevice": "",
     "voice": "Luciana"
   },
   "guide": {

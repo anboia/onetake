@@ -21,7 +21,7 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { DEFAULTS_PATH, loadConfig, mergeConfig, REQUIRED_TEAM } from '../src/core/config.ts';
+import { DEFAULTS_PATH, loadConfig, mergeConfig } from '../src/core/config.ts';
 import { isContrarregraError } from '../src/core/errors.ts';
 
 const ROOT = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
@@ -42,8 +42,8 @@ function writeJson(path: string, value: unknown): string {
 }
 
 describe('configuração (S0.1)', () => {
-  test('AC-0.5: signing.team ≠ 984PNJZ8B9 → E_CONFIG citando signing.team, sem processo filho nem conexão', () => {
-    const configPath = writeJson(join(tmp(), 'config.json'), { signing: { team: 'V4397KJVXZ' } });
+  test('time Apple malformado → E_CONFIG citando signing.team, sem processo filho nem conexão', () => {
+    const configPath = writeJson(join(tmp(), 'config.json'), { signing: { team: 'BAD TEAM!' } });
     const seen: string[] = [];
     const onChild = (): void => {
       seen.push('child_process');
@@ -60,7 +60,7 @@ describe('configuração (S0.1)', () => {
           assert.ok(isContrarregraError(err, 'E_CONFIG'), `esperava E_CONFIG, veio ${String(err)}`);
           assert.match(err.message, /signing\.team/);
           assert.equal(err.data?.['field'], 'signing.team');
-          assert.equal(err.data?.['value'], 'V4397KJVXZ');
+          assert.equal(err.data?.['value'], 'BAD TEAM!');
           assert.equal(err.data?.['path'], configPath);
           return true;
         },
@@ -72,10 +72,10 @@ describe('configuração (S0.1)', () => {
     assert.deepEqual(seen, []);
   });
 
-  test('AC-0.5: o processo que carrega ~/.config/contrarregra/config.json com outro time sai com código ≠ 0 e E_CONFIG, sem poder criar processo filho', () => {
+  test('configuração legada com time malformado falha sem criar processo filho', () => {
     const home = tmp();
     mkdirSync(join(home, '.config', 'contrarregra'), { recursive: true });
-    writeJson(join(home, '.config', 'contrarregra', 'config.json'), { signing: { team: '59CB45686C' } });
+    writeJson(join(home, '.config', 'contrarregra', 'config.json'), { signing: { team: 'INVALID!' } });
     const moduleUrl = pathToFileURL(join(ROOT, 'mac', 'src', 'core', 'config.ts')).href;
     // O modelo de permissões do Node nega qualquer processo filho: se o carregamento tentasse criar
     // um, o erro seria ERR_ACCESS_DENIED, não E_CONFIG.
@@ -96,17 +96,17 @@ describe('configuração (S0.1)', () => {
     assert.doesNotMatch(result.stderr, /ERR_ACCESS_DENIED/);
   });
 
-  test('config.json com o time fixo é mesclado sobre config/defaults.json: objetos chave a chave, listas e valores simples substituem', () => {
+  test('config.json com outro time Apple é mesclado sobre defaults', () => {
     const configPath = writeJson(join(tmp(), 'config.json'), {
-      signing: { team: REQUIRED_TEAM },
+      signing: { team: 'V4397KJVXZ', identity: 'Apple Development: Example (V4397KJVXZ)' },
       runner: { privateAllowed: ['PX-1', 'PX-2', 'PX-3', 'PX-5'] },
       bundle: { displayNames: ['Outro'] },
       app: { explore: 'com.example.app' },
       record: { fps: 30 },
     });
     const config = loadConfig({ configPath });
-    assert.equal(config.signing.team, REQUIRED_TEAM);
-    assert.equal(config.signing.identity, 'Apple Development: Andre Saboia (6NKUX5CX7G)');
+    assert.equal(config.signing.team, 'V4397KJVXZ');
+    assert.equal(config.signing.identity, 'Apple Development: Example (V4397KJVXZ)');
     assert.deepEqual(config.runner, { port: 8700, privateAllowed: ['PX-1', 'PX-2', 'PX-3', 'PX-5'] });
     assert.deepEqual(config.bundle.displayNames, ['Outro']);
     assert.equal(config.bundle.host, 'app.kifactory.contrarregra');
@@ -130,6 +130,27 @@ describe('configuração (S0.1)', () => {
   test('sem config.json na máquina, valem só os padrões de config/defaults.json', () => {
     const config = loadConfig({ configPath: join(tmp(), 'nao-existe.json') });
     assert.deepEqual(config, JSON.parse(readFileSync(DEFAULTS_PATH, 'utf8')));
+  });
+
+  test('prefere config onetake; migra a leitura legada sem mover arquivos', () => {
+    const home = tmp();
+    const legacy = join(home, '.config', 'contrarregra', 'config.json');
+    const modern = join(home, '.config', 'onetake', 'config.json');
+    mkdirSync(join(home, '.config', 'contrarregra'), { recursive: true });
+    mkdirSync(join(home, '.config', 'onetake'), { recursive: true });
+    writeJson(legacy, { signing: { team: '59CB45686C' } });
+    const moduleUrl = pathToFileURL(join(ROOT, 'mac', 'src', 'core', 'config.ts')).href;
+    const probe = `import { defaultConfigPath, loadConfig } from ${JSON.stringify(moduleUrl)}; console.log(JSON.stringify({path:defaultConfigPath(),team:loadConfig().signing.team}));`;
+    const run = () => spawnSync(process.execPath, ['--input-type=module', '-e', probe], {
+      env: { ...process.env, HOME: home }, encoding: 'utf8', timeout: 10_000,
+    });
+    const inherited = run();
+    assert.equal(inherited.status, 0, inherited.stderr);
+    assert.deepEqual(JSON.parse(inherited.stdout), { path: legacy, team: '59CB45686C' });
+    writeJson(modern, { signing: { team: 'V4397KJVXZ' } });
+    const preferred = run();
+    assert.equal(preferred.status, 0, preferred.stderr);
+    assert.deepEqual(JSON.parse(preferred.stdout), { path: modern, team: 'V4397KJVXZ' });
   });
 
   test('config.json ilegível → E_CONFIG citando o caminho (JSON inválido, raiz que não é objeto)', () => {
@@ -157,7 +178,11 @@ describe('configuração (S0.1)', () => {
       'alerts', 'app', 'apps', 'bundle', 'device', 'disk', 'guide', 'obs', 'paths', 'record', 'runner',
       'secrets', 'signing', 'sync', 'toolchain', 'urls', 'usbmux',
     ]);
-    assert.equal(defaults.signing.team, REQUIRED_TEAM);
+    assert.equal(defaults.signing.team, '');
+    assert.equal(defaults.signing.identity, '');
+    assert.equal(defaults.device.udid, '');
+    assert.equal(defaults.device.coreDeviceId, '');
+    assert.equal(defaults.device.name, '');
     assert.equal(defaults.signing.ascKeyPath, undefined);
     assert.equal(defaults.app.explore, undefined);
     assert.equal(defaults.sync.captureLatencyMs, undefined);

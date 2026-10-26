@@ -246,12 +246,12 @@ export interface RunResult {
 }
 
 /** Roda e espera, com a saída no arquivo `log` (sem pipes). */
-export function runToFile(command: string, args: readonly string[], log: string, options: { cwd?: string } = {}): Promise<RunResult> {
+export function runToFile(command: string, args: readonly string[], log: string, options: { cwd?: string; env?: Record<string, string> } = {}): Promise<RunResult> {
   const fd = openLog(log);
   return new Promise((resolve) => {
     let child: ChildProcess;
     try {
-      child = spawn(command, args, { cwd: options.cwd, stdio: ['ignore', fd, fd] });
+      child = spawn(command, args, { cwd: options.cwd, env: options.env === undefined ? undefined : { ...process.env, ...options.env }, stdio: ['ignore', fd, fd] });
     } catch {
       closeSync(fd);
       resolve({ exitCode: null, signal: null });

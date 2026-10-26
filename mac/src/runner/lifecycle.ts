@@ -26,7 +26,7 @@ import { basename, dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { isDeepStrictEqual } from 'node:util';
 
-import type { Config } from '../core/config.ts';
+import { APPLE_DEVELOPMENT_IDENTITY, APPLE_TEAM, type Config } from '../core/config.ts';
 import { ContrarregraError, isContrarregraError } from '../core/errors.ts';
 import type { HealthResult } from '../core/types.ts';
 import { readDeviceTransport } from '../device/devicectl.ts';
@@ -170,6 +170,16 @@ function buildFailed(step: string, result: RunResult, log: string): Contrarregra
 }
 
 export async function buildRunner(config: Config, options: BuildOptions): Promise<BuildResult> {
+  const invalid = (field: string, hint: string): never => {
+    throw new ContrarregraError('E_CONFIG', `${field}: ${hint}; configure em config.json antes de runner build`, { field });
+  };
+  if (!APPLE_TEAM.test(config.signing.team)) invalid('signing.team', 'Apple Team ID de dez caracteres A-Z/0-9 obrigatório');
+  if (!APPLE_DEVELOPMENT_IDENTITY.test(config.signing.identity)) invalid('signing.identity', 'identidade Apple Development exata obrigatória');
+  const bundleId = /^(?:[A-Za-z0-9-]+\.)+[A-Za-z0-9-]+$/;
+  if (!bundleId.test(config.bundle.host)) invalid('bundle.host', 'identificador de bundle DNS válido obrigatório');
+  if (!bundleId.test(config.bundle.runnerTest) || config.bundle.runnerTest === config.bundle.host) {
+    invalid('bundle.runnerTest', 'identificador de teste distinto e válido obrigatório');
+  }
   const configuration = options.configuration ?? DEFAULT_CONFIGURATION;
   if (!(CONFIGURATIONS as readonly string[]).includes(configuration)) {
     throw new ContrarregraError('E_CONFIG', `configuração de build desconhecida: ${configuration} (use ${CONFIGURATIONS.join(' ou ')})`, { configuration });
@@ -197,7 +207,14 @@ export async function buildRunner(config: Config, options: BuildOptions): Promis
   invalidateVerifiedBuilds(paths);
 
   options.onProgress?.(`runner build: xcodegen generate (registro em ${log})`);
-  const generated = await runToFile(tools.xcodegen, xcodegenArgs(repoRoot), log, { cwd: repoRoot });
+  const generated = await runToFile(tools.xcodegen, xcodegenArgs(repoRoot), log, {
+    cwd: repoRoot,
+    env: {
+      ONETAKE_SIGNING_TEAM: config.signing.team,
+      ONETAKE_HOST_BUNDLE_ID: config.bundle.host,
+      ONETAKE_RUNNER_TEST_BUNDLE_ID: config.bundle.runnerTest,
+    },
+  });
   if (generated.exitCode !== 0) throw buildFailed('xcodegen generate', generated, log);
 
   // Do xcodebuild em diante, toda saída (sucesso ou falha) compara o chaveiro com a linha de base.

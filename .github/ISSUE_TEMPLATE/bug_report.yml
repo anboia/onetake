@@ -1,0 +1,39 @@
+name: Relatar problema / Bug report
+description: Uma reprodução mínima, sem dados pessoais ou segredos.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Leia CONTRIBUTING.md. Vulnerabilidade? Siga SECURITY.md; não publique detalhes sensíveis aqui."
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Como reproduzir
+      description: Comando ou exemplo mínimo com dados sintéticos. Não inclua UDID, serial, assinatura ou tokens.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Resultado esperado e observado
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Commit, macOS, Xcode, iOS, Node e OBS. Modelo de iPhone é suficiente, sem identificador do aparelho.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Erro sanitizado / verificações já feitas
+      description: Nunca cole logs completos ou capturas de um aparelho pessoal sem revisar.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacidade
+      options:
+        - label: Revisei o relato e removi dados pessoais, credenciais e identificadores reais de aparelhos.
+          required: true

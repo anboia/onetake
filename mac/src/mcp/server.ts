@@ -20,20 +20,20 @@ import { doctor } from '../commands/doctor.ts';
 import { screenshot } from '../commands/screenshot.ts';
 import { parseTapArgs, parseTreeArgs, tap, TapArgsSchema, TreeArgsSchema, uiTree } from '../commands/ui.ts';
 
-export const SERVER_NAME = 'contrarregra';
+export const SERVER_NAME = 'onetake';
 const PACKAGE = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')) as { version: string };
 
 /** As ★ de S8 item 2 presentes nesta fase: `_meta['anthropic/alwaysLoad'] = true` (AC-8.1). */
 export const STARRED_TOOLS = ['doctor', 'device_status', 'screenshot', 'ui_tree', 'tap'] as const;
 
 /** Instruções do servidor (S8 item 6: ≤ 2.048 caracteres, regra principal primeiro). */
-export const INSTRUCTIONS = `Contrarregra: opere o iPhone físico (cabo USB, via XCUITest) para gravar demos do app alvo; mesmas operações da CLI \`contrarregra\`.
+export const INSTRUCTIONS = `OneTake: opere o iPhone físico (cabo USB, via XCUITest) para preparar demos do app alvo. MCP oferece exploração; CLI oferece gravação.
 1. Olhe antes de agir: \`screenshot\` (JPEG 390×844; coordenadas da imagem = pontos do XCUITest) e \`ui_tree\` (uma linha por nó visível, ex.: \`@e12 button "Open settings" (342,52 40x40)\`).
 2. Prefira alvos \`{ref: "@eN"}\` da árvore atual e rótulos (\`label\`, \`labelPrefix\`, \`labelContains\`, \`identifier\`) a coordenadas; \`{point: {x, y}}\` só quando não há elemento. Um \`@eN\` vale até a tela mudar: depois de \`E_TARGET_NOT_FOUND\`, leia a árvore de novo.
 3. Nunca digite credenciais (Apple ID, senha, código do iPhone) nem peça senha ao dono: login, Face ID e código são pontos de controle humanos.
 4. Não capture nem opere fora do app alvo e dos apps permitidos; Ajustes, Telefone, Mensagens, Mail, Wallet e lojas estão fora de alcance (\`E_FORBIDDEN_APP\`).
-5. Tomada (gravação) = \`take_start\` + \`take_wait\` (ainda não disponíveis nesta fase).
-Erros vêm como \`{error: {code, message, data}}\`. \`E_RUNNER_DOWN\`: rode \`contrarregra runner up\`. \`E_NO_USB\`: peça ao dono para ligar o cabo. \`E_BUSY\` com \`takeId\`: há uma tomada em curso. Na dúvida, \`doctor\`.`;
+5. Gravação só pela CLI: \`onetake take run <choreo.yaml>\`, após validação e aprovação humana. \`--dry\` opera o iPhone sem gravar; NÃO é simulação. MCP não inicia tomadas.
+Erros vêm como \`{error: {code, message, data}}\`. \`E_RUNNER_DOWN\`: confira \`onetake runner status\`. \`E_NO_USB\`: peça ao dono para ligar o cabo. \`E_BUSY\` com \`takeId\`: há uma tomada em curso; não a interrompa sem autorização. Na dúvida, \`doctor\`.`;
 
 const DESCRIPTIONS = {
   doctor:

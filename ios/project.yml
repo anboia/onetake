@@ -1,12 +1,11 @@
-# Projeto iOS do Contrarregra (XcodeGen 2.45.4; architecture.md A1, A2, A5). O .xcodeproj gerado fica fora
-# do git: `xcodegen generate --spec ios/project.yml`.
+# Projeto iOS do OneTake. Nomes internos preservados por compatibilidade.
+# Use `onetake runner build`: ele fornece as variáveis ONETAKE_* ao XcodeGen.
 #
 # - ContrarregraHost: app hospedeiro mínimo, só a tela do relógio de calibração (S0.10, S1 item 1).
-# - ContrarregraRunner: bundle de UI test (XCUITest) que o Xcode instala como
-#   app.kifactory.contrarregra.runner.xctrunner (S1 item 1).
+# - ContrarregraRunner: bundle de UI test (XCUITest), com ID configurado pelo operador.
 # - ContrarregraKit: pacote Swift local (modelos de S0, JSON-RPC, JCS, código do relógio).
 #
-# Assinatura (P-3): time fixo escrito aqui, assinatura automática pela conta já logada no Xcode
+# Assinatura: time explícito vindo da configuração, conta já logada no Xcode
 # (`-allowProvisioningUpdates`); a identidade é a "Apple Development" desse time, conferida no
 # `codesign -dvv` depois do build (AC-1.14). Nenhum alvo tem o bundle id do app alvo (P-4).
 #
@@ -29,7 +28,7 @@ configs:
 
 settings:
   base:
-    DEVELOPMENT_TEAM: 984PNJZ8B9
+    DEVELOPMENT_TEAM: ${ONETAKE_SIGNING_TEAM}
     CODE_SIGN_STYLE: Automatic
     CODE_SIGN_IDENTITY: Apple Development
     SWIFT_VERSION: "6.0"
@@ -55,11 +54,11 @@ targets:
     settings:
       base:
         PRODUCT_NAME: ContrarregraHost
-        PRODUCT_BUNDLE_IDENTIFIER: app.kifactory.contrarregra
+        PRODUCT_BUNDLE_IDENTIFIER: ${ONETAKE_HOST_BUNDLE_ID}
         TARGETED_DEVICE_FAMILY: "1"  # só iPhone; no alvo porque o preset de iOS do XcodeGen põe "1,2" aqui
         CODE_SIGN_IDENTITY: Apple Development
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Contrarregra
+        INFOPLIST_KEY_CFBundleDisplayName: OneTake
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIStatusBarHidden: YES
@@ -79,7 +78,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: ContrarregraRunner
-        PRODUCT_BUNDLE_IDENTIFIER: app.kifactory.contrarregra.runner
+        PRODUCT_BUNDLE_IDENTIFIER: ${ONETAKE_RUNNER_TEST_BUNDLE_ID}
         TARGETED_DEVICE_FAMILY: "1"  # só iPhone (idem)
         GENERATE_INFOPLIST_FILE: YES
         EXCLUDED_SOURCE_FILE_NAMES: "*/ContrarregraRunner/Spikes/*"

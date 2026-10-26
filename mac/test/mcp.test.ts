@@ -345,6 +345,7 @@ async function setup(options: { session?: boolean; config?: Record<string, unkno
       usbmux: { socketPath: usbmuxd.socketPath },
       paths: { cache, takes: join(root, 'takes') },
       app: { explore: 'com.example.target' },
+      device: { udid: UDID, coreDeviceId: CORE_DEVICE_ID, name: 'Test iPhone' },
       ...options.config,
     }),
   );
@@ -439,7 +440,8 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
     const firstLine = INSTRUCTIONS.split('\n')[0]!;
     assert.match(firstLine, /iPhone físico/);
     assert.match(firstLine, /demos/);
-    const order = [at('iPhone físico'), at('@eN'), at('credenciais'), at('senha'), at('Não capture'), at('take_start'), at('take_wait')];
+    const order = [at('iPhone físico'), at('@eN'), at('credenciais'), at('senha'), at('Não capture'), at('onetake take run')];
+    assert.doesNotMatch(INSTRUCTIONS, /take_start|take_wait/);
     assert.match(INSTRUCTIONS, /Não capture[^\n]*app alvo/);
     assert.deepEqual([...order].sort((a, b) => a - b), order, 'as regras aparecem na ordem de S8 item 6');
     assert.ok(INSTRUCTIONS.length <= LIMIT);
@@ -448,10 +450,10 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
   test('S8 item 7: .mcp.json versionado registra o servidor "contrarregra" (stdio) apontando para bin/contrarregra-mcp, sem env nem segredo', () => {
     const raw = readFileSync(join(ROOT, '.mcp.json'), 'utf8');
     const doc = JSON.parse(raw) as { mcpServers: Record<string, { type?: string; command: string; args?: string[]; env?: unknown }> };
-    assert.deepEqual(Object.keys(doc.mcpServers), ['contrarregra']);
-    const entry = doc.mcpServers['contrarregra']!;
+    assert.deepEqual(Object.keys(doc.mcpServers), ['onetake']);
+    const entry = doc.mcpServers['onetake']!;
     assert.equal(entry.type, 'stdio');
-    assert.match(entry.command, /(^|\/)bin\/contrarregra-mcp$/);
+    assert.match(entry.command, /(^|\/)bin\/onetake-mcp$/);
     assert.deepEqual(entry.args ?? [], []);
     assert.equal(entry.env, undefined, 'nenhuma variável de ambiente (segredos ficam no Chaveiro, S8 item 8)');
     assert.doesNotMatch(raw, /password|secret|token|OBS_WEBSOCKET/i);
@@ -704,7 +706,7 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
   });
 
   test('doctor: configuração inválida (signing.team) não lança — config falha com E_CONFIG e o resto fica pulado', async () => {
-    const env = await setup({ config: { signing: { team: 'V4397KJVXZ' } } });
+    const env = await setup({ config: { signing: { team: 'INVALID!' } } });
     const client = await connect(env);
     const doc = jsonOf(await call(client, 'doctor'));
     assert.equal(doc['ok'], false);
@@ -717,7 +719,7 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
   });
 
   test('AC-0.5: configuração inválida → E_CONFIG antes de qualquer conexão (o usbmuxd falso não recebe nada)', async () => {
-    const env = await setup({ config: { signing: { team: 'V4397KJVXZ' } } });
+    const env = await setup({ config: { signing: { team: 'INVALID!' } } });
     const client = await connect(env);
     for (const [name, args] of [
       ['device_status', {}],
@@ -870,11 +872,11 @@ describe('servidor MCP mínimo (T-0.15, S8)', () => {
     assert.deepEqual(responses.map((message) => message.id), [1, 2]);
 
     const init = responses[0]!.result as { instructions?: string; serverInfo: { name: string } };
-    assert.equal(init.serverInfo.name, 'contrarregra');
+    assert.equal(init.serverInfo.name, 'onetake');
     assert.equal(init.instructions, INSTRUCTIONS);
     const { tools } = responses[1]!.result as { tools: { name: string; _meta?: Record<string, unknown> }[] };
     assert.deepEqual(tools.map((tool) => tool.name).sort(), ['device_status', 'doctor', 'screenshot', 'tap', 'ui_tree']);
     assert.ok(tools.every((tool) => tool._meta?.['anthropic/alwaysLoad'] === true));
-    assert.match(stderr, /contrarregra-mcp: Node v22\.\d+\.\d+/);
+    assert.match(stderr, /onetake-mcp: Node v22\.\d+\.\d+/);
   });
 });

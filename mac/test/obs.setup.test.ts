@@ -641,7 +641,7 @@ function configFor(fake: FakeObs, obs: JsonObject = {}): { configPath: string } 
   tempDirs.push(dir);
   const configPath = join(dir, 'config.json');
   // paths.cache do falso: o marcador de reinício sobrevive entre as passadas do mesmo teste.
-  writeFileSync(configPath, JSON.stringify({ obs: { url: fake.url, ...obs }, paths: { cache: fake.cacheDir } }));
+  writeFileSync(configPath, JSON.stringify({ obs: { url: fake.url, ...obs }, paths: { cache: fake.cacheDir }, device: { udid: UDID, name: IPHONE_ITEM.itemName } }));
   return { configPath };
 }
 
@@ -1462,7 +1462,7 @@ describe('reinício pendente (pesquisa F17): sobrevive entre passadas até o OBS
     const cap = cliIo();
     assert.equal(await main(['obs', 'setup'], { config: configFor(fake), obs: depsFor(fake), io: cap.io }), 1);
     const err = cap.err.join('');
-    assert.match(err, /(^|\n)contrarregra: E_OBS_SOURCE: o iPhone "VIVO_00G7" não está na lista/);
+    assert.match(err, /(^|\n)onetake: E_OBS_SOURCE: o iPhone "VIVO_00G7" não está na lista/);
     assert.match(err, /\nmudanças feitas antes do erro \(\d+\):\n/);
     assert.match(err, /\nreinício: /);
     assert.match(err, /\ndica: ligue o cabo/);
@@ -1549,6 +1549,6 @@ describe('CLI contrarregra obs setup (S8 item 2: só na CLI)', () => {
     }
     const help = io();
     assert.equal(await main(['--help'], { ...deps, io: help.io }), 0);
-    assert.match(help.out.join(''), /contrarregra obs setup \[--json\]/);
+    assert.match(help.out.join(''), /onetake obs setup \[--json\]/);
   });
 });

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Shim POSIX da Contrarregra (spec S8 item 7, E-8.1; constituição P-1).
+# OneTake POSIX launcher; legacy contrarregra names remain compatible.
 #
 # Acha um Node 22.x >= 22.18 e roda o ponto de entrada em TypeScript direto (type stripping, sem
 # etapa de build): primeiro o maior 22.x >= 22.18 do nvm (o 22.19 desta máquina), depois o primeiro
@@ -33,7 +33,7 @@ esac
 root=$(CDPATH= cd -P -- "$bindir/.." && pwd) || exit 1
 
 case $name in
-  contrarregra-mcp) entry=$root/mac/src/mcp/main.ts ;;
+  onetake-mcp|contrarregra-mcp) entry=$root/mac/src/mcp/main.ts ;;
   *) entry=$root/mac/src/cli/main.ts ;;
 esac
 
@@ -112,11 +112,11 @@ fi
 
 if [ -z "$node" ]; then
   if [ "$refused_count" -gt 1 ]; then
-    echo "$name: $refused recusados; a Contrarregra precisa de $wanted (instale com: nvm install 22)." >&2
+    echo "$name: $refused recusados; OneTake precisa de $wanted (instale com: nvm install 22)." >&2
   elif [ "$refused_count" -eq 1 ]; then
-    echo "$name: $refused recusado; a Contrarregra precisa de $wanted (instale com: nvm install 22)." >&2
+    echo "$name: $refused recusado; OneTake precisa de $wanted (instale com: nvm install 22)." >&2
   else
-    echo "$name: nenhum Node no nvm ($nvm_dir) nem no PATH; a Contrarregra precisa de $wanted (instale com: nvm install 22)." >&2
+    echo "$name: nenhum Node no nvm ($nvm_dir) nem no PATH; OneTake precisa de $wanted (instale com: nvm install 22)." >&2
   fi
   exit 1
 fi

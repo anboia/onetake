@@ -651,11 +651,18 @@ describe('configuração (S0.1) no esquema', () => {
     assertAccepted(ConfigSchema, loaded);
   });
 
-  test('time diferente de 984PNJZ8B9 e campo desconhecido → E_CONFIG com o caminho', () => {
+  test('qualquer Apple Team ID válido é aceito, mas formato inválido e campo desconhecido são rejeitados', () => {
     const defaults = readJson(DEFAULTS_PATH) as Record<string, any>;
     const team = clone(defaults);
     team['signing']['team'] = 'V4397KJVXZ';
-    assertThrowsCode(() => parseConfig(team), 'E_CONFIG', 'signing.team');
+    team['signing']['identity'] = 'Apple Development: Other User (V4397KJVXZ)';
+    assertAccepted(ConfigSchema, team);
+    const malformed = clone(defaults);
+    malformed['signing']['team'] = 'NOT A TEAM';
+    assertThrowsCode(() => parseConfig(malformed), 'E_CONFIG', 'signing.team');
+    const malformedIdentity = clone(defaults);
+    malformedIdentity['signing']['identity'] = 'Apple Distribution: User (V4397KJVXZ)';
+    assertThrowsCode(() => parseConfig(malformedIdentity), 'E_CONFIG', 'signing.identity');
     const typo = clone(defaults);
     typo['paths']['ffmpg'] = '/usr/local/bin/ffmpeg';
     assertThrowsCode(() => parseConfig(typo), 'E_CONFIG', 'paths.ffmpg');

@@ -1,0 +1,32 @@
+{
+  "device": {
+    "udid": "",
+    "coreDeviceId": "",
+    "name": ""
+  },
+  "signing": {
+    "team": "",
+    "identity": ""
+  },
+  "bundle": {
+    "host": "com.example.onetake",
+    "runnerTest": "com.example.onetake.runner",
+    "displayNames": ["OneTake", "ContrarregraRunner-Runner"]
+  },
+  "app": { "explore": "com.example.demo" },
+  "apps": { "allowed": [] },
+  "urls": { "allowedPrefixes": [] },
+  "runner": { "privateAllowed": [] },
+  "paths": {
+    "takes": "~/Movies/onetake",
+    "cache": "~/Library/Caches/onetake",
+    "ffmpeg": "/opt/homebrew/opt/ffmpeg/bin/ffmpeg",
+    "ffprobe": "/opt/homebrew/opt/ffmpeg/bin/ffprobe"
+  },
+  "obs": {
+    "profile": "OneTake",
+    "collection": "OneTake",
+    "scene": "OneTake"
+  },
+  "alerts": { "sayDevice": "" }
+}
